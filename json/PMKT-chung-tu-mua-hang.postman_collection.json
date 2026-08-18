@@ -1,0 +1,965 @@
+{
+  "info": {
+    "name": "PMKT — Chứng từ mua hàng (PMKT-E-00485)",
+    "description": "API module Chứng từ mua hàng — `/api/mua-hang/chung-tu-mua-hang` (epic PMKT-E-00485).\n\nGIAI ĐOẠN HIỆN TẠI: CHỈ LUỒNG ĐỌC (PMKT-U-00506 — Xem danh sách + SCR_CTMH_DSChungTuLienQuan).\nCác endpoint GHI (POST/PUT/DELETE, ghi-so, bo-ghi-so, nhan-ban, 3 thao tác hàng loạt) VẪN CÓ MẶT vì\nkế thừa BaseChungTuController, nhưng trả 400 `CHUA_HO_TRO` kèm mã use case phụ trách. Xem nhóm\n\"5. Ca kiểm thử kỳ vọng lỗi\".\n\nCÁCH DÙNG\n1. Sửa biến collection: baseUrl (front-door http://localhost:8080; gọi thẳng cell-app thì\n   http://localhost:8081), identityUrl, username, password.\n2. Chạy \"0. Auth > Login\" — script tự lưu {{token}}.\n3. Chạy \"1. Danh sách > Search — mặc định\" — script tự lưu {{ctmhId}} từ dòng đầu tiên.\n4. Điền {{ctChiPhiId}} bằng id một chứng từ mua dịch vụ là CPMH đang được dùng làm nguồn phân bổ.\n\nQUYỀN (catalog iam_quyen, mã chức năng MuaHangHoa)\n- MuaHangHoa.View         → POST /search, GET /cot, POST /lookup\n- MuaHangHoa.View.Detail  → GET /{id}, GET /{id}/dong-chi-tiet, GET /{id}/thong-tin-hach-toan\n- MuaHangHoa.Export       → POST /export, POST /{id}/chung-tu-lien-quan/export   (seed ở V344)\n- MuaHangHoa.Delete       → GET /{id}/chung-tu-lien-quan (+ export của form đó)\n- MuaHangHoa.Clone        → GET /{id}/nhan-ban                                   (seed ở V344)\n- MuaHangHoa.Create/Edit/Delete/Post/Unpost → các endpoint ghi (hiện trả 400 CHUA_HO_TRO)\n`.Export` và `.Clone` CHƯA có trong V10; không chạy V344 thì hai endpoint đó 403 với mọi người dùng\nkể cả Admin.\n\nQUY ƯỚC GIÁ TRỊ\n- Enum trên wire dùng TÊN HẰNG JAVA (NHAP_KHO, DA_GHI_SO, CHUA_NHAN…) cho CẢ `filters` lẫn `data`.\n  Bộ lọc ép giá trị bằng Enum.valueOf(name) nên gửi chuỗi DB (\"NhapKho\") sẽ trả 400.\n  Danh sách hợp lệ lấy ở POST /lookup. Nhãn tiếng Việt do FE dịch bằng i18n.\n- Bộ lọc trạng thái chứng từ dùng alias `status`, KHÔNG phải `trangThai`.\n- Ba cột tiền của lưới là `tongTienThanhToanQuyDoi` / `chiPhiQuyDoi` / `tongGiaTriNhapKhoQuyDoi`\n  (ánh xạ về cột DB `*_vnd`).\n- `tinhTrangPhanBo` = null là HỢP LỆ: chứng từ không có dòng nào \"Là CPMH\" thì cột này để trống.\n- BE KHÔNG tự bơm bộ lọc \"đầu tháng → hiện tại\" (BR_CTMH_DS_01) — FE gửi. Request rỗng lấy tất cả.\n\nENVELOPE\n- Danh sách: { data, pagination { page, pageSize, totalItems, totalPages }, summary }\n  — POST /search trả THẲNG, KHÔNG bọc ApiResponse.\n- API đơn: { data, message, messageId }\n- Lỗi: JSON PHẲNG { code, message, messageId, details } — KHÔNG có lớp bọc \"error\".\n\nSẮP XẾP MẶC ĐỊNH (BR2): coalesce(ngày hạch toán, ngày chứng từ, ngày tạo) DESC → số chứng từ ASC →\nid ASC. Gửi `sort` thì client thắng.\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "identityUrl",
+      "value": "http://localhost:9000",
+      "type": "string"
+    },
+    {
+      "key": "username",
+      "value": "admin@tenant.vn",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ctmhId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ctChiPhiId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mauId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Auth",
+      "item": [
+        {
+          "name": "Login (tự lưu token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{identityUrl}}/auth/login",
+              "host": [
+                "{{identityUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "description": "Lấy access token và lưu vào biến {{token}} của collection."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const token = body.access_token || body.accessToken || (body.data && body.data.accessToken);",
+                  "pm.test('có access token', () => pm.expect(token).to.be.a('string').and.not.empty);",
+                  "pm.collectionVariables.set('token', token);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1. Danh sách & metadata",
+      "item": [
+        {
+          "name": "Search — mặc định (không bộ lọc, sắp xếp BR2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/search",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "search"
+              ]
+            },
+            "description": "Request rỗng lấy TẤT CẢ (trong giới hạn tenant + chưa xoá). BE không tự bơm bộ lọc thời gian — theo quyết định D3, việc đó thuộc FE.\n\nThứ tự mặc định BR2: coalesce(ngày hạch toán, ngày chứng từ, ngày tạo) giảm dần → số chứng từ tăng dần → id.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": 1,\n  \"pageSize\": 20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('envelope danh sách', () => {",
+                  "  pm.expect(b).to.have.property('data');",
+                  "  pm.expect(b).to.have.property('pagination');",
+                  "  pm.expect(b.pagination).to.have.all.keys('page','pageSize','totalItems','totalPages');",
+                  "});",
+                  "pm.test('có dòng tổng cộng 3 cột tiền (BR31)', () => {",
+                  "  pm.expect(b.summary).to.have.all.keys('tongTienThanhToanQuyDoi','chiPhiQuyDoi','tongGiaTriNhapKhoQuyDoi');",
+                  "});",
+                  "if (b.data && b.data.length) {",
+                  "  pm.collectionVariables.set('ctmhId', b.data[0].id);",
+                  "  pm.test('enum trả TÊN HẰNG, không phải chuỗi DB', () => {",
+                  "    pm.expect(b.data[0].loaiNghiepVu).to.match(/^[A-Z_]+$/);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search — đủ 10 tiêu chí của SCR_CTMH_DanhSach",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/search",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "search"
+              ]
+            },
+            "description": "Toàn bộ 10 ô tìm kiếm trên cột, ghép bằng AND (BR11.2.2).\nLưu ý: `status` (không phải `trangThai`), và mọi giá trị enum là TÊN HẰNG.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": 1,\n  \"pageSize\": 20,\n  \"sort\": \"ngayHachToan:desc,soChungTu:asc\",\n  \"logic\": \"AND\",\n  \"filters\": [\n    {\n      \"field\": \"ngayHachToan\",\n      \"op\": \"between\",\n      \"value\": [\n        \"2026-08-01\",\n        \"2026-08-31\"\n      ]\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"PNK\"\n    },\n    {\n      \"field\": \"soHoaDon\",\n      \"op\": \"like\",\n      \"value\": \"0001\"\n    },\n    {\n      \"field\": \"tenNhaCungCap\",\n      \"op\": \"like\",\n      \"value\": \"cong ty\"\n    },\n    {\n      \"field\": \"loaiNghiepVu\",\n      \"op\": \"in\",\n      \"value\": [\n        \"NHAP_KHO\",\n        \"KHONG_QUA_KHO\"\n      ]\n    },\n    {\n      \"field\": \"hinhThuc\",\n      \"op\": \"in\",\n      \"value\": [\n        \"NHAP_KHAU\"\n      ]\n    },\n    {\n      \"field\": \"status\",\n      \"op\": \"in\",\n      \"value\": [\n        \"DA_GHI_SO\"\n      ]\n    },\n    {\n      \"field\": \"trangThaiNhanHoaDon\",\n      \"op\": \"in\",\n      \"value\": [\n        \"CHUA_NHAN\"\n      ]\n    },\n    {\n      \"field\": \"trangThaiThanhToan\",\n      \"op\": \"in\",\n      \"value\": [\n        \"CHUA_THANH_TOAN\"\n      ]\n    },\n    {\n      \"field\": \"tinhTrangPhanBo\",\n      \"op\": \"in\",\n      \"value\": [\n        \"PHAN_BO_MOT_PHAN\"\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search — tìm nhanh keyword (bỏ dấu)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/search",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "search"
+              ]
+            },
+            "description": "BR11.1: gõ không dấu vẫn khớp có dấu (hàm SQL bo_dau + lower).\nPhạm vi tìm nhanh: soChungTu, soHoaDon, tenNhaCungCap, dienGiai.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": 1,\n  \"pageSize\": 20,\n  \"keyword\": \"cong ty a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search — client tự sắp xếp (đè mặc định BR2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/search",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "search"
+              ]
+            },
+            "description": "Gửi `sort` thì client thắng; alias ngoài whitelist bị bỏ qua im lặng.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": 1,\n  \"pageSize\": 50,\n  \"sort\": \"tongTienThanhToanQuyDoi:desc,ngayHachToan:asc\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cột khả dụng (GET /cot)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/cot",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "cot"
+              ]
+            },
+            "description": "Sinh từ CHÍNH whitelist @Searchable của entity — FE dựng bộ lọc động và màn cấu hình cột từ đây, không hardcode. Field không có ở đây thì lọc/sort theo nó cũng bị BE bỏ qua."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('có đủ 10 tiêu chí tìm kiếm', () => {",
+                  "  const keys = b.data.map(c => c.key);",
+                  "  ['ngayHachToan','soChungTu','soHoaDon','tenNhaCungCap','loaiNghiepVu',",
+                  "   'hinhThuc','status','trangThaiNhanHoaDon','trangThaiThanhToan',",
+                  "   'tinhTrangPhanBo'].forEach(k => pm.expect(keys).to.include(k));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lookup enum (6 dropdown)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/lookup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "lookup"
+              ]
+            },
+            "description": "Tập giá trị hợp lệ của 6 trường enum. Trả TÊN HẰNG Java — đúng giá trị mà `filters` nhận.\n\n`trangThaiChungTu` trả đủ 5 giá trị của CHECK constraint dù SCR chỉ liệt kê 2 (Đã ghi sổ / Chưa ghi sổ) — xem §11-Q6 của kế hoạch.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "pm.test('đủ 6 nhóm', () => pm.expect(Object.keys(d)).to.have.lengthOf(6));",
+                  "pm.test('loaiNghiepVu là tên hằng', () => pm.expect(d.loaiNghiepVu).to.include('NHAP_KHO'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Chi tiết",
+      "item": [
+        {
+          "name": "Header chứng từ",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/{{ctmhId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "{{ctmhId}}"
+              ]
+            },
+            "description": "Chỉ header — dòng chi tiết lấy ở endpoint riêng để lưới danh sách không kéo theo chúng."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "pm.test('có cột dẫn xuất soHoaDon', () => pm.expect(d).to.have.property('soHoaDon'));",
+                  "pm.test('có cặp số để đối chiếu tình trạng phân bổ', () => {",
+                  "  pm.expect(d).to.have.property('luyKeDaPhanBoQuyDoi');",
+                  "  pm.expect(d).to.have.property('tongChiPhiCanPhanBoQuyDoi');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dòng chi tiết",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/{{ctmhId}}/dong-chi-tiet",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "{{ctmhId}}",
+                "dong-chi-tiet"
+              ]
+            },
+            "description": "Theo đúng thứ tự hiển thị (stt tăng dần), nạp bằng @EntityGraph nên không N+1."
+          },
+          "response": []
+        },
+        {
+          "name": "Thông tin hạch toán (sổ cái đã ghi)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/{{ctmhId}}/thong-tin-hach-toan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "{{ctmhId}}",
+                "thong-tin-hach-toan"
+              ]
+            },
+            "description": "Các dòng acc_so_cai THẬT của chứng từ. Chứng từ chưa ghi sổ trả danh sách rỗng — trạng thái hợp lệ, không phải lỗi. Id bịa ra trả 404."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Chứng từ liên quan (SCR_CTMH_DSChungTuLienQuan)",
+      "item": [
+        {
+          "name": "Danh sách chứng từ liên quan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/{{ctChiPhiId}}/chung-tu-lien-quan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "{{ctChiPhiId}}",
+                "chung-tu-lien-quan"
+              ]
+            },
+            "description": "{{ctChiPhiId}} = id chứng từ CHI PHÍ đang bị thao tác xoá. Form mở ra từ cảnh báo MSG_PMKT-E-00485_129 khi người dùng chọn \"Có\".\n\nTrả TOÀN BỘ, không phân trang (BR_CTMH_DSLQ_01 \"load lên tất cả\"). Thứ tự BR_CTMH_DSLQ_02: ngày hạch toán tăng dần → số chứng từ tăng dần.\n\nQuyền .Delete chứ không .View: form chỉ tồn tại trong luồng xoá.\n\nCột \"Loại chứng từ\" trả MÃ (loaiNghiepVu + hinhThuc + hinhThucThanhToan + loaiChungTuId), FE ghép nhãn bằng i18n — xem §11-Q9."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "pm.test('sắp xếp tăng dần theo ngày hạch toán', () => {",
+                  "  const ngay = d.map(x => x.ngayHachToan).filter(Boolean);",
+                  "  pm.expect(ngay).to.eql([...ngay].sort());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xuất Excel danh sách liên quan (theo bộ lọc đang hiển thị)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/{{ctChiPhiId}}/chung-tu-lien-quan/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "{{ctChiPhiId}}",
+                "chung-tu-lien-quan",
+                "export"
+              ]
+            },
+            "description": "Gửi lại đúng bộ lọc cột mà form đang áp để file khớp dữ liệu đang hiển thị; body rỗng thì xuất toàn bộ.\n\nChỉ 4 field được lọc: ngayHachToan, ngayChungTu, soChungTu, loaiNghiepVu. Field khác trả 400 (khác bộ lọc chung vốn bỏ qua im lặng).\n\nBiên `null` trong between = mở biên.\n\nĐòi ĐỒNG THỜI MuaHangHoa.Delete và MuaHangHoa.Export.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filters\": [\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"PNK\"\n    },\n    {\n      \"field\": \"ngayHachToan\",\n      \"op\": \"between\",\n      \"value\": [\n        \"2026-07-01\",\n        null\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Excel",
+      "item": [
+        {
+          "name": "Export danh sách (theo bộ lọc hiện tại)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/export?mauId={{mauId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "export"
+              ],
+              "query": [
+                {
+                  "key": "mauId",
+                  "value": "{{mauId}}"
+                }
+              ]
+            },
+            "description": "Xuất TOÀN BỘ bản ghi khớp bộ lọc (không chỉ trang đang xem), trần MAX_EXPORT_ROWS = 100.000 dòng.\n\nBộ cột: mẫu chỉ định qua mauId → mẫu mặc định của người dùng → 12 cột mặc định của màn. Để trống mauId nếu chưa có mẫu.\n\nCần quyền MuaHangHoa.Export — seed ở V344.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": 1,\n  \"pageSize\": 20,\n  \"sort\": \"ngayHachToan:desc,soChungTu:asc\",\n  \"logic\": \"AND\",\n  \"filters\": [\n    {\n      \"field\": \"ngayHachToan\",\n      \"op\": \"between\",\n      \"value\": [\n        \"2026-08-01\",\n        \"2026-08-31\"\n      ]\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"PNK\"\n    },\n    {\n      \"field\": \"soHoaDon\",\n      \"op\": \"like\",\n      \"value\": \"0001\"\n    },\n    {\n      \"field\": \"tenNhaCungCap\",\n      \"op\": \"like\",\n      \"value\": \"cong ty\"\n    },\n    {\n      \"field\": \"loaiNghiepVu\",\n      \"op\": \"in\",\n      \"value\": [\n        \"NHAP_KHO\",\n        \"KHONG_QUA_KHO\"\n      ]\n    },\n    {\n      \"field\": \"hinhThuc\",\n      \"op\": \"in\",\n      \"value\": [\n        \"NHAP_KHAU\"\n      ]\n    },\n    {\n      \"field\": \"status\",\n      \"op\": \"in\",\n      \"value\": [\n        \"DA_GHI_SO\"\n      ]\n    },\n    {\n      \"field\": \"trangThaiNhanHoaDon\",\n      \"op\": \"in\",\n      \"value\": [\n        \"CHUA_NHAN\"\n      ]\n    },\n    {\n      \"field\": \"trangThaiThanhToan\",\n      \"op\": \"in\",\n      \"value\": [\n        \"CHUA_THANH_TOAN\"\n      ]\n    },\n    {\n      \"field\": \"tinhTrangPhanBo\",\n      \"op\": \"in\",\n      \"value\": [\n        \"PHAN_BO_MOT_PHAN\"\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Ca kiểm thử kỳ vọng lỗi",
+      "item": [
+        {
+          "name": "Thêm mới → 400 CHUA_HO_TRO (PMKT-U-00502)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang"
+              ]
+            },
+            "description": "Endpoint tồn tại do kế thừa BaseChungTuController nhưng luồng ghi chưa cài. Không method ghi nào chạm repository.save().",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"soChungTu\": \"PNK9999\",\n  \"ngayChungTu\": \"2026-08-05\",\n  \"ngayHachToan\": \"2026-08-05\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "const e = pm.response.json();",
+                  "pm.test('envelope lỗi PHẲNG, không bọc error', () => {",
+                  "  pm.expect(e).to.have.property('code');",
+                  "  pm.expect(e).to.not.have.property('error');",
+                  "});",
+                  "pm.test('code = CHUA_HO_TRO', () => pm.expect(e.code).to.eql('CHUA_HO_TRO'));",
+                  "pm.test('nêu đích danh use case', () => pm.expect(e.message).to.include('PMKT-U-00502'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ghi sổ → 400 CHUA_HO_TRO (PMKT-U-00508)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/{{ctmhId}}/ghi-so",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "{{ctmhId}}",
+                "ghi-so"
+              ]
+            },
+            "description": "Tương tự: cần quyền MuaHangHoa.Post để tới được service, rồi service từ chối."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('PMKT-U-00508', () => pm.expect(pm.response.json().message).to.include('PMKT-U-00508'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Toán tử lọc sai → 400 INVALID_FILTER",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/search",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "search"
+              ]
+            },
+            "description": "between cần ĐÚNG 2 giá trị (cho phép 1 đầu null). Gửi 1 hay 3 là bug client.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filters\": [\n    {\n      \"field\": \"ngayHachToan\",\n      \"op\": \"between\",\n      \"value\": [\n        \"2026-08-01\"\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Giá trị enum sai (gửi chuỗi DB thay vì tên hằng) → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/search",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "search"
+              ]
+            },
+            "description": "ValueConverter ép enum bằng Enum.valueOf(name). Phải gửi NHAP_KHO. Đây là bẫy hay gặp nhất — lấy giá trị đúng ở POST /lookup.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filters\": [\n    {\n      \"field\": \"loaiNghiepVu\",\n      \"op\": \"in\",\n      \"value\": [\n        \"NhapKho\"\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Quá 20 điều kiện lọc → 400 TOO_MANY_FILTERS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/search",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "search"
+              ]
+            },
+            "description": "Trần MAX_FILTERS = 20, chặn payload lọc phình vô hạn.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filters\": [\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X0\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X1\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X2\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X3\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X4\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X5\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X6\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X7\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X8\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X9\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X10\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X11\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X12\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X13\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X14\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X15\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X16\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X17\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X18\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X19\"\n    },\n    {\n      \"field\": \"soChungTu\",\n      \"op\": \"like\",\n      \"value\": \"X20\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Field ngoài whitelist → bỏ qua IM LẶNG (vẫn 200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/search",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "search"
+              ]
+            },
+            "description": "Hành vi CỐ Ý của DynamicSpecification: chỉ log.warn, không ném lỗi và không nới kết quả. Khác với form Chứng từ liên quan (trả 400).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filters\": [\n    {\n      \"field\": \"cotKhongTonTai\",\n      \"op\": \"eq\",\n      \"value\": \"x\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Id không tồn tại → 404 MSG_PMKT-E-00485_002",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            },
+            "description": "Bản ghi đã xoá mềm cũng bị coi như không tồn tại."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));",
+                  "pm.test('messageId của epic', () => pm.expect(pm.response.json().messageId).to.eql('MSG_PMKT-E-00485_002'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lọc form liên quan bằng field lạ → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/mua-hang/chung-tu-mua-hang/{{ctChiPhiId}}/chung-tu-lien-quan/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "mua-hang",
+                "chung-tu-mua-hang",
+                "{{ctChiPhiId}}",
+                "chung-tu-lien-quan",
+                "export"
+              ]
+            },
+            "description": "Form chỉ có 4 cột nên whitelist CHẶT hơn bộ lọc chung: field lạ nghĩa là client hiểu sai hợp đồng, không phải người dùng lọc thừa.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filters\": [\n    {\n      \"field\": \"tenNhaCungCap\",\n      \"op\": \"like\",\n      \"value\": \"a\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

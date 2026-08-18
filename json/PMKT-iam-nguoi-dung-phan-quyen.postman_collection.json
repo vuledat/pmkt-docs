@@ -1,0 +1,468 @@
+{
+  "info": {
+    "name": "PMKT — IAM: Người dùng & Phân quyền",
+    "description": "Tạo user (kèm provisioning Keycloak), vai trò, gán quyền. Base URL mặc định trỏ front-door (8080). Biến: baseUrl, cellAppUrl, controlPlaneUrl, internalToken, accessToken, tenantId.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "cellAppUrl", "value": "http://localhost:8081" },
+    { "key": "controlPlaneUrl", "value": "http://localhost:8082" },
+    { "key": "internalToken", "value": "" },
+    { "key": "accessToken", "value": "" },
+    { "key": "tenantId", "value": "" },
+    { "key": "nguoiDungId", "value": "" },
+    { "key": "vaiTroId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0. Auth (identity qua front-door)",
+      "item": [
+        {
+          "name": "POST /auth/login — lấy access_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.access_token) { pm.collectionVariables.set('accessToken', b.access_token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Trả về JSON token của Keycloak (access_token/refresh_token). Nếu tài khoản bật MFA thì trả {mfaRequired, ticket} → gọi tiếp /auth/mfa/verify.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"owner@example.com\",\n  \"password\": \"Password@123\",\n  \"remember\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/mfa/verify",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/mfa/verify",
+            "body": { "mode": "raw", "raw": "{\n  \"ticket\": \"<ticket>\",\n  \"otp\": \"123456\"\n}" }
+          }
+        },
+        {
+          "name": "POST /auth/refresh",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"<refresh_token>\"\n}" }
+          }
+        },
+        {
+          "name": "GET /api/iam/me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/iam/me"
+          }
+        },
+        {
+          "name": "GET /api/iam/me/permissions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/iam/me/permissions"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Người dùng (cell-app) — tự provisioning Keycloak",
+      "item": [
+        {
+          "name": "POST /api/iam/nguoi-dung — tạo user (tạo luôn trên Keycloak)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.data && b.data.id) { pm.collectionVariables.set('nguoiDungId', b.data.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/iam/nguoi-dung",
+            "description": "Quyền: HTNguoiDung.Create. code để trống = tự sinh (BR_ND_1). guiKichHoat=true → identity gửi email đặt mật khẩu. Service gọi control-plane /onboarding/member để tạo định danh Keycloak; rollback DB thì tự deprovision.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": null,\n  \"nhanVienId\": null,\n  \"hoTen\": \"Nguyen Van A\",\n  \"email\": \"nva@example.com\",\n  \"soDienThoai\": \"0900000001\",\n  \"donViId\": null,\n  \"ngaySinh\": \"1995-05-20\",\n  \"gioiTinh\": \"NAM\",\n  \"vaiTroIds\": [\"{{vaiTroId}}\"],\n  \"guiKichHoat\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /api/iam/nguoi-dung — danh sách",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/iam/nguoi-dung?page=1&pageSize=20&sort=code:asc&search=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "iam", "nguoi-dung"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20", "description": "10|20|50|100" },
+                { "key": "sort", "value": "code:asc", "description": "code|hoTen|email : asc|desc" },
+                { "key": "search", "value": "" },
+                { "key": "trangThai", "value": "", "disabled": true },
+                { "key": "donViId", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /api/iam/nguoi-dung/{id} — chi tiết",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/iam/nguoi-dung/{{nguoiDungId}}",
+            "description": "Response trả kèm vaiTros[] và updatedAt — dùng updatedAt cho PUT/DELETE (optimistic locking)."
+          }
+        },
+        {
+          "name": "PUT /api/iam/nguoi-dung/{id} — sửa + gán lại vai trò",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/iam/nguoi-dung/{{nguoiDungId}}",
+            "description": "vaiTroIds là danh sách THAY THẾ toàn bộ vai trò của user. updatedAt lấy từ GET chi tiết (BR_ND_14).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nhanVienId\": null,\n  \"hoTen\": \"Nguyen Van A\",\n  \"email\": \"nva@example.com\",\n  \"soDienThoai\": \"0900000001\",\n  \"donViId\": null,\n  \"ngaySinh\": \"1995-05-20\",\n  \"gioiTinh\": \"NAM\",\n  \"vaiTroIds\": [\"{{vaiTroId}}\"],\n  \"guiKichHoat\": false,\n  \"updatedAt\": \"2026-08-18T00:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /api/iam/nguoi-dung/{id}/gui-kich-hoat",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/iam/nguoi-dung/{{nguoiDungId}}/gui-kich-hoat",
+            "description": "Quyền HTNguoiDung.SendActive — gửi/gửi lại email mời + đặt mật khẩu (Keycloak required action)."
+          }
+        },
+        {
+          "name": "POST /api/iam/nguoi-dung/{id}/khoa-mo-khoa",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/iam/nguoi-dung/{{nguoiDungId}}/khoa-mo-khoa",
+            "description": "hanhDong = KHOA | MO_KHOA. Đồng bộ enabled xuống Keycloak trong cùng transaction.",
+            "body": { "mode": "raw", "raw": "{\n  \"hanhDong\": \"KHOA\",\n  \"updatedAt\": \"2026-08-18T00:00:00Z\"\n}" }
+          }
+        },
+        {
+          "name": "POST /api/iam/nguoi-dung/lookup",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/iam/nguoi-dung/lookup",
+            "body": { "mode": "raw", "raw": "{\n  \"ids\": [\"{{nguoiDungId}}\"]\n}" }
+          }
+        },
+        {
+          "name": "DELETE /api/iam/nguoi-dung/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/iam/nguoi-dung/{{nguoiDungId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"updatedAt\": \"2026-08-18T00:00:00Z\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Vai trò & quyền",
+      "item": [
+        {
+          "name": "GET /api/iam/quyen — catalog mã quyền",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/iam/quyen",
+            "description": "Trả cây quyền (ma, module, muc/nhom/chucNang/hanhDong). Lấy field `ma` đưa vào mảng `quyen` khi tạo/sửa vai trò."
+          }
+        },
+        {
+          "name": "POST /api/iam/vai-tro — tạo vai trò + gán quyền + gán user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.data && b.data.id) { pm.collectionVariables.set('vaiTroId', b.data.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/iam/vai-tro",
+            "description": "quyen: mảng mã quyền lấy từ GET /api/iam/quyen. nguoiDungIds: gán ngay user vào vai trò.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ma\": \"KETOAN\",\n  \"ten\": \"Kế toán viên\",\n  \"moTa\": \"Vai trò kế toán\",\n  \"quyen\": [\"HTNguoiDung.View\", \"HTVaiTro.View\"],\n  \"nguoiDungIds\": []\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /api/iam/vai-tro — danh sách",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/iam/vai-tro?page=1&pageSize=20&sort=ma:asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "iam", "vai-tro"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "sort", "value": "ma:asc", "description": "ma|ten : asc|desc" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "laAdmin", "value": "true", "disabled": true },
+                { "key": "coNguoiDung", "value": "true", "disabled": true },
+                { "key": "tuNgay", "value": "2026-01-01", "disabled": true },
+                { "key": "denNgay", "value": "2026-12-31", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /api/iam/vai-tro/{id}",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/iam/vai-tro/{{vaiTroId}}"
+          }
+        },
+        {
+          "name": "PUT /api/iam/vai-tro/{id} — đổi quyền / đổi thành viên",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/iam/vai-tro/{{vaiTroId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ma\": \"KETOAN\",\n  \"ten\": \"Kế toán viên\",\n  \"moTa\": \"Vai trò kế toán\",\n  \"quyen\": [\"HTNguoiDung.View\", \"HTNguoiDung.Create\"],\n  \"nguoiDungIds\": [\"{{nguoiDungId}}\"],\n  \"updatedAt\": \"2026-08-18T00:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/iam/vai-tro/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/iam/vai-tro/{{vaiTroId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. RBAC console (internal — grant trực tiếp theo phạm vi)",
+      "item": [
+        {
+          "name": "GET /internal/rbac/danh-muc/quyen",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Internal-Token", "value": "{{internalToken}}" }],
+            "url": "{{cellAppUrl}}/internal/rbac/danh-muc/quyen?tenantId={{tenantId}}"
+          }
+        },
+        {
+          "name": "GET /internal/rbac/danh-muc/don-vi",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Internal-Token", "value": "{{internalToken}}" }],
+            "url": "{{cellAppUrl}}/internal/rbac/danh-muc/don-vi?tenantId={{tenantId}}",
+            "description": "Nguồn lấy donViId để điền vào CreateNguoiDungRequest.donViId hoặc phạm vi DON_VI."
+          }
+        },
+        {
+          "name": "GET /internal/rbac/danh-muc/tai-khoan",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Internal-Token", "value": "{{internalToken}}" }],
+            "url": "{{cellAppUrl}}/internal/rbac/danh-muc/tai-khoan?tenantId={{tenantId}}"
+          }
+        },
+        {
+          "name": "POST /internal/rbac/grants — cấp quyền trực tiếp",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Token", "value": "{{internalToken}}" }
+            ],
+            "url": "{{cellAppUrl}}/internal/rbac/grants",
+            "description": "phamViLoai = TOAN_BO | DON_VI (DON_VI thì bắt buộc donViIds). nguoiCapId để trống = cấp với tư cách hệ thống (bỏ qua trigger kiểm người cấp).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"nguoiCapId\": null,\n  \"taiKhoanId\": \"{{nguoiDungId}}\",\n  \"maQuyen\": \"HTNguoiDung.View\",\n  \"phamViLoai\": \"TOAN_BO\",\n  \"donViIds\": [],\n  \"baoGomCapDuoi\": true,\n  \"ghiChu\": \"cap thu cong qua postman\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /internal/rbac/fixture/seed — dựng cây đơn vị/kho mẫu",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Token", "value": "{{internalToken}}" }
+            ],
+            "url": "{{cellAppUrl}}/internal/rbac/fixture/seed",
+            "description": "Idempotent — chạy lại lần 2 trả daTao rỗng là đúng. taiKhoanId có giá trị thì áp luôn bộ grant R6 cho tài khoản đó.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"taiKhoanId\": null,\n  \"nguoiCapId\": null\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /internal/rbac/grants — xem grants",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Internal-Token", "value": "{{internalToken}}" }],
+            "url": "{{cellAppUrl}}/internal/rbac/grants?tenantId={{tenantId}}"
+          }
+        },
+        {
+          "name": "DELETE /internal/rbac/grants/{grantId} — thu hồi",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "X-Internal-Token", "value": "{{internalToken}}" }],
+            "url": "{{cellAppUrl}}/internal/rbac/grants/<grantId>?tenantId={{tenantId}}"
+          }
+        },
+        {
+          "name": "GET /internal/rbac/closure — quyền hiệu lực của 1 tài khoản",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Internal-Token", "value": "{{internalToken}}" }],
+            "url": "{{cellAppUrl}}/internal/rbac/closure?tenantId={{tenantId}}&taiKhoanId={{nguoiDungId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Keycloak trực tiếp (control-plane, bỏ qua cell-app)",
+      "item": [
+        {
+          "name": "POST /api/control-plane/onboarding/member — tạo định danh Keycloak",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Token", "value": "{{internalToken}}" }
+            ],
+            "url": "{{controlPlaneUrl}}/api/control-plane/onboarding/member",
+            "description": "Trả { userId, created }. Idempotent: email đã có thì trả user cũ. KHÔNG tạo bản ghi nguoi_dung trong cell-app — chỉ dùng khi muốn thao tác riêng lớp định danh.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"email\": \"nva@example.com\",\n  \"name\": \"Nguyen Van A\",\n  \"phone\": \"0900000001\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /api/control-plane/onboarding/member/invite — gửi email đặt mật khẩu",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Token", "value": "{{internalToken}}" }
+            ],
+            "url": "{{controlPlaneUrl}}/api/control-plane/onboarding/member/invite",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nva@example.com\",\n  \"tenantId\": \"{{tenantId}}\",\n  \"hoTen\": \"Nguyen Van A\",\n  \"tenantName\": \"Cong ty ABC\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /api/control-plane/onboarding/member/set-enabled",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Token", "value": "{{internalToken}}" }
+            ],
+            "url": "{{controlPlaneUrl}}/api/control-plane/onboarding/member/set-enabled",
+            "description": "accountStatus = ACTIVE | LOCKED | SUSPENDED | DELETED",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nva@example.com\",\n  \"enabled\": false,\n  \"accountStatus\": \"LOCKED\",\n  \"tenantId\": \"{{tenantId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /api/control-plane/onboarding/member/deprovision",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Token", "value": "{{internalToken}}" }
+            ],
+            "url": "{{controlPlaneUrl}}/api/control-plane/onboarding/member/deprovision",
+            "description": "Gỡ liên kết tenant khỏi định danh; hết tenant thì xóa hẳn user Keycloak.",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"nva@example.com\",\n  \"tenantId\": \"{{tenantId}}\"\n}" }
+          }
+        },
+        {
+          "name": "POST /api/control-plane/onboarding/owner — tạo tenant + chủ sở hữu",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-Token", "value": "{{internalToken}}" }
+            ],
+            "url": "{{controlPlaneUrl}}/api/control-plane/onboarding/owner",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mst\": \"0101234567\",\n  \"tenDoanhNghiep\": \"Cong ty ABC\",\n  \"ownerEmail\": \"owner@example.com\",\n  \"ownerName\": \"Chu So Huu\",\n  \"ownerPhone\": \"0900000000\",\n  \"hubContractId\": \"HD-001\",\n  \"packageCode\": \"STANDARD\",\n  \"soNguoiDungToiDa\": 10,\n  \"ngayBatDau\": \"2026-08-18\",\n  \"ngayKetThuc\": \"2027-08-18\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
