@@ -1,7 +1,7 @@
 # Kế hoạch triển khai API — Hóa đơn bán hàng (PMKT-E-06196)
 
-> **Trạng thái:** `BẢN NHÁP CHỜ REVIEW` — chưa code dòng nào.
-> **Ngày cập nhật:** 2026-08-14
+> **Trạng thái:** `BẢN NHÁP CHỜ REVIEW` — F1 (danh sách) đã có code, F2–F6 (thêm/sửa/xóa/chi tiết/lập chứng từ) **chưa cài đặt**, controller chặn tường minh (xem §0-bis bên dưới).
+> **Ngày cập nhật:** 2026-08-20 (rà soát lại lần 2 — đối chiếu commit BA `d23d1e20d`, `25f9a7ca6` ngày 17/08 + code Java hiện có; lần đầu 2026-08-14)
 > **Người review cần có:** 1 BA (chốt §12) + 1 Dev BE/DBA (chốt §7, §9, §10)
 
 | Mục | Nội dung |
@@ -9,7 +9,7 @@
 | Use case | `PMKT-U-06456 DanhSach` · `PMKT-U-06457 ThemMoi` (thư mục `ThemMoi/`, BA chưa đánh mã — xem §12-Q1) · `PMKT-U-06466 ChiTiet` · `PMKT-U-06458 CapNhat` · `PMKT-U-06459 Xoa` |
 | Màn hình | `SCR_HDBanHang_DanhSach.md` · `SCR_HDBanHang_ThemMoi.md` · `SCR_HDBanHang_ChiTiet.md` · `SCR_HDBanHang_CapNhat.md` · `SCR_HDBanHang_Xoa.md` |
 | Tài liệu nguồn | `pmkt-docs/ba/PMKT-E-06196_HoaDonBanHang/` + `pmkt-docs/ba/PMKT-E-06194_ChungTuBanHang/5.screens/SCR_CTBH_ThemMoi.md` (logic chuẩn) + `pmkt-docs/ba/Common/business_rules.md` |
-| Module BE | `cell-app/src/main/java/vn/dopai/pmkt/cell/hoa_don_ban_hang/` (**tạo mới**) |
+| Module BE | `cell-app/src/main/java/vn/vtt/pmkt/cell/hoa_don_ban_hang/` (**đã scaffold** — entity/dto/repository/controller/service của **F1 danh sách** đã có code; F2–F6 chưa cài, xem §0-bis) |
 | Bảng DB | `sal_hoa_don_ban_hang` (**đã có, 57 cột**) · `sal_hoa_don_ban_hang_chi_tiet` (**đã có, 47 cột**) — thiếu 11 cột so với BA, xem [07-thiet-ke-db.md](07-thiet-ke-db.md) |
 
 **Bộ file của kế hoạch này**
@@ -24,6 +24,46 @@
 | [`05-xoa-hoa-don.md`](05-xoa-hoa-don.md) | F5 — `DELETE /{id}` + `POST /xoa-hang-loat` |
 | [`06-lap-chung-tu-tu-hoa-don.md`](06-lap-chung-tu-tu-hoa-don.md) | F6 — nạp dữ liệu HĐ sang màn CTBH + đồng bộ `TrangThaiLapChungTu` |
 | [`07-thiet-ke-db.md`](07-thiet-ke-db.md) | migration `V3`, cột thêm mới, sửa CHECK, sửa unique index |
+
+---
+
+## 0-bis. Cập nhật so với code hiện tại (rà soát 2026-08-20)
+
+Chạy lại `/plan-be` vì tài liệu BA của epic đổi sau ngày sinh plan lần đầu (14/08), qua hai commit
+17/08 trong `pmkt-docs`:
+
+- `d23d1e20d` — "đồng bộ tên entity ldm - scr field": đổi cách viết tên field BA từ bí danh
+  `HoaDonBan.X` sang tên bảng/entity chuẩn LDM `sal_hoa_don_ban_hang.X` (và `mst_mau_so_hoa_don`,
+  `sal_hoa_don_ban_hang_chi_tiet`) trong `5.screens/SCR_HDBanHang_DanhSach.md`,
+  `5.screens/SCR_HDBanHang_ThemMoi.md`, `Matrix/…/SCR_HDBanHang_ThemMoi_MaTranAnHien.md`.
+- `25f9a7ca6` — "gom mô tả sinh bút toán về BR20…": phía 06196 chỉ sửa 2 dòng ghi chú (bỏ "Tab Hạch
+  toán" khỏi danh sách tab bị lược trong `Matrix/…/_scope.md` và
+  `SCR_HDBanHang_ThemMoi_MaTranAnHien.md`) vì màn Hóa đơn **không có** tab này.
+
+**Kết luận: cả hai commit đều là chuẩn hóa CÁCH VIẾT tài liệu, KHÔNG đổi logic/trường/luật nghiệp
+vụ nào của 06196.** Đối chiếu cụ thể:
+
+| # | Điểm kiểm | Kết quả | Bằng chứng |
+|---|---|---|---|
+| 1 | Code Java (`HoaDonBanHang.java`, `HoaDonBanHangDto.java`) có dùng tên field/bảng sai chuẩn LDM không? | **KHÔNG có drift.** Entity đã `@Table(name = "sal_hoa_don_ban_hang")` và mọi `@Column` map đúng snake_case của bảng thật (vd `so_hoa_don`, `ngay_hoa_don`, `trang_thai_lap_chung_tu`…) theo đúng quy ước Java (`cell-app/CLAUDE.md` §Đặt tên), độc lập với việc tài liệu BA gọi bảng bằng bí danh `HoaDonBan` hay tên chuẩn `sal_hoa_don_ban_hang` — hai cách viết chỉ là bề mặt tài liệu, quy về cùng một bảng/cột vật lý. | `cell-app/src/main/java/vn/vtt/pmkt/cell/hoa_don_ban_hang/internal/entity/HoaDonBanHang.java:21,37,44,55,69` |
+| 2 | Code có giả định sai "Hóa đơn có Tab Hạch toán" không? | **KHÔNG.** Entity kế thừa `AggregateRootEntity` chứ không `BaseChungTuEntity` (đúng D2 §0), không có field/logic ghi sổ, không import `hach_toan`/`GhiSoApi`; comment ở `package-info.java` và entity nói rõ "không có ghi sổ/bỏ ghi sổ". Controller cũng chưa cài luồng ghi nào có thể sinh bút toán. | `cell-app/src/main/java/vn/vtt/pmkt/cell/hoa_don_ban_hang/package-info.java:8-12` · `internal/entity/HoaDonBanHang.java:23-27` · `internal/controller/HoaDonBanHangController.java:70-88` |
+| 3 | Plan cũ (00, 01, 07) có trích dẫn `file:dòng` bằng bí danh `HoaDonBan.X` đã lỗi thời không? | **CÓ, đã sửa trong bản này** — thuần túy cập nhật cách trích dẫn cho khớp tài liệu BA mới nhất, không đổi bất kỳ quyết định/thiết kế nào. | Xem danh sách sửa bên dưới |
+| 4 | Plan cũ có giả định "Tab Hạch toán" ở đâu không? | **KHÔNG** — grep toàn bộ `docs/doing/PMKT-E-06196-hoa-don-ban-hang-api/*.md` cũ không có chuỗi "Tab Hạch toán". D2 (§0) đã đúng ngay từ đầu: Hóa đơn không hạch toán. | — |
+| 5 | Package Java trong plan cũ đúng chưa? | **SAI, đã sửa trong bản này** — 5 chỗ ở `00-ke-hoach-tong.md` và `06-lap-chung-tu-tu-hoa-don.md` ghi package `vn.dopai.pmkt…` (theo `CLAUDE.md` gốc, đã lỗi thời), trong khi code thật và `cell-app/CLAUDE.md` dùng `vn.vtt.pmkt`. Lỗi này **không liên quan** hai commit BA — là sai sót còn sót lại từ lần sinh plan đầu. | `cell-app/src/main/java/vn/vtt/pmkt/cell/hoa_don_ban_hang/package-info.java:1` (thực tế) so với `00-ke-hoach-tong.md:12,94,241,505` và `06-lap-chung-tu-tu-hoa-don.md:210` (cũ) |
+| 6 | Phạm vi code đã cài so với 6 chức năng (F1–F6) trong plan? | Chỉ **F1 (xem danh sách)** có code chạy được (`HoaDonBanHangController` kế thừa `BaseCrudController` cho `search`/`cot`/`{id}`/`export`). **F2 (thêm mới), F4 (cập nhật), F5 (xóa)** bị chặn tường minh — `create()`/`update()`/`delete()` override ném `ApiException.badRequest(MaLoiHoaDonBanHang.CHUA_HO_TRO, …)`. **F3 (chi tiết)** dùng chung endpoint `GET /{id}` của base nhưng response DTO đầy đủ 41 field (`HoaDonBanHangDto`) kể cả phần "chỉ có nghĩa cho Thêm/Sửa" — cần đối chiếu lại với `03-xem-chi-tiet-hoa-don.md` khi cài thật. **F6 (lập chứng từ từ hóa đơn)** chưa có endpoint nào. | `internal/controller/HoaDonBanHangController.java:70-88` |
+
+**Sửa cụ thể trong lần rà soát này** (đổi bí danh field, không đổi nội dung/quyết định):
+
+| File | Vị trí | Trước | Sau |
+|---|---|---|---|
+| `00-ke-hoach-tong.md` | dòng mermaid "Chiều 2" | `HoaDonBan.TrangThaiLapChungTu` | `sal_hoa_don_ban_hang.TrangThaiLapChungTu` |
+| `00-ke-hoach-tong.md` | bảng migration `V3` mục 1 | `HoaDonBan.ChungTuBanId` | `sal_hoa_don_ban_hang.ChungTuBanId` |
+| `01-xem-danh-sach-hoa-don.md` | bảng "Ánh xạ cột BA ↔ DB ↔ DTO" (mục 2–9) | `HoaDonBan.NgayHoaDon`, `.SoHoaDon`, `.TenKhachHang`, `.TrangThaiLapChungTu`, `.TrangThaiPhatHanh`, `.TongThueGTGT`/`.TongThueGTGTQuyDoi`, `.TrangThaiHoaDon` | đổi tiền tố `HoaDonBan.` → `sal_hoa_don_ban_hang.` cho toàn bộ 7 dòng |
+| `07-thiet-ke-db.md` | bảng "Cột thiếu" — cột `chung_tu_ban_id` | `HoaDonBan.ChungTuBanId`; trích `SCR_CTBH_ThemMoi.md:1305` | `sal_hoa_don_ban_hang.ChungTuBanId`; trích dòng đã cập nhật `SCR_CTBH_ThemMoi.md:1436` (số dòng đổi vì tài liệu 06194 đã được viết lại nhiều đợt kể từ 14/08) |
+| `00-ke-hoach-tong.md` · `06-lap-chung-tu-tu-hoa-don.md` | 5 chỗ package Java | `vn.dopai.pmkt…` | `vn.vtt.pmkt…` |
+
+Không sửa gì khác trong §0 (quyết định D1–D9), §1 (phạm vi), §3–§11: nội dung nghiệp vụ của các mục
+này vẫn đúng với BA mới nhất, chỉ là cách trích dẫn field cần cập nhật.
 
 ---
 
@@ -91,7 +131,7 @@ Kết quả (đã bỏ `master_data/**` — vùng đóng băng):
 | `quan_he_chung_tu/api/LoaiChungTu.java:25` | `SAL_HOA_DON_BAN_HANG(true, true)` — HĐ đã được khai là vừa nguồn vừa đích |
 
 ```bash
-find cell-app/src/main/java/vn/dopai/pmkt/cell -maxdepth 1 -type d
+find cell-app/src/main/java/vn/vtt/pmkt/cell -maxdepth 1 -type d
 ```
 → `accounting_core, chung_tu_ban_hang, chung_tu_mua_hang, common, core, integration_ops, master_data, platform_iam, quan_he_chung_tu, reporting`
 
@@ -238,7 +278,7 @@ cell/hoa_don_ban_hang/
             └── SoTienHoaDon.java
 ```
 
-Test đặt song ánh: `src/test/java/vn/dopai/pmkt/cell/hoa_don_ban_hang/internal/service/business/…`
+Test đặt song ánh: `src/test/java/vn/vtt/pmkt/cell/hoa_don_ban_hang/internal/service/business/…`
 
 ---
 
@@ -294,7 +334,7 @@ flowchart LR
   subgraph Chieu2["Chiều 2 — HĐ sinh ra CTBH (F6, lần này)"]
     HD2[Hóa đơn bán hàng] -->|Lập chứng từ bán hàng| CT2[Chứng từ bán hàng mới]
     CT2 -.->|cộng lượng đã tiêu thụ| C2["ctu_quan_he_chung_tu<br/>(dòng HĐ → dòng CTBH)"]
-    C2 -.->|suy ra| S2["HoaDonBan.TrangThaiLapChungTu<br/>Chưa lập / Đã lập 1 phần / Đã lập đủ"]
+    C2 -.->|suy ra| S2["sal_hoa_don_ban_hang.TrangThaiLapChungTu<br/>Chưa lập / Đã lập 1 phần / Đã lập đủ"]
   end
 ```
 
@@ -332,7 +372,7 @@ sequenceDiagram
 
 | # | Việc | Vì sao bắt buộc |
 |---|---|---|
-| 1 | Thêm 4 cột header: `tong_tien_thue_xk`, `tong_tien_thue_xk_quy_doi`, `trang_thai_hoa_don`, `chung_tu_ban_id` | `SCR_HDBanHang_ThemMoi.md:54` (Tổng thuế XK) · `SCR_HDBanHang_DanhSach.md:121` (`TrangThaiHoaDon`) · `:108` (`HoaDonBan.ChungTuBanId`) |
+| 1 | Thêm 4 cột header: `tong_tien_thue_xk`, `tong_tien_thue_xk_quy_doi`, `trang_thai_hoa_don`, `chung_tu_ban_id` | `SCR_HDBanHang_ThemMoi.md:54` (Tổng thuế XK) · `SCR_HDBanHang_DanhSach.md:121` (`TrangThaiHoaDon`) · `:108` (`sal_hoa_don_ban_hang.ChungTuBanId`) |
 | 2 | Thêm 7 cột chi tiết: `dien_giai`, `dien_giai_thue`, `khong_tong_hop_to_khai_gtgt`, `chiet_khau_hang_phan_tram`, `chiet_khau_hoa_don_phan_tram`, `gia_tri_tinh_thue_xk`, `gia_tri_tinh_thue_xk_quy_doi` | `SCR_HDBanHang_ThemMoi.md:44-45` · `SCR_CTBH_ThemMoi.md:234-235` (BR12d) · `:236-237` (BR14) |
 | 3 | Sửa CHECK `trang_thai_lap_chung_tu` → 3 giá trị + backfill | D8, `SCR_HDBanHang_DanhSach.md:61-63` |
 | 4 | Sửa CHECK `loai_nghiep_vu` → thêm `'Bán dịch vụ'` | `SCR_HDBanHang_ThemMoi.md:21` (HĐ lập kèm kế thừa `LoaiNghiepVu` của chứng từ nguồn) — chờ §12-Q5 |
@@ -502,4 +542,4 @@ Hành vi khi thiếu quyền (BR25.2): `QuyenChecker` ném 403; FE hiển thị 
 - `pmkt-docs/ba/PMKT-E-06194_ChungTuBanHang/5.screens/SCR_CTBH_ThemMoi.md` — BR06, BR07, BR08, BR09, BR10, BR11, BR12, BR13, BR14, BR15, BR23, BR24
 - `pmkt-docs/ba/Common/business_rules.md` — BR1, BR2, BR3, BR7, BR8, BR11, BR13, BR14, BR15, BR16, BR18, BR19, BR20, BR21, BR25, BR26, BR28, BR29, BR30, BR31, BR39, BR43, BR45, BR46
 - `CLAUDE.md`, `cell-app/CLAUDE.md`, `docs/conventions.md`, `docs/be-khung-kien-truc-chuan.md`
-- Mẫu code tham khảo: `cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_ban_hang/`, `.../core/`, `.../quan_he_chung_tu/`
+- Mẫu code tham khảo: `cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_ban_hang/`, `.../core/`, `.../quan_he_chung_tu/`

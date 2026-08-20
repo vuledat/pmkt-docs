@@ -42,7 +42,7 @@ Comment bảng (`V1:16788`): *"PMKT-E-06196 HoaDonBanhang — hóa đơn bán h�
 |---|---|---|
 | `tong_tien_thue_xk`, `tong_tien_thue_xk_quy_doi` | Bán hàng xuất khẩu ẩn chỉ tiêu thuế GTGT và **thay bằng Tổng thuế XK**; header đang có `tong_tien_thue_gtgt` nhưng **không có** cặp XK | `SCR_HDBanHang_ThemMoi.md:54` · `SCR_CTBH_ThemMoi.md:864` (BR14 "Lên Section Tổng hợp") |
 | `trang_thai_hoa_don` | Cột danh sách BR06, phải **lọc và sắp xếp được** ⇒ phải là cột vật lý | `SCR_HDBanHang_DanhSach.md:28,88-95,121` · [01 §7](01-xem-danh-sach-hoa-don.md) |
-| `chung_tu_ban_id` | BR08 nguồn dữ liệu danh sách nhắc đích danh **`HoaDonBan.ChungTuBanId`**; chỉ có link ở mức **dòng**, không có ở mức header | `SCR_HDBanHang_DanhSach.md:108` · `SCR_CTBH_ThemMoi.md:1305` (BR23 §nguồn — "liên kết ngược qua `HoaDonBan.ChungTuBanId`") |
+| `chung_tu_ban_id` | BR08 nguồn dữ liệu danh sách nhắc đích danh **`sal_hoa_don_ban_hang.ChungTuBanId`**; chỉ có link ở mức **dòng**, không có ở mức header | `SCR_HDBanHang_DanhSach.md:108` · `SCR_CTBH_ThemMoi.md:1436` ("Lập kèm hóa đơn" — "liên kết ngược qua `sal_hoa_don_ban_hang.ChungTuBanId`") |
 
 ### 1.2 `sal_hoa_don_ban_hang_chi_tiet` — 47 cột, `V1__baseline.sql:16874-16923`
 

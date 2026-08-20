@@ -1,20 +1,21 @@
 # PMKT-E-06194 — Chứng từ bán hàng (API) — Kế hoạch tổng
 
-> **Trạng thái:** `ĐÃ CODE (xem IMPLEMENT.md) — ĐÃ ĐỐI CHIẾU LẠI TÀI LIỆU 2026-08-18, CÒN 12 KHOẢNG CÁCH Ở §17`
-> **Ngày lập:** 2026-08-15 · **Người lập:** AI (skill `/plan-be`)
+> **Trạng thái:** `ĐÃ CODE PHẦN LỚN — ĐÃ ĐỐI CHIẾU LẠI TÀI LIỆU 2026-08-20, 3 ĐIỂM LỆCH MỚI Ở §18 "Cập nhật so với code hiện tại" (rename TrangThaiGhiSo · luật Bỏ ghi sổ đổi · DonDatHangId) + 12 khoảng cách cũ chưa xử lý ở §17`
+> **Ngày lập:** 2026-08-15 · **Người lập:** AI (skill `/plan-be`) · **Cập nhật lần 3:** 2026-08-20
 > **Thay thế** bản plan cũ (khảo sát 2026-08-07, đối chiếu code 2026-08-10) — bản cũ đã lệch tài liệu,
 > lý do ghi ở [§0.1](#01-vì-sao-phải-viết-lại-thay-vì-cập-nhật).
 
 | Hạng mục | Giá trị |
 |---|---|
-| Tài liệu nguồn | `pmkt-docs/ba/PMKT-E-06194_ChungTuBanHang/` @ commit `1a928c53b` (2026-08-13 09:23) + `pmkt-docs/ba/Common/business_rules.md` @ `de31106d2` (2026-08-12 15:03) |
+| Tài liệu nguồn | `pmkt-docs/ba/PMKT-E-06194_ChungTuBanHang/` @ commit `8e559f800` (2026-08-20 11:00, merge `ManhDT/RefactorV5`) + `pmkt-docs/ba/Common/business_rules.md` cùng commit — xem [§18](#18-cập-nhật-so-với-code-hiện-tại-2026-08-20) cho phần đổi mới nhất |
 | UC trong phạm vi | PMKT-U-06396 · 06397–06399 · 06400–06402 · 06403–06405 · 06406–06408 · 06430 · 06431 · 06461 · 06966 · 06982–06985 |
 | Màn hình nguồn | `SCR_CTBH_DanhSach` · `SCR_CTBH_ThemMoi` · `SCR_CTBH_CapNhat` · `SCR_CTBH_XemChiTiet` · `SCR_CTBH_PopupXacNhanXoa` · `SCR_CTBH_PBCK` · `SCR_CTBH_PBCK_MHHD` |
-| Module BE | `cell/chung_tu_ban_hang/` (Modulith, đã tồn tại) |
-| Bảng DB | `sal_chung_tu_ban_hang` (87 cột) · `sal_chung_tu_ban_hang_chi_tiet` |
-| Code base @ | nhánh `feat/chung-tu-ban-hang-2`, commit `4f350a1e` (2026-08-16 13:15), base package **`vn.vtt.pmkt`** — xem [§2.0](#20-mốc-đối-chiếu-code) |
+| Module BE | `cell/chung_tu_ban_hang/` (Modulith, đã tồn tại — 46 file Java, đã có `api/GiaVonBanHangApi.java`) |
+| Bảng DB | `sal_chung_tu_ban_hang` (87+ cột) · `sal_chung_tu_ban_hang_chi_tiet` |
+| Code base @ | nhánh `feat/chung-tu-ban-hang-2`, commit `1f4ff8b57` (2026-08-20 17:32), base package **`vn.vtt.pmkt`** — xem [§2.0](#20-mốc-đối-chiếu-code) |
 | Đối chiếu lại | **2026-08-16** — tài liệu BA không đổi; code đổi lớn, chi tiết [§2.0](#20-mốc-đối-chiếu-code) |
 | Đối chiếu lại (2) | **2026-08-18** — tài liệu BA đổi 3 commit (BR20 viết lại, bỏ lọc trạng thái danh mục, đổi tên entity); code đã merge. Bảng khoảng cách: [§17](#17-đối-chiếu-tài-liệu--code-2026-08-18) |
+| Đối chiếu lại (3) | **2026-08-20** — tài liệu BA đổi 2 commit: `bb4c10eb9` (19/08 18:20, chuẩn hoá luật ghi sổ/bỏ ghi sổ bán-mua-đối trừ) + `beaf3662a` (20/08 10:46, sửa nhãn `DonHangId` → `DonDatHangId`). **3 điểm lệch code cụ thể** ở [§18](#18-cập-nhật-so-với-code-hiện-tại-2026-08-20) — đây là mục chính user yêu cầu đợt này. |
 
 ---
 
@@ -47,6 +48,10 @@ bảng **không còn tồn tại** → sửa từng dòng tốn hơn viết lạ
 | **D6** | Trạng thái chứng từ dùng `core.entity.TrangThaiChungTu` **hai giá trị** `CHUA_GHI_SO` / `DA_GHI_SO`, cột `trang_thai_chung_tu`. **✅ Đã là hiện trạng code từ 16/08** — không còn việc phải làm. | Khớp BR22 dòng "Ghi sổ" (Chưa ghi sổ · Đã ghi sổ). | Bản 5 trạng thái (`NHAP` · `CHO_DUYET` · `DA_DUYET` · `HUY`) không có trong BR nào và đã bị gỡ ([§2.0](#20-mốc-đối-chiếu-code) mục 3). |
 | **D7** | Bốn trạng thái BR22 là **trường dẫn xuất**, BE tính lại tại đúng các mốc BA liệt kê, **không** nhận giá trị client gửi lên. | DTO ghi không có 4 trường này; service tính từ counter `SoLuongDaXuatHoaDon` / `SoLuongDaXuatKho` / `SoTienDaThanhToan`. | Nhận từ client = client thành nguồn sự thật của trạng thái kế toán; hai màn khác nhau sẽ ghi ra hai kết quả khác nhau. |
 | **D8** | Chiết khấu: BE **tính lại toàn bộ** `TienChietKhau` / `TienThueGTGT` / các tổng trước khi lưu, không tin số client gửi. | `TinhToanBanHang` mở rộng theo BR12 (4 loại CK) + BR13 (thuế) + BR14 (thuế XK). | BR12 mục f là **ràng buộc chặn lưu** ở mức từng dòng — validate mà không tự tính lại thì client sửa số là lách được. |
+| **D11** | *(mới 2026-08-20)* **`TrangThaiGhiSo` là đổi TÊN LOGIC, không đổi field vật lý.** Giữ nguyên field Java `trangThaiChungTu` / cột `trang_thai_chung_tu` trên `core.entity.BaseChungTuEntity` — chỉ đổi **nhãn hiển thị** "Trạng thái chứng từ" → "Trạng thái ghi sổ" tại các chỗ thuộc module `chung_tu_ban_hang`. Chi tiết + bằng chứng ở [§18-1](#18-cập-nhật-so-với-code-hiện-tại-2026-08-20). | `ChungTuBanHangController.java:206` (nhãn cột `/cot`) đổi text; JSON contract (`ChungTuBanHangDto.trangThaiChungTu`, khoá lọc/sắp xếp `@Searchable` trên entity) **giữ nguyên tên**. Không sửa `core/`. | `trangThaiChungTu` là field của `core.entity.BaseChungTuEntity`, **dùng chung bởi 26 module chứng từ khác** (`grep -rl "extends BaseChungTuEntity"` → 26 file) và khoá lọc/sắp xếp `@Searchable` gắn trực tiếp vào tên field đó (`BaseChungTuEntity.java:70-73`). Đổi field ở module này sẽ làm khoá `/cot`, `/search` của module lệch tên so với 25 module còn lại, và cần sửa `core/` — vượt phạm vi một epic con, giống lý do đã chốt ở D10 cho BR46. |
+| **D12** | *(mới 2026-08-20)* **Viết lại điều kiện chặn Bỏ ghi sổ** theo luật mới `UC_CTBH_BoGhiSo.md` (commit `bb4c10eb9`): BỎ 3 điều kiện chặn cũ (`phieuXuatKhoId`, `hoaDonBanHangId` của dòng hàng, `quan_he_chung_tu.coLienKet`), GIỮ điều kiện `phieuThuId` (đại diện "chứng từ thu lập riêng") nhưng đúng ra phải kiểm **trạng thái Đã ghi sổ** của phiếu thu đó (hiện chưa làm được — xem [§18-2](#18-cập-nhật-so-với-code-hiện-tại-2026-08-20) mục Q), THÊM điều kiện mới: chặn khi chứng từ đang tham gia đối trừ công nợ, mã lỗi mới `MSG_PMKT-E-06194_052`. | `BoGhiSoChungTuBanHang.java:91-102` (`kiemTraChungTuLienQuan`) viết lại hoàn toàn; `MaLoiBanHang.java` thêm hằng số cho MSG_052. | Giữ nguyên logic cũ (chặn cả phiếu xuất kho + hóa đơn + coLienKet) sẽ **chặn oan** phần lớn thao tác bỏ ghi sổ hợp lệ theo luật mới — BA đã nói rõ "phiếu xuất kho lập riêng không xét" và không còn nhắc hóa đơn là điều kiện chặn (BR18 mục 8: hóa đơn có vòng đời riêng). |
+| **D13** | *(mới 2026-08-20)* **Kiểm tra "đang tham gia đối trừ công nợ" đọc thẳng bảng `pur_chung_tu_doi_tru_chi_tiet.chung_tu_cong_no_id`** (module `chung_tu_mua_hang` đang sở hữu, PMKT-E-14621/14622), qua một **NamedInterface mới** `chung_tu_mua_hang.api.DoiTruChungTuApi` thay vì import thẳng `internal.repository.DoiTruChungTuRepository`. | Thêm 1 method (vd `boolean dangDoiTru(UUID chungTuCongNoId)`) vào `chung_tu_mua_hang/api/` (module đó hiện **không có** `package-info.java` khai `@NamedInterface` cho phần `DoiTru*` — cần bổ sung); `chung_tu_ban_hang` gọi qua interface này, không đụng `internal/` của module bạn. | BA gọi bảng là `ktth_chung_tu_doi_tru_chi_tiet` nhưng bảng vật lý DUY NHẤT khớp cột `ChungTuCongNoId` là `pur_chung_tu_doi_tru_chi_tiet` (comment DB: *"dùng chung PhaiThu/PhaiTra qua `loai_doi_tru`"* — `V1__create_database.sql:13499`). Đọc thẳng bảng bằng native query trong `chung_tu_ban_hang` (bỏ qua ranh giới Modulith) vi phạm luật cứng "mọi truy cập chéo module đi qua `api/`"; tự thêm bảng mới trùng nghĩa thì sai vì bảng đã tồn tại và đã có 30 bản ghi seed dùng chung 2 chiều Thu/Trả. |
+| **D14** | *(mới 2026-08-20)* **Sửa Javadoc `DinhKhoanBanHang.java:157`** — đổi `DonHangId` thành `DonDatHangId` để khớp `SCR_CTBH_ThemMoi.md:1188` (BA đã tự sửa lỗi đánh máy này ở commit `beaf3662a`, 20/08). Đây chỉ là sửa comment mô tả trong TODO-C6, **không phát sinh code thật** — cột `DonDatHangId` vẫn nằm trong nhóm 4 trường "chưa truyền được" của G4 (kernel `DinhKhoan` không có tham số, bảng chi tiết CTBH cũng chưa có cột `don_dat_hang_id`). | `DinhKhoanBanHang.java:157` sửa chữ trong Javadoc. | Không có phương án khác — đây là đồng bộ thuật ngữ với BA, không phải quyết định kiến trúc. |
 
 ---
 
@@ -313,11 +318,13 @@ Nguyên văn từ `6.messages.md` — trích các mã plan này dùng tới:
 | Mã | Tình huống |
 |---|---|
 | `MSG_PMKT-E-06194_044` | Tiền CK vượt Thành tiền của dòng (BR12 mục f) — dòng thường: chặn; dòng KM/CKTM: cảnh báo |
-| `MSG_PMKT-E-06194_049` | Chặn bỏ ghi sổ khi còn phiếu thu / đối trừ lập riêng đã ghi sổ (BR22 mục 2) |
+| `MSG_PMKT-E-06194_049` | *(nội dung đổi 2026-08-20)* Đang có chứng từ lập riêng (phiếu thu) ở trạng thái Đã ghi sổ — chặn bỏ ghi sổ (BR21 mục 4, không còn nói "hoặc đối trừ") |
 | `MSG_PMKT-E-06194_050` | Sai định dạng MST tổ chức (10 số hoặc 10 số + "-" + 3 số) — BR01 mục d |
 | `MSG_PMKT-E-06194_051` | Sai định dạng CCCD chủ hộ (12 số) — BR01 mục d |
+| `MSG_PMKT-E-06194_052` | **mới 2026-08-20** — Chứng từ đã dùng để đối trừ công nợ, không thể bỏ ghi sổ; phải xóa phiếu đối trừ liên quan trước (BR21 mục 4, UC_CTBH_BoGhiSo AC2) — xem [D12](#02-bảng-quyết-định) · [D13](#02-bảng-quyết-định) · [§18](#18-cập-nhật-so-với-code-hiện-tại-2026-08-20) |
 | `MSG_PMKT-E-06194_101` | Trùng hóa đơn theo khóa Số HĐ + Ký hiệu + Mẫu số (BR06 mục b) |
 | `MSG_PMKT-E-06194_107` | Tài khoản đang chọn không còn hợp lệ (BR16 mục 4) |
+| `MSG_PMKT-E-06194_108` | Kết quả ghi sổ hàng loạt — số thành công/thất bại (UC_CTBH_GhiSo AC3) |
 
 > Các mã còn lại trong `6.messages.md` được trích **nguyên văn** tại từng file con nơi phát sinh.
 

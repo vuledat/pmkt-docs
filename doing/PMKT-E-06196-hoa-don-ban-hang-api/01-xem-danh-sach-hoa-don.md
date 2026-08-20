@@ -126,14 +126,14 @@
 | # | Cột BA (`SCR_…DanhSach.md:21-29`) | Field BA (`BR08`, dòng 114-122) | Cột DB thật | Field DTO / alias lọc | Lọc | Sort |
 |---|---|---|---|---|---|---|
 | 1 | STT | `-` | — | — (FE tính, BR2) | N | N |
-| 2 | Ngày hóa đơn | `HoaDonBan.NgayHoaDon` | `ngay_hoa_don date` | `ngayHoaDon` | Y | Y |
-| 3 | Số hóa đơn | `HoaDonBan.SoHoaDon` | `so_hoa_don text` | `soHoaDon` | Y | Y |
-| 4 | Tên khách hàng | `HoaDonBan.TenKhachHang` | `ten_khach_hang text` | `tenKhachHang` | Y | Y |
-| 5 | Trạng thái lập chứng từ | `HoaDonBan.TrangThaiLapChungTu` | **`trang_thai_lap_chung_tu text`** ⚠ CHECK phải mở lên 3 giá trị ([07 §2](07-thiet-ke-db.md)) | `trangThaiLapChungTu` | Y | Y |
-| 6 | Trạng thái phát hành HĐ | `HoaDonBan.TrangThaiPhatHanh` | **`trang_thai_phat_hanh_hoa_don text`** ⚠ tên DB **lệch** tên BA (`…_hoa_don` thừa) | `trangThaiPhatHanh` | Y | Y |
-| 7 | Tiền thuế GTGT | `HoaDonBan.TongThueGTGT` / `TongThueGTGTQuyDoi` | **`tong_tien_thue_gtgt`** / **`tong_tien_thue_gtgt_quy_doi`** ⚠ tên DB **lệch** tên BA (`tong_tien_…` vs `TongThue…`) | `tongTienThueGtgt`, `tongTienThueGtgtQuyDoi`, `tienThueGtgtHienThi` (dẫn xuất — F1-c) | N | N |
-| 8 | Trạng thái hóa đơn | `HoaDonBan.TrangThaiHoaDon` | **CHƯA CÓ CỘT** → thêm `trang_thai_hoa_don text` ở `V3` | `trangThaiHoaDon` | Y | Y |
-| 9 | Hóa đơn liên quan | `HoaDonBan.SoHoaDon` của HĐ điều chỉnh/thay thế | **không có cột** — suy từ `sal_dieu_chinh_hoa_don_ban_hang.hoa_don_ban_hang_goc_id` (`V1:16707`) | `hoaDonLienQuan: [{id, soHoaDon}]` | Y (§8.5) | N |
+| 2 | Ngày hóa đơn | `sal_hoa_don_ban_hang.NgayHoaDon` | `ngay_hoa_don date` | `ngayHoaDon` | Y | Y |
+| 3 | Số hóa đơn | `sal_hoa_don_ban_hang.SoHoaDon` | `so_hoa_don text` | `soHoaDon` | Y | Y |
+| 4 | Tên khách hàng | `sal_hoa_don_ban_hang.TenKhachHang` | `ten_khach_hang text` | `tenKhachHang` | Y | Y |
+| 5 | Trạng thái lập chứng từ | `sal_hoa_don_ban_hang.TrangThaiLapChungTu` | **`trang_thai_lap_chung_tu text`** ⚠ CHECK phải mở lên 3 giá trị ([07 §2](07-thiet-ke-db.md)) | `trangThaiLapChungTu` | Y | Y |
+| 6 | Trạng thái phát hành HĐ | `sal_hoa_don_ban_hang.TrangThaiPhatHanh` | **`trang_thai_phat_hanh_hoa_don text`** ⚠ tên DB **lệch** tên BA (`…_hoa_don` thừa) | `trangThaiPhatHanh` | Y | Y |
+| 7 | Tiền thuế GTGT | `sal_hoa_don_ban_hang.TongThueGTGT` / `TongThueGTGTQuyDoi` | **`tong_tien_thue_gtgt`** / **`tong_tien_thue_gtgt_quy_doi`** ⚠ tên DB **lệch** tên BA (`tong_tien_…` vs `TongThue…`) | `tongTienThueGtgt`, `tongTienThueGtgtQuyDoi`, `tienThueGtgtHienThi` (dẫn xuất — F1-c) | N | N |
+| 8 | Trạng thái hóa đơn | `sal_hoa_don_ban_hang.TrangThaiHoaDon` | **CHƯA CÓ CỘT** → thêm `trang_thai_hoa_don text` ở `V3` | `trangThaiHoaDon` | Y | Y |
+| 9 | Hóa đơn liên quan | `sal_hoa_don_ban_hang.SoHoaDon` của HĐ điều chỉnh/thay thế | **không có cột** — suy từ `sal_dieu_chinh_hoa_don_ban_hang.hoa_don_ban_hang_goc_id` (`V1:16707`) | `hoaDonLienQuan: [{id, soHoaDon}]` | Y (§8.5) | N |
 
 > ⚠️ **Không tạo migration đổi tên cột** cho mục 6 và 7 — cột đã có dữ liệu, đổi tên là rủi ro thừa. Chỉ ánh xạ ở `@Column(name = …)` của entity và alias `@Searchable`.
 

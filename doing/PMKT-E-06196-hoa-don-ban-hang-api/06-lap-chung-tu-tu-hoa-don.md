@@ -207,7 +207,7 @@ Hợp đồng tối thiểu:
 
 ```java
 // hoa_don_ban_hang/api/package-info.java  →  @NamedInterface("hoa-don-ban-hang")
-package vn.dopai.pmkt.cell.hoa_don_ban_hang.api;
+package vn.vtt.pmkt.cell.hoa_don_ban_hang.api;
 
 public interface HoaDonBanHangApi {
     /** Tính lại TrangThaiLapChungTu của các hóa đơn nguồn sau khi chứng từ đích thay đổi. */
