@@ -28,7 +28,7 @@ Hai luật:
 
 **Bảng mới thuộc module quan hệ chứng từ:** `ctu_quan_he_chung_tu` — đặt đúng chuẩn ngay từ đầu nên
 không nằm trong danh sách đổi tên. `ctu_` là tiền tố module mới (xem
-[thiet-ke-quan-he-chung-tu.md](done/thiet-ke-quan-he-chung-tu.md) §1.1 và §10-A).
+[thiet-ke-quan-he-chung-tu.md](../done/thiet-ke-quan-he-chung-tu.md) §1.1 và §10-A).
 
 **Không áp dụng cho:** danh mục (`mst_*`), phân quyền (`iam_*`), cấu hình (`cfg_*`), báo cáo
 (`rpt_*` — đã dùng hậu tố `_chi_tiet` đúng chuẩn), tổng hợp (`agg_*`, `acc_so_cai*`), audit (`aud_*`),
@@ -44,11 +44,11 @@ vận hành (`ops_*`), số dư đầu kỳ (`sdbd_*`), và hồ sơ tài sản 
 | File `.java` phải sửa | **13** | *24* |
 | Module Java bị chạm | `chung_tu_ban_hang`, `chung_tu_mua_hang`, **`master_data`** | nt |
 
-🚫 **`master_data/**` là vùng đóng băng** theo `CLAUDE.md`. Rename không hoàn tất được nếu không sửa
+🚫 **`master_data/**` là vùng đóng băng** theo `../../CLAUDE.md`. Rename không hoàn tất được nếu không sửa
 các native query có tên bảng cứng ở đó (đã biết: `LyDoNhapXuatRepository.java:74` →
 `inv_phieu_xuat_kho_module_kho`; `TaiKhoanNganHangRepository.java:30,34` → `cb_phieu_thu`,
 `sal_hoa_don_ban_hang`; `MucDichThuChiServiceImpl.java:33`). User **đã đồng ý** sửa `master_data` cho
-đợt chuẩn hóa ⇒ gỡ tạm `permissions.deny` trong [.claude/settings.json](../.claude/settings.json),
+đợt chuẩn hóa ⇒ gỡ tạm `permissions.deny` trong [.claude/settings.json](../../.claude/settings.json),
 khôi phục ngay sau khi PR merge.
 
 > Sau khi bỏ luật `chung_tu`, hai trong ba file trên (`TaiKhoanNganHangRepository`,
@@ -203,12 +203,12 @@ SELECT conname, length(conname) FROM pg_constraint WHERE length(conname) >= 63;
 - [ ] `./gradlew build` xanh trên CI có Docker (máy dev không có Docker → test Testcontainers luôn đỏ, đối chiếu danh sách lớp lỗi trước khi kết luận).
 - [ ] Query §6.1 chạy trên bản sao DB production, không còn kết quả.
 - [ ] Đo được thời gian giữ `ACCESS EXCLUSIVE lock` trên bản sao production.
-- [ ] Sau đợt cuối: khôi phục `permissions.deny` cho `master_data/**` trong `.claude/settings.json`.
+- [ ] Sau đợt cuối: khôi phục `permissions.deny` cho `master_data/**` trong `../../.claude/settings.json`.
 
 ## 7. Tham chiếu
 
 - [docs/conventions.md](conventions.md) — bổ sung quy ước §1 vào mục đặt tên DB sau khi chốt.
-- [thiet-ke-quan-he-chung-tu.md](done/thiet-ke-quan-he-chung-tu.md) — bảng `ctu_quan_he_chung_tu`; **đợt rename 1 (`sal_`) và 2 (`pur_`) phải xong trước pha P1** của tài liệu đó, không chồng lấn.
-- [CLAUDE.md](../CLAUDE.md) — vùng đóng băng `master_data/**`.
+- [thiet-ke-quan-he-chung-tu.md](../done/thiet-ke-quan-he-chung-tu.md) — bảng `ctu_quan_he_chung_tu`; **đợt rename 1 (`sal_`) và 2 (`pur_`) phải xong trước pha P1** của tài liệu đó, không chồng lấn.
+- [CLAUDE.md](../../CLAUDE.md) — vùng đóng băng `master_data/**`.
 - [10-thiet-ke-db.md](doing/PMKT-E-06194-chung-tu-ban-hang-api/10-thiet-ke-db.md) §2 — nguồn gốc quyết định.
-- `pmkt-docs/ba/Common/business_rules.md` — BR28 (multi-tenant), BR29 (chính sách xóa).
+- `../../pmkt-docs/ba/Common/business_rules.md` — BR28 (multi-tenant), BR29 (chính sách xóa).

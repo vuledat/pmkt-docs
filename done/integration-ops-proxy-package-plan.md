@@ -1285,7 +1285,7 @@ Checklist bổ sung:
 - [ ] `ProxyArchTest` xanh; `CellModularityTest` xanh (sau khi xử lý `inbox`).
 - [ ] Không có `catch (Exception ignored)`; không có `System.out.println`.
 - [ ] Commit chuẩn `feat(cell-app): …`, nhánh `tinh-nang/proxy-goi-api-ngoai`, không commit thẳng `master`/`develop`.
-- [ ] Soát [Checklist §5 của conventions](../conventions.md#5-checklist-trước-khi-commit).
+- [ ] Soát [Checklist §5 của conventions](../rules/conventions.md#5-checklist-trước-khi-commit).
 
 ---
 
@@ -1311,8 +1311,8 @@ Không cần dependency nào khác: `MockRestServiceServer` cho `RestClient.Buil
 
 ## Phụ lục B — Tài liệu liên quan
 
-- [docs/conventions.md](../conventions.md) — §1 (không hardcode/secret), §3 (Java).
-- [docs/request-flow.md](../request-flow.md) — luồng request vào `cell-app`.
+- [docs/conventions.md](../rules/conventions.md) — §1 (không hardcode/secret), §3 (Java).
+- [docs/request-flow.md](../rules/request-flow.md) — luồng request vào `cell-app`.
 - [docs/audit-logs-service-plan.md](audit-logs-service-plan.md) — §4 quy định che dữ liệu nhạy cảm.
 - `cell-app/.../accounting_core/hach_toan/api/package-info.java` — tiền lệ `@NamedInterface` trong module CLOSED.
 - `cell-app/.../common/storage/api/FileStorageApi.java` — khuôn javadoc "hướng dẫn dùng" (prose + `<pre>{@code …}</pre>`).

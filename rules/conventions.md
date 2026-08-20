@@ -1,6 +1,6 @@
 # Quy định & Quy tắc phát triển — VTT / OSP
 
-> Tài liệu gốc (single source of truth). Mọi `CLAUDE.md` trong repo đều trỏ về đây.
+> Tài liệu gốc (single source of truth). Mọi `../../CLAUDE.md` trong repo đều trỏ về đây.
 > Áp dụng cho **tất cả project** trong `vtt-osp`: `client` (FE) và các module Java
 > (`cell-app`, `cell-gateway`, `front-door`, `identity`, `integration-platform`,
 > `shared-kernel`, `tenant-provisioning`).
@@ -131,7 +131,7 @@ Không cần i18n: log kỹ thuật, key nội bộ, mã lỗi backend.
 
 ### 2.4 Import & cấu trúc
 
-**BẮT BUỘC dùng path alias**, KHÔNG ĐƯỢC dùng relative path vượt cấp (`../../`).
+**BẮT BUỘC dùng path alias**, KHÔNG ĐƯỢC dùng relative path vượt cấp (`../../..`).
 Alias theo tầng của repo này:
 
 | Alias | Tầng |
@@ -163,7 +163,7 @@ Luật này được ép bằng lint: `npm run lint:boundaries`.
 // ❌ export default function UserCard() {}
 ```
 
-### 2.5 Lệnh kiểm tra bắt buộc trước khi commit (`client/`)
+### 2.5 Lệnh kiểm tra bắt buộc trước khi commit (`../../client`)
 
 ```bash
 npm run typecheck        # không được có lỗi
@@ -246,7 +246,7 @@ cd cell-app && ./gradlew unitTest   # CỔNG CHÍNH — chỉ @Tag("unit"), thu�
 
 🚫 **KHÔNG `./gradlew build`, KHÔNG `./gradlew test`, KHÔNG Docker.** Cả hai task đó kéo test
 Testcontainers và **bắt buộc có Docker** — thứ bị cấm tuyệt đối, xem luật cứng "CHẠY CODE — QUA
-INTELLIJ, TUYỆT ĐỐI KHÔNG DOCKER" ở `CLAUDE.md` gốc.
+INTELLIJ, TUYỆT ĐỐI KHÔNG DOCKER" ở `../../CLAUDE.md` gốc.
 
 Service Java chưa có làn `unitTest` riêng, hoặc cần chạy sâu hơn → chạy test class / run
 configuration **qua IntelliJ** (`mcp__idea__get_run_configurations` +
@@ -343,10 +343,10 @@ Tự soát (DEV **và** AI agent) — mọi mục phải ✅ mới được tạ
 - [ ] Commit message đúng `<type>(<scope>): <mô tả>`
 - [ ] Đang ở đúng nhánh (không phải `master`/`develop`)
 
-**Nếu chạm `client/`**
+**Nếu chạm `../../client`**
 - [ ] Không có `any` / `@ts-ignore` mới
 - [ ] Text mới đã có key i18n ở **cả** `vi.ts` và `en.ts`
-- [ ] Import dùng alias, không có `../../`
+- [ ] Import dùng alias, không có `../../..`
 - [ ] `npm run typecheck && npm run lint && npm run lint:boundaries && npm run test` — xanh
 
 **Nếu chạm module Java**

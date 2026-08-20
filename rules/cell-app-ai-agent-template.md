@@ -2,7 +2,7 @@
 
 > **Mục tiêu:** dùng AI Agent để phát triển PYC trong `cell-app` nhưng vẫn **đi đúng kiến trúc thư mục**, **tái sử dụng code base hiện có**, và **không sửa code base gốc ngoài phạm vi cho phép**.
 >
-> **Phạm vi tài liệu này:** quy trình và template giao việc cho AI. Không thay thế `CLAUDE.md`, `cell-app/CLAUDE.md` hay `docs/conventions.md`; đây là lớp ràng buộc bổ sung để AI làm đúng trong `cell-app`.
+> **Phạm vi tài liệu này:** quy trình và template giao việc cho AI. Không thay thế `../../CLAUDE.md`, `../../cell-app/CLAUDE.md` hay `conventions.md`; đây là lớp ràng buộc bổ sung để AI làm đúng trong `cell-app`.
 >
 > **Tình trạng:** dùng được ngay cho các PYC kiểu `chung_tu_*`, đặc biệt các module greenfield như `chung_tu_mua_hang/`.
 
@@ -32,9 +32,9 @@ Ba nguyên tắc cứng:
 
 Trước khi AI sinh kế hoạch hoặc code, phải đọc và tuân thủ theo đúng thứ tự ưu tiên sau:
 
-1. `CLAUDE.md`
-2. `cell-app/CLAUDE.md`
-3. `docs/conventions.md`
+1. `../../CLAUDE.md`
+2. `../../cell-app/CLAUDE.md`
+3. `conventions.md`
 4. tài liệu kế hoạch/BA của đúng PYC đang làm
 5. module mẫu gần nhất về mặt kiến trúc, thường là `cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_ban_hang/**`
 
@@ -58,7 +58,7 @@ Trước khi AI sinh kế hoạch hoặc code, phải đọc và tuân thủ the
 
 `cell-app/src/main/java/vn/dopai/pmkt/cell/master_data/**`
 
-Lý do đã được chốt trong `CLAUDE.md` và `cell-app/CLAUDE.md`:
+Lý do đã được chốt trong `../../CLAUDE.md` và `../../cell-app/CLAUDE.md`:
 
 - đây là kiến trúc cũ, phẳng, không còn là mẫu chuẩn;
 - đọc vào sẽ kéo AI sang pattern sai;

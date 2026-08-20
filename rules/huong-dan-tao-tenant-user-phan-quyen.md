@@ -3,9 +3,9 @@
 Dùng cho môi trường **DEV local** (các service chạy bằng IntelliJ, không Docker). Mục tiêu: có ngay
 một bộ dữ liệu đăng nhập được để test — 1 công ty, 1 chủ sở hữu, N nhân viên với các mức quyền khác nhau.
 
-- Script tái sử dụng: [`deploy/seed-tenant.py`](../deploy/seed-tenant.py)
-- Profile mẫu: [`deploy/seed-profiles/mau-co-ban.json`](../deploy/seed-profiles/mau-co-ban.json)
-- Lần seed cũ (2 tenant OSP-DEMO, hardcode, chỉ để tham khảo): [`deploy/seed-osp-demo.README.md`](../deploy/seed-osp-demo.README.md)
+- Script tái sử dụng: [`../../deploy/seed-tenant.py`](../../deploy/seed-tenant.py)
+- Profile mẫu: [`../../deploy/seed-profiles/mau-co-ban.json`](../../deploy/seed-profiles/mau-co-ban.json)
+- Lần seed cũ (2 tenant OSP-DEMO, hardcode, chỉ để tham khảo): [`../../deploy/seed-osp-demo.README.md`](../../deploy/seed-osp-demo.README.md)
 
 > ⚠ File này chứa mật khẩu tài khoản DEV. Không dùng lại mật khẩu đó ở staging/production.
 
@@ -231,7 +231,7 @@ Script đã làm sẵn cả ba việc bù này. Muốn chữa tận gốc thì m
 ### 6.2 User tạo ra nhưng không đăng nhập được
 
 `KeycloakUserSyncRest` có `@ConditionalOnProperty("pmkt.control-plane.url")`. Thiếu
-`PMKT_CONTROL_PLANE_URL` trong `deploy/env/osp-cell-app.env` → rơi về bean **no-op**:
+`PMKT_CONTROL_PLANE_URL` trong `../../deploy/env/osp-cell-app.env` → rơi về bean **no-op**:
 `POST /api/iam/nguoi-dung` vẫn trả **201**, nhưng id là UUID ngẫu nhiên và Keycloak không có user nào
 ⇒ tài khoản chết, **không vá tay được** (Keycloak Admin API bỏ qua trường `id` khi tạo user).
 
@@ -241,7 +241,7 @@ nếu phát hiện no-op. Cách chữa: thêm `PMKT_CONTROL_PLANE_URL=http://loc
 
 ### 6.3 Tạo vai trò qua front-door bị 405
 
-`CELL_CB_TIMEOUT=8s` (`deploy/env/osp-cell-gateway.env`). `POST /api/iam/vai-tro` với ~700 mã quyền
+`CELL_CB_TIMEOUT=8s` (`../../deploy/env/osp-cell-gateway.env`). `POST /api/iam/vai-tro` với ~700 mã quyền
 chạy quá 8s ⇒ circuit-breaker cắt và fallback trả **405 Method Not Allowed**, trong khi cell-app **vẫn
 commit** vai trò. Vì thế: **GHI IAM đi thẳng :8081**, ĐỌC/verify đi qua front-door :8080.
 

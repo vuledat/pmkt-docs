@@ -79,7 +79,7 @@ Axios interceptor tự gắn các header quan trọng:
 
 ## 4. Front Door nhận toàn bộ `/api/**`
 
-File: `../front-door/src/main/resources/application.yml`
+File: `../../front-door/src/main/resources/application.yml`
 
 Route chính:
 
@@ -132,7 +132,7 @@ Sau khi có tenant, front-door gọi:
 
 ## 6. Cell Gateway forward tiếp vào cell-app
 
-File: `../cell-gateway/src/main/resources/application.yml`
+File: `../../cell-gateway/src/main/resources/application.yml`
 
 Route bên trong cell:
 

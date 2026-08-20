@@ -1,7 +1,7 @@
 # FE — mục lục component `@base`
 
-Tách khỏi `client/CLAUDE.md` §6 (2026-08-14). Bảng này mục nhanh — **nguồn sự thật vẫn là
-barrel `client/src/base/index.ts`** và route `/__components` khi chạy dev.
+Tách khỏi `../../client/CLAUDE.md` §6 (2026-08-14). Bảng này mục nhanh — **nguồn sự thật vẫn là
+barrel `../../client/src/base/index.ts`** và route `/__components` khi chạy dev.
 
 
 **Luôn tìm trong `base/components` trước khi tự viết component.** Chỉ tự tạo khi thật sự không có, hoặc

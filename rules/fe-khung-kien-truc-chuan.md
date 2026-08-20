@@ -1,15 +1,15 @@
 # FE — Khung kiến trúc chuẩn cho một phiếu yêu cầu
 
-Bản trích từ `client/src/` (đo ngày 2026-08-11). Đây là **khung bắt buộc**: mọi phiếu yêu cầu
+Bản trích từ `../../client/src` (đo ngày 2026-08-11). Đây là **khung bắt buộc**: mọi phiếu yêu cầu
 (feature / màn hình / API mới) làm ở frontend phải sinh ra đúng bộ artefact dưới đây, đúng vị trí,
 đúng tên. Không có ngoại lệ cho "màn nhỏ".
 
 **Module tham chiếu — bản chuẩn hoá ngày 2026-08-11:**
-`client/src/features/banHang/chungTuBanHang/`. Đây là module DUY NHẤT trong repo đủ chuẩn §3; dựng
+`../../client/src/features/banHang/chungTuBanHang`. Đây là module DUY NHẤT trong repo đủ chuẩn §3; dựng
 màn mới thì mở nó ra đọc, đừng đi tìm mẫu khác.
 
-SSOT chi tiết: [client/CLAUDE.md](../client/CLAUDE.md) · luật tầng ép bằng máy ở
-`client/eslint.boundaries.js`.
+SSOT chi tiết: [client/CLAUDE.md](../../client/CLAUDE.md) · luật tầng ép bằng máy ở
+`../../client/eslint.boundaries.js`.
 
 ---
 
@@ -32,7 +32,7 @@ base ⊄ platform và platform ⊄ base                       hai anh em, không
 core không import gì của dự án
 ```
 
-Alias bắt buộc (không `../../` xuyên tầng): `@core`=`src/utils` · `@base` · `@platform` ·
+Alias bắt buộc (không `../../..` xuyên tầng): `@core`=`src/utils` · `@base` · `@platform` ·
 `@domain-kit`=`src/base/domainKit` · `@features/*` · `@app/*` · `@test/*` · `@legacy/*`.
 
 Ba lệnh cấm: import `axios` ngoài `src/platform/` · import `@app/*` từ tầng dưới ·
@@ -52,7 +52,7 @@ features/<domain>/
 **Một màn hình = MỘT module.** Không có tầng `<nhóm>` trung gian, không tách màn theo hành vi
 (`danhSach/` · `themMoi/` · `chinhSua/` · `xemChiTiet/`). Popup Thêm / Sửa / Xem là **component của
 cùng module**, nằm ở `components/` — nó dùng chung `types`, `constants`, `api`, `helpers`, i18n với
-màn danh sách, tách ra chỉ đẻ thêm `_shared/` và một mớ `../../`.
+màn danh sách, tách ra chỉ đẻ thêm `_shared/` và một mớ `../../..`.
 
 `_shared/` là cơ chế dùng chung **giữa các module có thật**, không phải cấu trúc dựng sẵn. Domain mới
 chỉ có một màn → **không tạo `_shared/`**.
@@ -60,7 +60,7 @@ chỉ có một màn → **không tạo `_shared/`**.
 ### 3. Cấu trúc chuẩn của `<module>/` — BẮT BUỘC
 
 Áp cho cả `src/features/**` và `src/base/domainKit/**`.
-Module tham chiếu: **`client/src/features/banHang/chungTuBanHang/`** — đọc file đó trước khi dựng mới.
+Module tham chiếu: **`../../client/src/features/banHang/chungTuBanHang`** — đọc file đó trước khi dựng mới.
 
 ```
 <module>/
@@ -113,7 +113,7 @@ Chỉ là giá trị cố định?          → constants/constants.ts
 - Khác lớp: `../<lớp>/<file>` — ví dụ `helpers/anHien.ts` → `'../fields/types'`.
 - Alias tuyệt đối `@features/<domain>/<module>/<lớp>/<file>` cũng hợp lệ (module tham chiếu dùng cho
   `constants/`).
-- **TUYỆT ĐỐI không `../../`.** Cây phẳng một bậc khiến `../../` chỉ xuất hiện khi đặt file sai chỗ —
+- **TUYỆT ĐỐI không `../../..`.** Cây phẳng một bậc khiến `../../..` chỉ xuất hiện khi đặt file sai chỗ —
   gặp nó là dấu hiệu module đang bị tách sai.
 
 ### 3.4 Phân biệt 3 lớp dễ nhầm — hỏi "ai gõ cửa bắt sửa file này"
@@ -273,7 +273,7 @@ kéo theo cặp `vi.ts`/`en.ts` thứ hai, và đó chính là thứ đẻ ra th
 
 ## 8. Quy chuẩn nghiệp vụ (BR) phải đối chiếu
 
-Mọi phiếu phải code theo [pmkt-docs/ba/Common/business_rules.md](../pmkt-docs/ba/Common/business_rules.md).
+Mọi phiếu phải code theo [pmkt-docs/ba/Common/business_rules.md](../../pmkt-docs/ba/Common/business_rules.md).
 Epic chỉ mô tả phần đặc thù; phần chung **mặc định lấy theo BR**. Epic không nhắc BR ≠ được bỏ BR.
 
 | Phạm vi phiếu | BR phải đọc |
@@ -319,8 +319,8 @@ Luật nghiệm thu:
 
 | Vùng | Luật |
 |---|---|
-| `cell-app/**/master_data/**` | Không đọc để tham khảo, không sao chép kiến trúc, không dùng làm mẫu. Deny cứng ở `.claude/settings.json` |
-| **`client/src/legacy/` — VÙNG KHOÁ** | ✗ **Không đọc** để tham khảo (grep toàn repo thì bỏ qua kết quả rơi vào đây) · ✗ **Không sao chép** kiến trúc / pattern / code · ✗ **Không dùng làm mẫu** cho màn mới, kể cả màn danh mục · ✗ **Không sửa** khi user chưa cho phép trực tiếp cho đúng lần đó · ✗ Không thêm tính năng mới, không mở màn mới |
+| `cell-app/**/master_data/**` | Không đọc để tham khảo, không sao chép kiến trúc, không dùng làm mẫu. Deny cứng ở `../../.claude/settings.json` |
+| **`../../client/src/legacy` — VÙNG KHOÁ** | ✗ **Không đọc** để tham khảo (grep toàn repo thì bỏ qua kết quả rơi vào đây) · ✗ **Không sao chép** kiến trúc / pattern / code · ✗ **Không dùng làm mẫu** cho màn mới, kể cả màn danh mục · ✗ **Không sửa** khi user chưa cho phép trực tiếp cho đúng lần đó · ✗ Không thêm tính năng mới, không mở màn mới |
 | `src/legacy/` khi ĐÃ được cho phép sửa | Chỉ vá lỗi màn đang chạy, không mở rộng diff. Đi qua `@platform`, cấm `axios` trần. Test đặt cạnh file nguồn (`<Tên>.rules.test.ts`). Báo rõ cho user là đang chạm vùng khoá |
 | Shape phẳng cũ (`XxxTab.tsx` + `api/columns/model/queries/mock` ở gốc) | Không mở module mới theo shape này |
 | Shape tách theo hành vi (`danhSach/` · `themMoi/` · `_shared/` cho MỘT màn) | Không mở module mới theo shape này — §2. Đây là shape `chungTuBanHang` đã gỡ ngày 2026-08-11 |
@@ -329,10 +329,10 @@ Luật nghiệm thu:
 **Nợ hiện tại (đo 2026-08-11)** — module đủ lớp §3: `features` **1/47** · `domainKit` **0/6**
 (`chungTu` gần nhất nhưng còn `kernel/` + 3 file lạc ở gốc).
 
-**Mẫu DUY NHẤT được phép copy: `client/src/features/banHang/chungTuBanHang/`.** Mọi module khác trong
+**Mẫu DUY NHẤT được phép copy: `../../client/src/features/banHang/chungTuBanHang`.** Mọi module khác trong
 `features/` đều chưa đạt chuẩn — không lấy cái khác làm mẫu, kể cả khi nó cũng là màn chứng từ.
 
-Nợ kèm theo: 9 `mock.ts` · 413 import `../../` xuyên tầng (133 chỗ đáng lẽ là `@domain-kit`) ·
+Nợ kèm theo: 9 `mock.ts` · 413 import `../../..` xuyên tầng (133 chỗ đáng lẽ là `@domain-kit`) ·
 14 chỗ `any` ngoài legacy.
 
 Luật áp **từ nay về sau**: module mới đủ chuẩn; module cũ chuyển dần khi có việc chạm vào.

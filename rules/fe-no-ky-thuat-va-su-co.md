@@ -1,6 +1,6 @@
 # FE — nợ kỹ thuật đang đếm được & hai sự cố đã trả giá
 
-Tách khỏi `client/CLAUDE.md` (2026-08-14) để file rule chỉ còn LUẬT. Đây là **số liệu trạng thái**
+Tách khỏi `../../client/CLAUDE.md` (2026-08-14) để file rule chỉ còn LUẬT. Đây là **số liệu trạng thái**
 (mục nhanh, kiểm lại trước khi trích) và **bằng chứng** cho các luật tương ứng.
 
 ## A. Nợ hiện tại — đo 2026-08-11
@@ -32,7 +32,7 @@ timeout 5s hàng loạt: 11 → 56 test đỏ), và **hỏng bộ lọc theo đ�
 ## C. Sự cố "xanh local, đỏ deploy" — file mới quên `git add`
 
 `typecheck` · `lint` · `test` · `build` đều chạy trên **working tree**, nơi file mới vẫn nằm trên đĩa
-dù chưa `git add`. CI (`deploy/.github/workflows/build-deploy.yml`) thì
+dù chưa `git add`. CI (`../../deploy/.github/workflows/build-deploy.yml`) thì
 `git reset --hard origin/<branch>` rồi build trên **cây commit**. Chênh lệch đó tạo ra một lớp lỗi
 **xanh 100% ở máy local, đỏ 100% ở deploy**:
 
@@ -47,7 +47,7 @@ nhưng `CommonTimeInput.tsx` chưa được `git add` — build deploy đỏ nga
 
 1. **Thêm file mới thì `git add` chính file đó TRƯỚC, rồi mới sửa barrel/`index.ts` trỏ tới nó.**
    Thứ tự ngược lại là cách sinh ra đúng lỗi trên.
-2. **Sau mỗi commit đụng `client/`, chạy `npm run check:committed`** — script duyệt đúng cây commit
+2. **Sau mỗi commit đụng `../../client`, chạy `npm run check:committed`** — script duyệt đúng cây commit
    (`git ls-tree`, `git cat-file`) và kiểm mọi import/export tương đối trong `src/` có resolve được về
    file **cũng nằm trong cây commit** hay không. ~0,7 giây, không cần `node_modules`.
    Kiểm nhánh đã đẩy lên: `npm run check:committed -- origin/<branch>`.

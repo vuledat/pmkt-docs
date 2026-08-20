@@ -1,6 +1,6 @@
 # FE — nhánh chết & hai shape module đã đóng băng
 
-Tách khỏi `client/CLAUDE.md` §4 (2026-08-14) để giữ file rule gọn. Đọc khi: sắp sửa một
+Tách khỏi `../../client/CLAUDE.md` §4 (2026-08-14) để giữ file rule gọn. Đọc khi: sắp sửa một
 module `features/` có sẵn, hoặc thấy module lạ shape không giống §5.
 
 ## 4.1 Trước khi sửa: kiểm màn đó có đang chạy không

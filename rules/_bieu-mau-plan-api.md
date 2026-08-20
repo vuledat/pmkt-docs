@@ -28,7 +28,7 @@ NGUYÊN TẮC XUYÊN SUỐT
 |---|---|
 | Use case | `<PMKT-U-xxxxx — Tên use case>` |
 | Màn hình | `<SCR_xxx.md, SCR_yyy.md>` |
-| Tài liệu nguồn | `<pmkt-docs/ba/PMKT-E-xxxxx_.../>` + `pmkt-docs/ba/Common/business_rules.md` |
+| Tài liệu nguồn | `<pmkt-docs/ba/PMKT-E-xxxxx_.../>` + `../../pmkt-docs/ba/Common/business_rules.md` |
 | Module BE | `<cell-app/src/main/java/vn/dopai/pmkt/cell/<module>/>` |
 | Bảng DB | `<ten_bang>` (`<đã có sẵn N cột / phải tạo mới>`) |
 
@@ -83,8 +83,8 @@ NGUYÊN TẮC XUYÊN SUỐT
 
 ### 2.2 Hiện trạng DB
 
-`<Bảng X = N cột, dựng qua các migration V…>` · **Số hiệu migration lớn nhất hiện tại: `<Vxxx>` ⇒ file
-mới là `<Vxxx+1>`.**
+`<Bảng X = N cột, dựng qua các migration V…>` · **File migration mới đánh theo timestamp:
+`V<yyyyMMddHHmmss>__…` (`date +V%Y%m%d%H%M%S`) — không tính `max + 1`.**
 
 | Bảng phụ | Vai trò | Cột khoá nối |
 |---|---|---|
@@ -338,9 +338,10 @@ erDiagram
 
 ---
 
-## 10. Migration `<Vxxx>`
+## 10. Migration `V<yyyyMMddHHmmss>`
 
-File: `cell-app/src/main/resources/db/migration/<Vxxx>__<mo_ta>.sql`
+File: `cell-app/src/main/resources/db/migration/V<yyyyMMddHHmmss>__<mo_ta>.sql`
+(version = timestamp lúc tạo file, lấy bằng `date +V%Y%m%d%H%M%S`)
 
 > 📋 Mục này **chỉ dịch §9 sang SQL** — không phát sinh cột/index mới ở đây.
 
@@ -435,7 +436,7 @@ cd cell-app && ./gradlew unitTest
 cd cell-app && ./gradlew build
 ```
 
-> `cell-app/` là Gradle project độc lập (wrapper riêng); repo root không có `gradlew`, nên
+> `../../cell-app` là Gradle project độc lập (wrapper riêng); repo root không có `gradlew`, nên
 > `./gradlew :cell-app:build` sẽ báo "no such file or directory". Máy chưa cài Docker thì `build`
 > luôn đỏ ở các test Testcontainers — đối chiếu danh sách lớp lỗi trước khi kết luận hồi quy.
 
@@ -492,6 +493,6 @@ cd cell-app && ./gradlew build
 - `<pmkt-docs/ba/…/5.screens/…>`
 - `<pmkt-docs/ba/…/6.messages.md>`
 - `<pmkt-docs/ba/…/3.crud-matrix.puml>`
-- `pmkt-docs/ba/Common/business_rules.md` — `<liệt kê đúng các BR đã dùng>`
-- `docs/conventions.md`, `CLAUDE.md`, `cell-app/CLAUDE.md`
+- `../../pmkt-docs/ba/Common/business_rules.md` — `<liệt kê đúng các BR đã dùng>`
+- `conventions.md`, `../../CLAUDE.md`, `../../cell-app/CLAUDE.md`
 - Mẫu code tham khảo: `<cell-app/src/main/java/vn/dopai/pmkt/cell/…>`

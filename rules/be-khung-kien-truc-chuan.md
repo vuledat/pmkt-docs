@@ -13,7 +13,7 @@ buộc**: mọi phiếu yêu cầu (module / API / bảng mới) làm ở backen
 | CRUD + phân quyền | `cell/platform_iam/quyen/`, `cell/platform_iam/nguoi_dung/` |
 | Outbox / inbox / gọi hệ thống ngoài | `cell/integration_ops/` |
 
-SSOT chi tiết: [cell-app/CLAUDE.md](../cell-app/CLAUDE.md) · [docs/conventions.md §3](conventions.md) ·
+SSOT chi tiết: [cell-app/CLAUDE.md](../../cell-app/CLAUDE.md) · [docs/conventions.md §3](conventions.md) ·
 song song với bản FE: [docs/fe-khung-kien-truc-chuan.md](fe-khung-kien-truc-chuan.md).
 
 ---
@@ -22,17 +22,17 @@ song song với bản FE: [docs/fe-khung-kien-truc-chuan.md](fe-khung-kien-truc-
 
 | Dịch vụ | Vai trò | Kiến trúc |
 |---|---|---|
-| **`cell-app/`** | nghiệp vụ kế toán (nơi ~90% phiếu yêu cầu đáp xuống) | **Spring Modulith** — §2 |
-| `cell-gateway/` · `front-door/` | định tuyến, cửa vào | phẳng `controller/ service/ …`, xem CLAUDE.md của module |
-| `identity/` | xác thực | như trên |
-| `integration-platform/` | tích hợp ngoài, có migration riêng | như trên |
-| `tenant-provisioning/` | control-plane, cấp phát tenant | chia theo bounded context (`controlplane/<ctx>/`) |
-| `shared-kernel/` | thư viện dùng chung | như trên |
+| **`../../cell-app`** | nghiệp vụ kế toán (nơi ~90% phiếu yêu cầu đáp xuống) | **Spring Modulith** — §2 |
+| `../../cell-gateway` · `../../front-door` | định tuyến, cửa vào | phẳng `controller/ service/ …`, xem CLAUDE.md của module |
+| `../../identity` | xác thực | như trên |
+| `../../integration-platform` | tích hợp ngoài, có migration riêng | như trên |
+| `../../tenant-provisioning` | control-plane, cấp phát tenant | chia theo bounded context (`controlplane/<ctx>/`) |
+| `../../shared-kernel` | thư viện dùng chung | như trên |
 
 Base package chung: `vn.dopai.pmkt`. Stack: Java 21 · Spring Boot · Gradle Kotlin DSL.
 
 **Tài liệu này mô tả chuẩn của `cell-app`.** Dịch vụ khác giữ shape riêng đã có; trước khi sửa phải
-đọc `CLAUDE.md` trong đúng thư mục đó (luật cộng dồn — xem CLAUDE.md gốc).
+đọc `../../CLAUDE.md` trong đúng thư mục đó (luật cộng dồn — xem CLAUDE.md gốc).
 
 ---
 
@@ -161,7 +161,7 @@ Controller  →  Service  →  Repository  →  Entity
 | # | Artefact | Đường dẫn | Bắt buộc |
 |---|---|---|---|
 | 1 | Khai báo module | `cell/<module>/package-info.java` (`@ApplicationModule`) | ✅ |
-| 2 | Migration schema | `cell-app/src/main/resources/db/migration/V<N>__<prefix>_<mô_tả>.sql` | ✅ nếu có bảng |
+| 2 | Migration schema | `cell-app/src/main/resources/db/migration/V<yyyyMMddHHmmss>__<prefix>_<mô_tả>.sql` | ✅ nếu có bảng |
 | 3 | Entity | `internal/entity/` | ✅ |
 | 4 | Repository | `internal/repository/` | ✅ |
 | 5 | Enum / mã lỗi nghiệp vụ | `internal/model/` | ✅ nếu có enum/mã lỗi |
@@ -192,8 +192,10 @@ làn `unitTest`.
 
 Module mới → chọn tiền tố mới, **ghi vào `package-info.java`** dòng đầu: `<module> ({@code xxx_}) — …`.
 
-**Migration:** `V<N>__<prefix>_<mô_tả_snake_case>.sql`, N tăng dần toàn repo (hiện đã tới V83+ trong
-tổng 311 file). Không sửa file migration đã merge — thêm file mới.
+**Migration:** `V<yyyyMMddHHmmss>__<prefix>_<mô_tả_snake_case>.sql` — version là **timestamp lúc tạo
+file**, lấy bằng `date +V%Y%m%d%H%M%S`, KHÔNG đếm `max + 1`. Hai nhánh song song vì thế không bao giờ
+đẻ ra hai file trùng version. File đã merge giữ nguyên tên cũ — không đổi, không sửa; sửa schema thì
+thêm file mới. Chi tiết: [migration-danh-so-theo-timestamp.md](migration-danh-so-theo-timestamp.md).
 
 **JPA:**
 - `@Column` khai rõ `nullable`, `length` (chuỗi), kiểu khi không mặc định.
@@ -214,7 +216,7 @@ tổng 311 file). Không sửa file migration đã merge — thêm file mới.
 cd cell-app && ./gradlew build
 ```
 
-⚠ **`cell-app/` là Gradle project ĐỘC LẬP** (có wrapper riêng, `rootProject.name = "cell-app"`); repo
+⚠ **`../../cell-app` là Gradle project ĐỘC LẬP** (có wrapper riêng, `rootProject.name = "cell-app"`); repo
 gốc **không** có `gradlew`. Lệnh `./gradlew :cell-app:build` ở gốc repo sẽ báo "no such file or
 directory".
 
@@ -248,10 +250,10 @@ Luật nghiệm thu:
 
 | Vùng | Luật |
 |---|---|
-| **`cell/master_data/**` — VÙNG ĐÓNG BĂNG** | ✗ **Không đọc** để tham khảo (grep rơi vào đây thì bỏ qua, không trích làm bằng chứng cho quy ước hiện hành) · ✗ **Không sao chép** kiến trúc / cách chia package / cách đặt tên / pattern · ✗ **Không dùng làm mẫu** cho module mới, kể cả module danh mục. Chặn cứng ở `.claude/settings.json` (`permissions.deny` cho tool `Read`) |
+| **`cell/master_data/**` — VÙNG ĐÓNG BĂNG** | ✗ **Không đọc** để tham khảo (grep rơi vào đây thì bỏ qua, không trích làm bằng chứng cho quy ước hiện hành) · ✗ **Không sao chép** kiến trúc / cách chia package / cách đặt tên / pattern · ✗ **Không dùng làm mẫu** cho module mới, kể cả module danh mục. Chặn cứng ở `../../.claude/settings.json` (`permissions.deny` cho tool `Read`) |
 | `master_data` khi ĐÃ được cho phép | Chỉ đọc **đúng** chữ ký cần dùng (`master_data.*.dto`, `master_data.*.service`, `TenantProvisioner`), không mang kiến trúc sang, **báo rõ cho user** là đang chạm vùng đóng băng, và **xin phép** gỡ tạm rule deny |
 | **Shape phẳng không có `internal/`** | `controller/ dto/ entity/ repository/ service/` nằm thẳng ở gốc module. Nợ còn lại: `platform_iam/rbac_console/`, `common/mau_excel/`, `common/ui_config/`. **Không mở module mới theo shape này** |
-| `client/src/legacy/` | Vùng khoá của FE — xem [fe-khung-kien-truc-chuan.md §10](fe-khung-kien-truc-chuan.md) |
+| `../../client/src/legacy` | Vùng khoá của FE — xem [fe-khung-kien-truc-chuan.md §10](fe-khung-kien-truc-chuan.md) |
 
 **Nợ hiện tại (đo 2026-08-11):** 96 vi phạm ranh giới Modulith · 3 sub-module còn shape phẳng ·
 `master_data` chưa chuyển.
@@ -263,7 +265,7 @@ Luật áp **từ nay về sau**: module mới đủ chuẩn; module cũ chuyể
 
 ## 9. Quy chuẩn nghiệp vụ (BR) phải đối chiếu
 
-Mọi phiếu phải code theo [pmkt-docs/ba/Common/business_rules.md](../pmkt-docs/ba/Common/business_rules.md).
+Mọi phiếu phải code theo [pmkt-docs/ba/Common/business_rules.md](../../pmkt-docs/ba/Common/business_rules.md).
 Epic chỉ mô tả phần đặc thù; phần chung **mặc định lấy theo BR**. Epic không nhắc BR ≠ được bỏ BR.
 
 BR hay dùng ở BE:
