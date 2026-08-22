@@ -7,6 +7,9 @@
 | **Màn hình nguồn** | `SCR_HDBanHang_ThemMoi.md` (+ `SCR_CTBH_ThemMoi.md` là **logic chuẩn** được tham chiếu) |
 | **Endpoint phụ trách** | **A4** `POST /lookup` · **A5** `POST /them-moi` |
 | **File gốc** | [`00-ke-hoach-tong.md`](00-ke-hoach-tong.md) |
+| **Trạng thái** | ⬜ **CHƯA CÀI** — `POST /them-moi` hiện trả 400 `HOA_DON_BAN_HANG_CHUA_HO_TRO` (`HoaDonBanHangController.java:72-75`) |
+
+> **Cập nhật 2026-08-21:** enum trên wire đổi sang **TÊN HẰNG Java** ([00 §0-D12](00-ke-hoach-tong.md)) — mọi ví dụ JSON dưới đây đã sửa. Số dòng trích `SCR_CTBH_ThemMoi.md` cũng đã cập nhật sau khi BA sửa tài liệu (file dài thêm ~130 dòng, BR giữ nguyên mã).
 
 > **File này là gốc của cả epic.** F4 (Cập nhật) dùng lại 100% hợp đồng request, validate và tính toán ở đây; F3 (Chi tiết) dùng lại cấu trúc response.
 
@@ -35,20 +38,23 @@
 // Response 200
 {
   "data": {
-    "loaiNghiepVu":       ["Bán hàng trong nước", "Bán hàng xuất khẩu"],
-    "loaiChietKhau":      ["Không chiết khấu", "Theo mặt hàng", "Theo % hóa đơn",
-                           "Theo số tiền trên tổng hóa đơn", "Theo mặt hàng và hóa đơn"],
-    "hinhThucThanhToan":  ["Tiền mặt", "Chuyển khoản", "TM-CK"],
-    "thueSuatGtgt":       ["0", "5", "8", "10", "KCT", "KKKNT", "KHAC"],
-    "trangThaiPhatHanh":  ["Chưa phát hành", "Đã phát hành"],
-    "trangThaiLapChungTu":["Chưa lập", "Đã lập 1 phần", "Đã lập đủ"]
+    // TÊN HẰNG Java — D12. Nhãn tiếng Việt do FE dịch qua i18n.
+    "loaiNghiepVu":       ["TRONG_NUOC", "XUAT_KHAU"],
+    "loaiChietKhau":      ["KHONG_CHIET_KHAU", "THEO_MAT_HANG", "THEO_PHAN_TRAM_HOA_DON",
+                           "THEO_SO_TIEN_TONG_HOA_DON", "THEO_MAT_HANG_VA_HOA_DON"],
+    "hinhThucThanhToan":  ["TIEN_MAT", "CHUYEN_KHOAN", "TM_CK"],
+    "thueSuatGtgt":       ["MUC_0", "MUC_5", "MUC_8", "MUC_10", "KCT", "KKKNT", "KHAC"],
+    "trangThaiPhatHanhHoaDon": ["CHUA_PHAT_HANH", "DA_PHAT_HANH"],
+    "trangThaiLapChungTu":["CHUA_LAP", "DA_LAP_MOT_PHAN", "DA_LAP_DU"]
   },
   "message": null, "messageId": null
 }
 ```
 
 > `loaiNghiepVu` trả **2 giá trị** cho màn lập trực tiếp (`SCR_HDBanHang_ThemMoi.md:21` — "chỉ chọn giữa *Bán hàng trong nước* và *Bán hàng xuất khẩu*"). Giá trị `"Bán dịch vụ"` chỉ xuất hiện trên HĐ **lập kèm** từ chứng từ nguồn — chờ [00 §12-Q5](00-ke-hoach-tong.md).
-> Với `Bán hàng xuất khẩu`, `thueSuatGtgt` **chỉ nhận** `["0", "KCT"]` (`SCR_CTBH_ThemMoi.md:790` — BR13 mục 1). FE lọc theo `loaiNghiepVu` đang chọn; BE **cũng validate lại** (§5-V13).
+> Với `XUAT_KHAU`, `thueSuatGtgt` **chỉ nhận** `["MUC_0", "KCT"]` (`SCR_CTBH_ThemMoi.md:799` — BR13 mục 1). FE lọc theo `loaiNghiepVu` đang chọn; BE **cũng validate lại** (§5-V13).
+
+> ⚠️ **Tên hằng ở trên là ĐỀ XUẤT** — 4 enum đã tồn tại (`hoa_don_ban_hang/internal/model/`) nhưng bài viết này chưa soi từng hằng. **Đọc lại `LoaiNghiepVuHoaDon`, `LoaiChietKhauHoaDon`, `HinhThucThanhToanHoaDon`, `TrangThaiPhatHanh`, `TrangThaiLapChungTu`, `TrangThaiHoaDon` trước khi code**, và lấy tên hằng thật ở đó làm chuẩn. `ThueSuatGtgtHoaDon` thì **chưa tồn tại** — F2 phải tạo mới.
 
 ### A5 — `POST /api/ban-hang/hoa-don-ban-hang/them-moi`
 
@@ -57,7 +63,7 @@
 ```jsonc
 // Request — LuuHoaDonBanHangRequest
 {
-  "loaiNghiepVu": "Bán hàng trong nước",
+  "loaiNghiepVu": "TRONG_NUOC",
 
   // --- Thông tin hóa đơn (SCR_CTBH_ThemMoi.md:80-101 "Tab Hóa đơn") ---
   "khachHangId": "9a03…",
@@ -70,7 +76,7 @@
   "soDienThoai": "0912345678",
   "diaChi": "Số 1 Trần Duy Hưng, Hà Nội",
   "nguoiLienHe": "Trần Thị B",
-  "hinhThucThanhToan": "Chuyển khoản",
+  "hinhThucThanhToan": "CHUYEN_KHOAN",
   "taiKhoanNganHangThuId": "c410…",
   "mauSoHoaDonId": "b21e…",
   "kyHieuHoaDon": "K26TAA",
@@ -82,7 +88,7 @@
   // --- Loại tiền / chiết khấu (SCR_CTBH_ThemMoi.md:167-181) ---
   "loaiTienId": "0001…",
   "tyGia": 1.000000,
-  "loaiChietKhau": "Theo mặt hàng",
+  "loaiChietKhau": "THEO_MAT_HANG",
   "giaTriChietKhau": 0,
 
   // --- Thông tin xuất khẩu (chỉ khi loaiNghiepVu = "Bán hàng xuất khẩu") ---
@@ -119,7 +125,7 @@
       "tienChietKhauHoaDon": null,
       "tienChietKhauHoaDonQuyDoi": null,
 
-      "thueSuatGtgtMacDinh": "10",
+      "thueSuatGtgtMacDinh": "MUC_10",
       "giaTriThueGtgt": null,
       "tienThueGtgt": 807500.00,
       "tienThueGtgtQuyDoi": 807500.00,
@@ -145,9 +151,9 @@
 {
   "data": {
     "id": "7f1c…",
-    "trangThaiPhatHanh": "Chưa phát hành",
-    "trangThaiLapChungTu": "Chưa lập",
-    "trangThaiHoaDon": "Hóa đơn gốc",
+    "trangThaiPhatHanhHoaDon": "CHUA_PHAT_HANH",
+    "trangThaiLapChungTu": "CHUA_LAP",
+    "trangThaiHoaDon": "GOC",
     "tongTienHangHoa": 8500000.00,
     "tongTienChietKhau": 425000.00,
     "tongTienThueGtgt": 807500.00,
@@ -194,55 +200,55 @@
 
 ### 3.1 Header — `sal_hoa_don_ban_hang`
 
-| Trường BA (`SCR_CTBH_ThemMoi.md:87-101` "Tab Hóa đơn") | Bắt buộc | Max | Cột DB | Field DTO | Ghi chú |
+| Trường BA (`SCR_CTBH_ThemMoi.md:82-107` "Tab Hóa đơn") | Bắt buộc | Max | Cột DB | Field DTO | Ghi chú |
 |---|---|---|---|---|---|
 | Loại nghiệp vụ | Y | — | `loai_nghiep_vu text NOT NULL` | `loaiNghiepVu` | riêng của HĐ (`SCR_HDBanHang_ThemMoi.md:21`) |
 | Mã khách hàng | Y | — | `khach_hang_id uuid NOT NULL` | `khachHangId` | |
 | Tên khách hàng | Y | 255 | `ten_khach_hang text NOT NULL` | `tenKhachHang` | |
-| Mã số thuế/CCCD chủ hộ | N | 14 | `ma_so_thue text` | `maSoThue` | |
-| Người mua hàng | N | 100 | `nguoi_mua_hang text` | `nguoiMuaHang` | |
+| Mã số thuế/CCCD chủ hộ | N | 14 | `ma_so_thue text` | `maSoThue` | BA đổi control `InputNumber` → `TextField` (2026-08-20) |
+| Người mua hàng | N | **255** | `nguoi_mua_hang text` | `nguoiMuaHang` | ⚠ BA đổi max 100 → **255** (2026-08-20) |
 | Mã số DV QHNS | N | 7 | `ma_so_dvqhns text` | `maSoDvqhns` | |
-| Số CCCD | N | 12 | `cccd text` | `cccd` | |
+| Số CCCD | N | 12 | `cccd text` | `cccd` | BA đổi control `InputNumber` → `TextField` |
 | Hộ chiếu | N | 20 | `ho_chieu text` | `hoChieu` | |
 | Số điện thoại | N | 20 | `so_dien_thoai text` | `soDienThoai` | |
-| Địa chỉ | **Y** | 400 | `dia_chi text` **NULL ở DB** | `diaChi` | ⚠ BA bắt buộc, DB cho NULL → validate ở tầng service, **không** đổi NOT NULL (dữ liệu cũ) |
+| Địa chỉ | **Y** | 400 | `dia_chi text` **NULL ở DB** | `diaChi` | ⚠ BA bắt buộc, DB cho NULL → validate ở tầng service, **không** đổi NOT NULL (dữ liệu cũ). BA đổi control → `TextArea` |
 | Hình thức TT | Y | — | `hinh_thuc_thanh_toan text NOT NULL` | `hinhThucThanhToan` | CHECK 3 giá trị (`V1:16853`) |
-| Tài khoản NH | N | — | `tai_khoan_ngan_hang_thu_id uuid` | `taiKhoanNganHangThuId` | |
-| Mẫu số hóa đơn | Y | — | `mau_so_hoa_don_id uuid` **NULL ở DB** | `mauSoHoaDonId` | ⚠ như `diaChi` |
+| Tài khoản NH | N | — | `tai_khoan_ngan_hang_thu_id uuid` | `taiKhoanNganHangThuId` | BA bỏ max-length 50 (là uuid) |
+| Mẫu số hóa đơn | Y | — | `mau_so_hoa_don_id uuid` **NULL ở DB** | `mauSoHoaDonId` | ⚠ như `diaChi`. BA bỏ max-length 1. Xem thêm [01 §12-Q-F1-1](01-xem-danh-sach-hoa-don.md) về cột snapshot `mau_so_hoa_don` |
 | Ký hiệu hóa đơn | Y | 6 | `ky_hieu_hoa_don text` **NULL ở DB** | `kyHieuHoaDon` | ⚠ như `diaChi` |
 | Ngày hóa đơn | Y | — | `ngay_hoa_don date NOT NULL` | `ngayHoaDon` | mặc định ngày hiện tại (FE) |
 | Số hóa đơn | Y | 8 (BA) / **50** (BR20) | `so_hoa_don text NOT NULL` | `soHoaDon` | ⚠ mâu thuẫn độ dài — §5-V03 |
-| Diễn giải | N | — | `mo_ta text` | `moTa` | tên DB **lệch** (`mo_ta` vs `DienGiai`) |
+| Diễn giải | N | 500 | `mo_ta text` | `moTa` | tên DB **lệch** (`mo_ta` vs `DienGiai`) |
 | — | N | — | `nguoi_lien_he text` | `nguoiLienHe` | |
-| — | N | — | `nhan_vien_ban_hang_id uuid` | `nhanVienBanHangId` | |
+| **Nhân viên bán hàng** 🆕 | N | — | `nhan_vien_ban_hang_id uuid` | `nhanVienBanHangId` | BA **thêm** trường này vào Tab Hóa đơn (2026-08-20); trước đó chỉ có ở header chứng từ |
 | Loại tiền | Y | — | `loai_tien_id uuid NOT NULL` | `loaiTienId` | |
 | Tỷ giá quy đổi | Y | — | `ty_gia exchange_rate NOT NULL` | `tyGia` | `numeric(18,6)` — BR7 |
 | Loại chiết khấu | Y | — | `loai_chiet_khau text NOT NULL` | `loaiChietKhau` | CHECK 5 giá trị (`V1:16854`) |
 | Ô nhập % / số tiền CK chung | N | — | `gia_tri_chiet_khau numeric(18,2)` | `giaTriChietKhau` | |
-| **Thông tin xuất khẩu** (`SCR_CTBH_ThemMoi.md:154-160`) | N | 50–255 | `so_hop_dong`, `ngay_hop_dong`, `dia_diem_giao`, `dia_diem_nhan`, `so_van_don`, `so_container`, `don_vi_van_chuyen` | cùng tên camelCase | đã có đủ |
+| **Thông tin xuất khẩu** (`SCR_CTBH_ThemMoi.md:155-172`) | N | 50–255 | `so_hop_dong`, `ngay_hop_dong`, `dia_diem_giao`, `dia_diem_nhan`, `so_van_don`, `so_container`, `don_vi_van_chuyen` | cùng tên camelCase | đã có đủ |
 | Tổng tiền hàng | — | — | `tong_tien_hang_hoa money_vnd` | `tongTienHangHoa` | **server tính** |
 | Tổng chiết khấu | — | — | `tong_tien_chiet_khau` + `tong_tien_chiet_khau_hang` + `tong_tien_chiet_khau_hoa_don` | `tongTienChietKhau…` | **server tính** |
 | Tổng thuế GTGT | — | — | `tong_tien_thue_gtgt` | `tongTienThueGtgt` | **server tính** |
 | Tổng tiền sau thuế / Tổng thanh toán | — | — | `tong_tien_sau_thue`, `tong_tien_thanh_toan` | | **server tính** |
-| **Tổng thuế XK** (`SCR_HDBanHang_ThemMoi.md:54`) | — | — | **CHƯA CÓ** → `tong_tien_thue_xk` + `…_quy_doi` (V3) | `tongTienThueXk…` | **server tính** |
+| **Tổng thuế XK** (`SCR_HDBanHang_ThemMoi.md:54`) | — | — | `tong_tien_thue_xk` + `…_quy_doi` — ✅ **đã có** ở baseline | `tongTienThueXk…` | **server tính** |
 | (5 cột `…_quy_doi` tương ứng) | — | — | đã có đủ | | **server tính** |
 | Trạng thái phát hành | — | — | `trang_thai_phat_hanh_hoa_don` | `trangThaiPhatHanh` | **server ép** (F2-e) |
 | Trạng thái lập chứng từ | — | — | `trang_thai_lap_chung_tu` | `trangThaiLapChungTu` | **server ép** |
-| Trạng thái hóa đơn | — | — | **CHƯA CÓ** → `trang_thai_hoa_don` (V3) | `trangThaiHoaDon` | **server ép** |
-| Chứng từ nguồn | — | — | **CHƯA CÓ** → `chung_tu_ban_id` (V3) | `chungTuBanId` | client gửi khi lập từ CTBH |
+| Trạng thái hóa đơn | — | — | `trang_thai_hoa_don` — ✅ **đã có**, DEFAULT `'Hóa đơn gốc'` | `trangThaiHoaDon` | **server ép** |
+| Chứng từ nguồn | — | — | `chung_tu_ban_id` — ✅ **đã có** | `chungTuBanId` | client gửi khi lập từ CTBH |
 | `id`, `tenant_id`, `phien_ban`, audit ×6, `da_xoa` | — | — | theo `AggregateRootEntity` | | base tự quản (BR46) |
 
 ### 3.2 Dòng chi tiết — `sal_hoa_don_ban_hang_chi_tiet`
 
-Tham chiếu `SCR_CTBH_ThemMoi.md:187-240` (Tab Chi tiết hàng hóa) **trừ** các cột hạch toán bị loại bởi `SCR_HDBanHang_ThemMoi.md:40-41,69`.
+Tham chiếu `SCR_CTBH_ThemMoi.md:190-264` (Tab Chi tiết hàng hóa) **trừ** các cột hạch toán bị loại bởi `SCR_HDBanHang_ThemMoi.md:40-41,69`.
 
 | Cột BA | Bắt buộc | Cột DB | Field DTO | Ai ghi |
 |---|---|---|---|---|
 | STT | Y | `thu_tu numeric NOT NULL` | `thuTu` | client gửi, **server đánh lại 1…N** (F2-d) |
 | Loại dòng hàng | Y | `loai_dong_hang boolean NOT NULL DEFAULT true` | `loaiDongHang` | client |
-| Mã hàng | Y (dòng hàng) | `ma_hang_id uuid` | `maHangId` | client |
-| Tên hàng | Y | `ten_hang text` | `tenHang` | client (auto-fill từ vật tư ở FE — BR07) |
-| **Diễn giải (ẩn)** | N | **CHƯA CÓ** → `dien_giai text` (V3) | `dienGiai` | client; **server fill** = `tenHang` nếu client bỏ trống (BR15) |
+| Mã hàng **hóa** | Y (dòng hàng) | `ma_hang_id uuid` | `maHangId` | client — BA đổi nhãn "Mã hàng" → "Mã hàng hóa" |
+| Tên hàng **hóa** | Y | `ten_hang text` | `tenHang` | client (auto-fill từ vật tư ở FE — BR07); BA đổi nhãn |
+| **Diễn giải (ẩn)** | N | **CHƯA CÓ** → `dien_giai text` (**V1033**) | `dienGiai` | client; **server fill** = `tenHang` nếu client bỏ trống (BR15) |
 | Chiết khấu thương mại | N | `chiet_khau_thuong_mai boolean` | `chietKhauThuongMai` | client |
 | Hàng khuyến mại | N | `hang_khuyen_mai boolean` | `hangKhuyenMai` | client |
 | ĐVT | Y | `don_vi_tinh_id uuid` | `donViTinhId` | client |
@@ -255,16 +261,16 @@ Tham chiếu `SCR_CTBH_ThemMoi.md:187-240` (Tab Chi tiết hàng hóa) **trừ**
 | Tỷ lệ CK (%) | N | `chiet_khau_phan_tram percent_rate` | `chietKhauPhanTram` | server tính hoặc client (§4.2) |
 | Tiền CK | N | `chiet_khau money_vnd` | `chietKhau` | server tính hoặc client |
 | Tiền CK quy đổi | N | `chiet_khau_quy_doi money_vnd` | `chietKhauQuyDoi` | server tính, client sửa được |
-| **Tỷ lệ CK theo mặt hàng (%)** | N | **CHƯA CÓ** → `chiet_khau_hang_phan_tram percent_rate` (V3) | `chietKhauHangPhanTram` | client |
+| **Tỷ lệ CK theo mặt hàng (%)** | N | **CHƯA CÓ** → `chiet_khau_hang_phan_tram percent_rate` (**V1033**) | `chietKhauHangPhanTram` | client |
 | Tiền CK theo mặt hàng (+quy đổi) | N | `tien_chiet_khau_hang`, `…_quy_doi` | `tienChietKhauHang…` | server tính |
-| **Tỷ lệ CK theo hóa đơn (%)** | N | **CHƯA CÓ** → `chiet_khau_hoa_don_phan_tram percent_rate` (V3) | `chietKhauHoaDonPhanTram` | client |
+| **Tỷ lệ CK theo hóa đơn (%)** | N | **CHƯA CÓ** → `chiet_khau_hoa_don_phan_tram percent_rate` (**V1033**) | `chietKhauHoaDonPhanTram` | client |
 | Tiền CK theo hóa đơn (+quy đổi) | N | `tien_chiet_khau_hoa_don`, `…_quy_doi` | `tienChietKhauHoaDon…` | server tính |
 | % thuế GTGT | Y | `thue_suat_gtgt_mac_dinh text` (CHECK 7 giá trị — `V1:16922`) | `thueSuatGtgtMacDinh` | client |
 | Giá trị thuế GTGT (khi `KHAC`) | N | `gia_tri_thue_gtgt numeric(18,2)` | `giaTriThueGtgt` | client — ⚠ tên DB **lệch** BA (`ThueSuatKhac`) |
 | Tiền thuế GTGT (+quy đổi) | N | `tien_thue_gtgt`, `…_quy_doi` | `tienThueGtgt…` | server tính, client sửa được (§4.4) |
-| **Diễn giải thuế** | N | **CHƯA CÓ** → `dien_giai_thue text` (V3) | `dienGiaiThue` | client; server fill mặc định `Thuế GTGT - {tenHang}` |
-| **HH không TH trên tờ khai GTGT** | N | **CHƯA CÓ** → `khong_tong_hop_to_khai_gtgt boolean DEFAULT false` (V3) | `khongTongHopToKhaiGtgt` | **server ép** theo `%thuế` (§4.3) |
-| **Giá trị tính thuế XK (+quy đổi)** | Y (khi XK) | **CHƯA CÓ** → `gia_tri_tinh_thue_xk`, `…_quy_doi numeric(18,2)` (V3) | `giaTriTinhThueXk…` | server tính, client sửa được |
+| **Diễn giải thuế** | N | **CHƯA CÓ** → `dien_giai_thue text` (**V1033**) | `dienGiaiThue` | client; server fill mặc định `Thuế GTGT - {tenHang}` |
+| **HH không TH trên tờ khai GTGT** | N | **CHƯA CÓ** → `khong_tong_hop_to_khai_gtgt boolean DEFAULT false` (**V1033**) | `khongTongHopToKhaiGtgt` | **server ép** theo `%thuế` (§4.3) |
+| **Giá trị tính thuế XK (+quy đổi)** | Y (khi XK) | **CHƯA CÓ** → `gia_tri_tinh_thue_xk`, `…_quy_doi numeric(18,2)` (**V1033**) | `giaTriTinhThueXk…` | server tính, client sửa được |
 | % Thuế XK | N | `phan_tram_thue_xk percent_rate` | `phanTramThueXk` | client |
 | Tiền thuế XK (+quy đổi) | N | `tien_thue_xk`, `…_quy_doi` | `tienThueXk…` | server tính, client sửa được |
 | Số lô / Hạn sử dụng | N | `so_lo text`, `han_su_dung date` | `soLo`, `hanSuDung` | client |
@@ -273,7 +279,7 @@ Tham chiếu `SCR_CTBH_ThemMoi.md:187-240` (Tab Chi tiết hàng hóa) **trừ**
 
 **Cột KHÔNG có trên lưới hóa đơn** (theo `SCR_HDBanHang_ThemMoi.md:40-42`): `Kho`, `Giá vốn`, `Tiền vốn`, `TK công nợ`, `TK doanh thu`, `TK giá vốn`, `TK kho`, `TK chiết khấu`, `TK Thuế GTGT`, `Số lượng đã xuất HĐ`, `Số lượng còn lại`. Bảng DB **cũng không có** các cột này — khớp.
 
-**Hai trường tự do BA có mà DB thiếu:** `Đối tượng THCP` (`DoiTuongTapHopChiPhiId`) và `Đơn đặt hàng` (`DonDatHangId`) — `SCR_CTBH_ThemMoi.md:250,254`. Xem [07 §2](07-thiet-ke-db.md) và [00 §12](00-ke-hoach-tong.md).
+**Hai trường tự do BA có mà DB thiếu:** `Đối tượng THCP` (`DoiTuongTapHopChiPhiId`) và `Đơn đặt hàng` (`DonDatHangId`) — `SCR_CTBH_ThemMoi.md:257,261`. Xem [07 §2](07-thiet-ke-db.md) và [00 §12](00-ke-hoach-tong.md).
 
 ---
 
@@ -281,7 +287,7 @@ Tham chiếu `SCR_CTBH_ThemMoi.md:187-240` (Tab Chi tiết hàng hóa) **trừ**
 
 `TinhToanHoaDonBan` — lớp thuần JVM, không Spring, không DB. Chạy **sau** validate cấu trúc, **trước** validate nghiệp vụ về tiền.
 
-### 4.1 Thành tiền — BR11 (`SCR_CTBH_ThemMoi.md:671-701`)
+### 4.1 Thành tiền — BR11 (`SCR_CTBH_ThemMoi.md:680-710`)
 
 ```
 thanhTien      = soLuong × donGia                         (nếu soLuong > 0)
@@ -294,7 +300,7 @@ thanhTienQuyDoi= thanhTien × tyGia                        (trừ khi client g�
 
 **Dòng ghi chú** (`loaiDongHang = false`): bỏ qua toàn bộ tính toán, ép mọi cột số = `null`, chỉ giữ `tenHang` + `thuTu` (`SCR_HDBanHang_ThemMoi.md:46`, `SCR_CTBH_ThemMoi.md:290`).
 
-### 4.2 Chiết khấu — BR12 (`SCR_CTBH_ThemMoi.md:702-784`)
+### 4.2 Chiết khấu — BR12 (`SCR_CTBH_ThemMoi.md:711-793`)
 
 | `loaiChietKhau` | BE làm gì |
 |---|---|
@@ -306,7 +312,7 @@ thanhTienQuyDoi= thanhTien × tyGia                        (trừ khi client g�
 
 Cột quy đổi: `…QuyDoi = giá trị gốc × tyGia` (BR11 mục 5), trừ khi client gửi (§4.4).
 
-### 4.3 Thuế GTGT — BR13 (`SCR_CTBH_ThemMoi.md:785-849`)
+### 4.3 Thuế GTGT — BR13 (`SCR_CTBH_ThemMoi.md:794-858`)
 
 ```
 thueSuat = switch (thueSuatGtgtMacDinh) {
@@ -333,15 +339,15 @@ BR11 mục 5 và BR14 nói rõ người dùng sửa tay thì **không tính ngư
 
 | Field | Nguồn BA |
 |---|---|
-| `thanhTienQuyDoi` | `SCR_CTBH_ThemMoi.md:699-701` |
+| `thanhTienQuyDoi` | `SCR_CTBH_ThemMoi.md:708-710` |
 | `chietKhauQuyDoi` | `:699-701` |
-| `tienThueGtgt`, `tienThueGtgtQuyDoi` | `:805` — "Khi người dùng sửa trực tiếp 'Tiền thuế GTGT', hệ thống **KHÔNG** cập nhật ngược lại Thuế suất" |
-| `giaTriTinhThueXk`, `giaTriTinhThueXkQuyDoi` | `:857-858` — "sửa để khớp Tờ khai Hải quan" |
-| `tienThueXk`, `tienThueXkQuyDoi` | `:861-862` |
+| `tienThueGtgt`, `tienThueGtgtQuyDoi` | `:814` — "Khi người dùng sửa trực tiếp 'Tiền thuế GTGT', hệ thống **KHÔNG** cập nhật ngược lại Thuế suất" |
+| `giaTriTinhThueXk`, `giaTriTinhThueXkQuyDoi` | `:866-867` — "sửa để khớp Tờ khai Hải quan" |
+| `tienThueXk`, `tienThueXkQuyDoi` | `:870-871` |
 
 **Cơ chế phân biệt "client không gửi" vs "client gửi 0":** DTO dùng kiểu **boxed** (`BigDecimal`); `null` = không gửi ⇒ BE tính, có giá trị (kể cả `0`) ⇒ BE giữ nguyên. **Không** dùng primitive.
 
-### 4.5 Thuế XK — BR14 (`SCR_CTBH_ThemMoi.md:850-868`)
+### 4.5 Thuế XK — BR14 (`SCR_CTBH_ThemMoi.md:859-877`)
 Chỉ áp dụng khi `loaiNghiepVu = "Bán hàng xuất khẩu"`; các loại khác ép mọi cột XK = `null`.
 ```
 giaTriTinhThueXk       = thanhTien       − chietKhau
@@ -377,7 +383,7 @@ Bộ `…QuyDoi` tính y hệt từ các cột quy đổi.
 |---|---|---|---|---|---|
 | V01 | Trường bắt buộc header: `loaiNghiepVu`, `khachHangId`, `tenKhachHang`, `diaChi`, `hinhThucThanhToan`, `mauSoHoaDonId`, `kyHieuHoaDon`, `ngayHoaDon`, `soHoaDon`, `loaiTienId`, `tyGia`, `loaiChietKhau` | `@Valid` ở controller | null/blank | — (`details[]`, "[Tên trường] không được để trống") | BR15.1 |
 | V02 | **Trim** mọi field text trước khi lưu và trước khi so trùng | service, trước V03 | — | — | BR43 |
-| V03 | `soHoaDon` ≤ 50 ký tự, **không** ký tự tiếng Việt có dấu | service | vi phạm | — (`details[]`) | BR20.2 — ⚠ BA màn ghi max **8** (`SCR_CTBH_ThemMoi.md:100`), BR20 ghi **50**. Chọn **50** (BR chung thắng khi màn không nói rõ vì sao khác); nêu ở báo cáo |
+| V03 | `soHoaDon` ≤ 50 ký tự, **không** ký tự tiếng Việt có dấu | service | vi phạm | — (`details[]`) | BR20.2 — ⚠ BA màn ghi max **8** (`SCR_CTBH_ThemMoi.md:106`), BR20 ghi **50**. Chọn **50** (BR chung thắng khi màn không nói rõ vì sao khác); nêu ở báo cáo |
 | V04 | **Check trùng**: `(tenant_id, soHoaDon, kyHieuHoaDon, mauSoHoaDonId)` trên **toàn bộ** `sal_hoa_don_ban_hang` chưa xóa — **bao gồm** HĐ sinh kèm từ CTBH/CTBDV | service, trước khi lưu | tồn tại bản ghi khác `id` | **`_006`** kèm tham số `{soHD}`, `{kyHieuHD}`, `{mauSoHD}` | BR03 (`SCR_HDBanHang_ThemMoi.md:87-91`) |
 | V05 | Có ≥ 1 dòng chi tiết **loại dòng hàng** (`loaiDongHang = true`) | service | rỗng | **`_007`** | `SCR_…ThemMoi.md:112` |
 | V06 | `soLuong ≥ 0` mọi dòng hàng | service | âm | **`_009`** | `:113` |
@@ -397,7 +403,7 @@ Bộ `…QuyDoi` tính y hệt từ các cột quy đổi.
 
 Lý do V04 (check trùng) chạy **sau** tính toán và **trước** V12: nó là query DB; chạy trước mọi validate rẻ tiền là lãng phí, chạy sau V12 thì đã cầm khóa dòng nguồn quá lâu.
 
-**Chốt cuối ở DB:** unique index `uq_sal_hdbh_so_hd` (sau khi sửa ở `V3`) vẫn là hàng rào cuối — hai request đồng thời cùng số HĐ, một cái sẽ đâm `23505` và `GlobalExceptionHandler` phải map về **`_006`**, không phải 500.
+**Chốt cuối ở DB:** unique index `uq_sal_hdbh_so_hd` (sau khi sửa ở **V1033**) vẫn là hàng rào cuối — hai request đồng thời cùng số HĐ, một cái sẽ đâm `23505` và `GlobalExceptionHandler` phải map về **`_006`**, không phải 500.
 
 ---
 

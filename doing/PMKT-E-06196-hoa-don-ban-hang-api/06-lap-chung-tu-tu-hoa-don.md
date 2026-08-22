@@ -4,11 +4,28 @@
 |---|---|
 | **Mã chức năng** | `F6` |
 | **UC nguồn** | `PMKT-U-06456` — [`UC_HDBanHang_DanhSach.md:41-46`](../../../pmkt-docs/ba/PMKT-E-06196_HoaDonBanHang/4.usecases/PMKT-u-06456_DanhSach/UC_HDBanHang_DanhSach.md) (luồng phụ "Lập chứng từ bán hàng") |
-| **Màn hình nguồn** | `SCR_HDBanHang_DanhSach.md:70-77` (BR04) · `:79-86` (BR05 — ngoài phạm vi) |
+| **Màn hình nguồn** | `SCR_HDBanHang_DanhSach.md:72-79` (BR04) · `:79-86` (BR05 — ngoài phạm vi) |
 | **Endpoint phụ trách** | **A10** `GET /{id}/du-lieu-lap-chung-tu` |
 | **File gốc** | [`00-ke-hoach-tong.md`](00-ke-hoach-tong.md) |
+| **Trạng thái** | ⬜ **CHƯA CÀI** — `LoaiChungTu.java:19` vẫn `SAL_CHUNG_TU_BAN_HANG(true, false)`, CHECK `ck_ctu_qhct_loai_dich` (`V1:7339`) vẫn thiếu; xác nhận lại 2026-08-21 |
 
-> **Làm sau cùng** — phụ thuộc entity của F2 và migration mục 6 của [00 §7](00-ke-hoach-tong.md). Đây là chức năng **rủi ro nhất** của epic (R1, R2).
+> **Làm sau cùng** — phụ thuộc entity của F2 và migration mục 3 của [00 §7](00-ke-hoach-tong.md). Đây là chức năng **rủi ro nhất** của epic (R1, R2).
+
+---
+
+## 0. 🆕 BA đã viết lại BR18 của Chứng từ bán hàng (2026-08-20)
+
+BR18 đổi tên thành *"Chứng từ kiêm — phiếu xuất kho, phiếu thu **và hóa đơn**"* và đổi bản chất: chứng từ kiêm nay **sinh bản ghi riêng** thay vì "tự đóng vai". Bảng mới (`SCR_CTBH_ThemMoi.md:996-1008`) khai đích danh chiều 1:
+
+| Phần | Điều kiện | Bản ghi sinh ra | Liên kết ngược |
+|---|---|---|---|
+| **Hóa đơn** | `LapKemHoaDon = True` | `ENT_sal_hoa_don_ban_hang` + `ENT_sal_hoa_don_ban_hang_chi_tiet` | **`sal_hoa_don_ban_hang.ChungTuBanId`**; dòng: `sal_hoa_don_ban_hang_chi_tiet.ChiTietChungTuBanId` |
+
+Ba điều rút ra:
+
+1. ✅ **Cột `chung_tu_ban_id` của kế hoạch là đúng** — BA nay khai đích danh nó là khóa liên kết ngược. Cột đã có ở baseline ([00 §2.2](00-ke-hoach-tong.md)).
+2. ✅ BR18 mục 8 khẳng định *"Hóa đơn **vẫn là chứng từ độc lập** vì mang giá trị pháp lý riêng… có **màn Xem chi tiết riêng** (PMKT-E-06196) và **vòng đời riêng**"* — củng cố D2/D3.
+3. ⚠️ **Luật mới, chưa có trong kế hoạch:** *"Bỏ tích checkbox rồi Lưu lại → hệ thống **xóa bản ghi phần tương ứng**, với điều kiện phiếu đó đang **Chưa ghi sổ**"* (`SCR_CTBH_ThemMoi.md:1010`). Nghĩa là **module `chung_tu_ban_hang` được phép XÓA một hóa đơn** khi người dùng bỏ tích "Lập kèm hóa đơn". Hóa đơn không có trạng thái ghi sổ ⇒ điều kiện "Chưa ghi sổ" phải dịch sang cái gì? Xem §9-Q7.
 
 ---
 
@@ -18,9 +35,9 @@
 |---|---|---|
 | Nguồn → Đích | Chứng từ bán hàng → Hóa đơn | Hóa đơn → Chứng từ bán hàng |
 | Ai bấm nút | Người dùng ở màn CTBH, nút "Lập hóa đơn" | Người dùng ở màn HĐ, nút "Lập chứng từ bán hàng" |
-| Counter | `sal_chung_tu_ban_hang_chi_tiet.so_luong_da_xuat_hd` (`ChiTietChungTuBanHang.java:204`) | `ctu_quan_he_chung_tu` (không cột counter riêng) |
-| Trạng thái suy ra | `sal_chung_tu_ban_hang.trang_thai_hoa_don` — enum `TrangThaiHoaDon` 3 giá trị (`TrangThaiHoaDon.java:12-14`) | `sal_hoa_don_ban_hang.trang_thai_lap_chung_tu` — 3 giá trị (D8) |
-| Điều kiện hiển thị nút | CTBH `Đã ghi sổ` **và** `TrangThaiLapHoaDon ∈ {Chưa lập, Đã lập một phần}` (`SCR_CTBH_ThemMoi.md:1341`) | HĐ `TrangThaiLapChungTu ∈ {Chưa lập, Đã lập 1 phần}` (`SCR_HDBanHang_DanhSach.md:72`) |
+| Counter | `sal_chung_tu_ban_hang_chi_tiet.so_luong_da_xuat_hd` (`chung_tu_ban_hang/internal/entity/ChiTietChungTuBanHang.java` (`so_luong_da_xuat_hd`)) | `ctu_quan_he_chung_tu` (không cột counter riêng) |
+| Trạng thái suy ra | `sal_chung_tu_ban_hang.trang_thai_hoa_don` — enum `TrangThaiHoaDon` 3 giá trị (`chung_tu_ban_hang/internal/model/TrangThaiHoaDon.java`) | `sal_hoa_don_ban_hang.trang_thai_lap_chung_tu` — 3 giá trị (D8) |
+| Điều kiện hiển thị nút | CTBH `Đã ghi sổ` **và** `TrangThaiLapHoaDon ∈ {Chưa lập, Đã lập một phần}` (`SCR_CTBH_ThemMoi.md:1472`) | HĐ `TrangThaiLapChungTu ∈ {Chưa lập, Đã lập 1 phần}` (`SCR_HDBanHang_DanhSach.md:73`) |
 | Ràng buộc số lượng | `SoLuong_nhap ≤ SoLuong − SoLuongDaXuatHoaDon` (BR23 §5.2) | ⚠️ BA **không nói** — xem §9-Q1 |
 
 **Hai chiều tồn tại đồng thời và không loại trừ nhau.** Một HĐ lập từ CTBH (chiều 1) về lý thuyết vẫn có thể là nguồn của một CTBH khác (chiều 2) — điều đó vô lý nghiệp vụ nhưng **không có gì trong dữ liệu chặn**. Xem §9-Q2.
@@ -43,7 +60,7 @@ Và giá trị enum này **phải khớp chính xác** CHECK constraint `ck_ctu_
 | # | Thay đổi | File |
 |---|---|---|
 | 1 | `SAL_CHUNG_TU_BAN_HANG(true, false)` → `(true, true)` | `quan_he_chung_tu/api/LoaiChungTu.java:19` |
-| 2 | `ALTER … DROP CONSTRAINT ck_ctu_qhct_loai_dich` + `ADD` lại kèm `'SAL_CHUNG_TU_BAN_HANG'` | migration `V3` — [07 §5](07-thiet-ke-db.md) |
+| 2 | `ALTER … DROP CONSTRAINT ck_ctu_qhct_loai_dich` + `ADD` lại kèm `'SAL_CHUNG_TU_BAN_HANG'` | migration `V1033` — [07 §5](07-thiet-ke-db.md) |
 
 **Không sửa `laTieuThu()`.** `LoaiChungTu.java:58-71` phân loại theo *"quan hệ tới loại đích này có **lấy hàng đi khỏi** dòng nguồn không"*. Chứng từ bán hàng lập từ hóa đơn **có** lấy hàng đi (một hóa đơn 100 cái, lập chứng từ cho 60 thì còn 40) ⇒ phải nằm nhóm `true`. Nhưng đổi `SAL_CHUNG_TU_BAN_HANG` sang `laTieuThu = true` sẽ **ảnh hưởng chiều 1** (CTBH làm nguồn), nơi nó đang là `false`.
 
@@ -52,14 +69,14 @@ Và giá trị enum này **phải khớp chính xác** CHECK constraint `ck_ctu_
 | | A — đổi `laTieuThu` sang `true` | B — thêm hằng enum riêng `SAL_CHUNG_TU_BAN_HANG_TU_HD` | **C (CHỌN) — không áp ràng buộc số lượng ở chiều 2** |
 |---|---|---|---|
 | Rủi ro | Đổi hành vi chiều 1 (CTBH làm nguồn của phiếu thu/điều chỉnh giá) — **có thể vỡ nghiệp vụ đang chạy** | Enum phình, CHECK constraint phình, hai hằng cùng trỏ một bảng | Không ràng buộc SL ⇒ về lý thuyết lập được chứng từ vượt số lượng hóa đơn |
-| Bằng chứng BA | — | — | BA **không hề nêu** ràng buộc số lượng cho chiều 2 (`SCR_HDBanHang_DanhSach.md:70-77` chỉ nói auto-fill), khác hẳn chiều 1 vốn có BR23 rất chi tiết |
+| Bằng chứng BA | — | — | BA **không hề nêu** ràng buộc số lượng cho chiều 2 (`SCR_HDBanHang_DanhSach.md:72-79` chỉ nói auto-fill), khác hẳn chiều 1 vốn có BR23 rất chi tiết |
 | Chốt an toàn | — | — | `TrangThaiLapChungTu` vẫn tính đúng (§5); nếu người dùng lập vượt thì trạng thái về `Đã lập đủ`, nút biến mất. Ghi vào §9-Q1 để BA quyết. |
 
 ---
 
 ## 3. Phạm vi thực tế của F6
 
-BA (`SCR_HDBanHang_DanhSach.md:73-77`) chỉ nói:
+BA (`SCR_HDBanHang_DanhSach.md:75-79`) chỉ nói:
 > - Khi click vào nút, hệ thống mở màn hình Thêm mới Chứng từ bán hàng
 > - **Tự động fill thông tin từ hóa đơn bán hàng sang chứng từ bán hàng:**
 >   - Thông tin khách hàng: Mã khách hàng, Tên khách hàng, Địa chỉ, Điện thoại, Mã số thuế
@@ -89,8 +106,8 @@ BA (`SCR_HDBanHang_DanhSach.md:73-77`) chỉ nói:
     "hoaDonBanHangId": "7f1c…",
     "soHoaDon": "0000123",
     "ngayHoaDon": "2026-08-12",
-    "loaiNghiepVu": "Bán hàng trong nước",
-    "trangThaiLapChungTu": "Đã lập 1 phần",
+    "loaiNghiepVu": "TRONG_NUOC",
+    "trangThaiLapChungTu": "DA_LAP_MOT_PHAN",
 
     // --- Thông tin khách hàng (BR04 gạch đầu dòng 1) ---
     "khachHangId": "9a03…",
@@ -121,7 +138,7 @@ BA (`SCR_HDBanHang_DanhSach.md:73-77`) chỉ nói:
         "thanhTien": 8500000.00,
         "chietKhauPhanTram": 5.00,
         "chietKhau": 425000.00,
-        "thueSuatGtgtMacDinh": "10",
+        "thueSuatGtgtMacDinh": "MUC_10",
         "giaTriThueGtgt": null,
         "tienThueGtgt": 807500.00,
         "dienGiai": "Xi măng PC40",
@@ -162,7 +179,7 @@ trangThaiLapChungTu =
     tongDaLapChungTu >= tongSoLuongDongHang    → "Đã lập đủ"
 ```
 
-Khớp nguyên văn BR02 (`SCR_HDBanHang_DanhSach.md:61-63`):
+Khớp nguyên văn BR02 (`SCR_HDBanHang_DanhSach.md:63-65`):
 > - **"Chưa lập"**: Hóa đơn chưa được lập chứng từ (chưa được chọn vào bất kỳ CTBH/CTBDV nào)
 > - **"Đã lập 1 phần"**: Tổng số lượng đã lập chứng từ < Tổng số lượng hàng hóa/dịch vụ trên hóa đơn
 > - **"Đã lập đủ"**: Tổng số lượng đã lập chứng từ = Tổng số lượng hàng hóa/dịch vụ trên hóa đơn
@@ -248,7 +265,7 @@ Gọi **trong cùng transaction** của luồng lưu CTBH.
 
 | Lớp | Kiểm |
 |---|---|
-| `LoaiChungTuCheckConstraintIT` | ★ **Test đồng bộ enum ⇄ `pg_constraint`** đã có sẵn (`LoaiChungTu.java:8-11`) — chạy để chắc chắn migration `V3` và enum khớp nhau. **Bắt buộc chạy qua IntelliJ trước khi push** (R2). |
+| `LoaiChungTuCheckConstraintIT` | ★ **Test đồng bộ enum ⇄ `pg_constraint`** đã có sẵn (`LoaiChungTu.java:8-11`) — chạy để chắc chắn migration `V1033` và enum khớp nhau. **Bắt buộc chạy qua IntelliJ trước khi push** (R2). |
 | `LapChungTuTuHoaDonIT` | Lập CTBH từ HĐ 100 cái với 60 cái → `trangThaiLapChungTu` = `Đã lập 1 phần` |
 | | Lập tiếp 40 cái → `Đã lập đủ`; nút biến mất (`choPhepLapChungTuBanHang = false`) |
 | | Xóa CTBH đã lập → liên kết bị gỡ, HĐ về `Đã lập 1 phần` / `Chưa lập` |
@@ -261,12 +278,12 @@ Gọi **trong cùng transaction** của luồng lưu CTBH.
 
 | # | Vấn đề | Bằng chứng | Xử lý tạm |
 |---|---|---|---|
-| **Q1** | Lập chứng từ từ hóa đơn có bị **ràng buộc số lượng** không (`SoLuong_nhap ≤ SoLuong − đã lập`)? | **Có (suy luận):** BR02 (`SCR_HDBanHang_DanhSach.md:61-63`) định nghĩa trạng thái theo tỷ lệ số lượng ⇒ ngụ ý có theo dõi số lượng. **Không (theo văn bản):** BR04 (`:70-77`) chỉ nói auto-fill, **không** nêu ràng buộc nào; đối chiếu chiều ngược lại thì BR23 của CTBH (`SCR_CTBH_ThemMoi.md:1298-1419`) mô tả ràng buộc rất chi tiết — sự vắng mặt ở đây có thể là cố ý hoặc là thiếu sót. | **Không** áp ràng buộc (phương án C của §2), tránh đụng `laTieuThu()` vốn ảnh hưởng nghiệp vụ đang chạy. Nếu BA chốt "có" → phải xử lý §2 phương án A hoặc B, **tăng đáng kể phạm vi và rủi ro**. |
-| **Q2** | Một hóa đơn **được lập kèm từ CTBH** (chiều 1) có được phép làm nguồn để lập CTBH mới (chiều 2) không? | Không có tài liệu nào cấm. Về nghiệp vụ thì vô lý (hàng đã có chứng từ bán rồi). Dữ liệu: HĐ đó có `chungTuBanId ≠ null` (cột thêm ở `V3`). | Đề xuất **chặn**: nút "Lập chứng từ bán hàng" ẩn khi `chungTuBanId ≠ null`. Cần BA xác nhận trước khi cài. |
+| **Q1** | Lập chứng từ từ hóa đơn có bị **ràng buộc số lượng** không (`SoLuong_nhap ≤ SoLuong − đã lập`)? | **Có (suy luận):** BR02 (`SCR_HDBanHang_DanhSach.md:63-65`) định nghĩa trạng thái theo tỷ lệ số lượng ⇒ ngụ ý có theo dõi số lượng. **Không (theo văn bản):** BR04 (`:70-77`) chỉ nói auto-fill, **không** nêu ràng buộc nào; đối chiếu chiều ngược lại thì BR23 của CTBH (`SCR_CTBH_ThemMoi.md:1429-1550`) mô tả ràng buộc rất chi tiết — sự vắng mặt ở đây có thể là cố ý hoặc là thiếu sót. | **Không** áp ràng buộc (phương án C của §2), tránh đụng `laTieuThu()` vốn ảnh hưởng nghiệp vụ đang chạy. Nếu BA chốt "có" → phải xử lý §2 phương án A hoặc B, **tăng đáng kể phạm vi và rủi ro**. |
+| **Q2** | Một hóa đơn **được lập kèm từ CTBH** (chiều 1) có được phép làm nguồn để lập CTBH mới (chiều 2) không? | Không có tài liệu nào cấm. Về nghiệp vụ thì vô lý (hàng đã có chứng từ bán rồi). Dữ liệu: HĐ đó có `chungTuBanId ≠ null` (cột `chung_tu_ban_id` — ✅ đã có ở baseline). | Đề xuất **chặn**: nút "Lập chứng từ bán hàng" ẩn khi `chungTuBanId ≠ null`. Cần BA xác nhận trước khi cài. |
 | **Q3** | Chứng từ lập từ hóa đơn có kế thừa `loaiTienId` / `tyGia` không? BR04 **không nhắc**. | `SCR_HDBanHang_DanhSach.md:74-77` liệt kê 3 nhóm fill: khách hàng, mặt hàng, diễn giải/ghi chú — **không có** loại tiền. Nhưng `ChungTuBan.LoaiTienId` là trường **bắt buộc** (`SCR_CTBH_ThemMoi.md:173`). | A10 **có trả** `loaiTienId` + `tyGia` để FE fill. Nếu BA không muốn → FE bỏ qua field. |
 | **Q4** | Gọi A10 trên HĐ `Đã lập đủ` — trả lỗi gì? `6.messages.md` không có mã. | — | 409 `ALREADY_FULLY_USED`, `messageId = null`. **Cần BA cấp mã** hoặc xác nhận FE tự chặn bằng cờ `choPhepLapChungTuBanHang` (khi đó BE trả 409 chỉ là hàng rào phụ). |
-| **Q5** | Chứng từ lập từ hóa đơn **không kế thừa** được TK công nợ / TK doanh thu / Kho / giá vốn (hóa đơn không có các cột này). Người dùng phải nhập lại — có chấp nhận không? | `SCR_HDBanHang_ThemMoi.md:40,69` liệt kê rõ các cột hóa đơn **không có** | FE auto-fill theo BR07/BR16 của CTBH khi chọn mã hàng. Xác nhận đây là hành vi mong muốn. |
-| **Q6** | BR05 "Lập chứng từ bán dịch vụ" — module chưa tồn tại, xử lý thế nào? | `SCR_HDBanHang_DanhSach.md:79-86` | Xem [00 §12-Q6](00-ke-hoach-tong.md). |
+| **Q5** | Chứng từ lập từ hóa đơn **không kế thừa** được TK công nợ / TK doanh thu / Kho / giá vốn (hóa đơn không có các cột này). Người dùng phải nhập lại — có chấp nhận không? | `SCR_HDBanHang_ThemMoi.md:40-41,69` liệt kê rõ các cột hóa đơn **không có** | FE auto-fill theo BR07/BR16 của CTBH khi chọn mã hàng. Xác nhận đây là hành vi mong muốn. |
+| **Q6** | BR05 "Lập chứng từ bán dịch vụ" — module chưa tồn tại, xử lý thế nào? | `SCR_HDBanHang_DanhSach.md:81-88` | Xem [00 §12-Q6](00-ke-hoach-tong.md). |
 
 ---
 

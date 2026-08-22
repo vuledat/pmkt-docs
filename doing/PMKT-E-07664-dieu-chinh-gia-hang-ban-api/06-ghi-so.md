@@ -1,5 +1,16 @@
 # F6 — Ghi sổ Chứng từ điều chỉnh giá (đơn + hàng loạt)
 
+> ### 🔄 CẬP NHẬT 2026-08-21 — thêm A18 (BR48) và huỷ D6
+>
+> 1. **➕ A18 `POST /xem-du-lieu-ghi-so` — BR48 "Xem dữ liệu ghi sổ" (BR mới).** Form chỉ xem, **hai chế độ do server tự chọn** theo trạng thái chứng từ:
+>    - *Xem trước* — chứng từ **chưa ghi sổ** (kể cả **chưa Lưu lần nào**): **tính bút toán tại chỗ** bằng đúng `DinhKhoanDieuChinhGia` của §4, **không** ghi `acc_so_cai`, **không** cấp số chứng từ. Vì phải chạy được trên dữ liệu form chưa lưu nên là `POST` mang body, không phải `GET /{id}`.
+>    - *Dữ liệu sổ* — chứng từ **đã ghi sổ**: đọc thẳng `acc_so_cai`, **không tính lại**.
+>    Không validate gì (BR48.5): dòng thiếu tài khoản ⇒ bỏ bút toán đó, các bút toán khác vẫn hiện; chưa có số chứng từ ⇒ cột số để trống. Hiển thị: cặp Nợ/Có liền nhau (Nợ trước), **không gộp dòng**, sắp theo số thứ tự bút toán rồi số hiệu TK Nợ, có dòng Tổng phát sinh Nợ/Có **trên toàn bộ dòng**. Quyền: **không có mã riêng**, kế thừa quyền màn gọi (BR48.1).
+> 2. **🐞 A10 và A18 chế độ *Dữ liệu sổ* thiếu vế lọc `LoaiChungTuId`** mà BR48.3 bắt buộc — `SoCaiApi.theoChungTu(id)` chỉ lọc `chungTuId`. Xem L2 ở [00 §2.4](00-ke-hoach-tong.md).
+> 3. **Cột phẳng (huỷ D6):** §4 đọc `TT`/`CK`/`T` từ `thanh_tien`/`chiet_khau`/`tien_thue_gtgt_chenh_lech`, không còn `COALESCE` hai khối.
+> 4. **G3 (kiểm trùng số trước ghi sổ)** nay do engine đánh số lo (409 `SO_CHUNG_TU_DA_TON_TAI`), module không tự kiểm.
+> 5. Bốn kịch bản bút toán ở §4 **không đổi**. Mẫu code: `dieu_chinh_gia_hang_mua/internal/service/DinhKhoanDieuChinhGiaMua.java`.
+
 | | |
 |---|---|
 | Mã chức năng | **F6** |
@@ -11,14 +22,14 @@
 ## 1. Quyết định riêng
 
 - **Phạm vi ghi sổ = bút toán sổ cái + trạng thái** (quyết định **D3** ở file gốc). Năm tác động còn lại mà UC liệt kê (phiếu thu/chi, HĐĐT, sổ thuế, tồn quỹ) không có module BE để gọi — §1.2 và §12-Q2 file gốc. **Sổ cái vẫn đúng** vì bút toán 2 (vế tiền) sinh đủ từ `tai_khoan_tien_id`.
-- **Bút toán 2 (vế tiền) phân bổ theo từng dòng chi tiết**, không dồn thành một định khoản header. Lý do kỹ thuật: `DinhKhoan.chiTietChungTuId` là cột **NOT NULL** của `acc_so_cai` và nằm trong khoá chống ghi trùng ([DinhKhoan.java javadoc](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/hach_toan/api/dto/DinhKhoan.java)) — một định khoản header không có dòng để gắn. Lý do nghiệp vụ: BR36 cấm gộp dòng bút toán. **Không chọn** gắn tất cả vào dòng đầu tiên: sổ chi tiết công nợ theo mặt hàng sẽ lệch.
-- **Kiểm kỳ kế toán KHÔNG gọi ở module** — `GhiSoApi.ghiSo` tự kiểm với đúng cặp `(ngayHachToan, maLoaiChungTu)` nó sắp INSERT ([ChungTuTemplate javadoc](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)). Gọi thêm là thừa một truy vấn và tạo an toàn giả.
+- **Bút toán 2 (vế tiền) phân bổ theo từng dòng chi tiết**, không dồn thành một định khoản header. Lý do kỹ thuật: `DinhKhoan.chiTietChungTuId` là cột **NOT NULL** của `acc_so_cai` và nằm trong khoá chống ghi trùng ([DinhKhoan.java javadoc](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/hach_toan/api/dto/DinhKhoan.java)) — một định khoản header không có dòng để gắn. Lý do nghiệp vụ: BR36 cấm gộp dòng bút toán. **Không chọn** gắn tất cả vào dòng đầu tiên: sổ chi tiết công nợ theo mặt hàng sẽ lệch.
+- **Kiểm kỳ kế toán KHÔNG gọi ở module** — `GhiSoApi.ghiSo` tự kiểm với đúng cặp `(ngayHachToan, maLoaiChungTu)` nó sắp INSERT ([ChungTuTemplate javadoc](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)). Gọi thêm là thừa một truy vấn và tạo an toàn giả.
 
 ## 2. Hợp đồng API
 
 ### A7 — `POST /{id}/ghi-so` · quyền `DieuChinhGiaHangBan.Post`
 
-Không có body (base khai `@PostMapping("/{id}/ghi-so")`, [BaseChungTuController.java:93](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/controller/BaseChungTuController.java)).
+Không có body (base khai `@PostMapping("/{id}/ghi-so")`, [BaseChungTuController.java:93](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/controller/BaseChungTuController.java)).
 
 ```jsonc
 // Response 200
@@ -109,7 +120,7 @@ Bút toán 2 — kết chuyển chi tiền, trên từng dòng:
 
 ## 5. Luồng xử lý
 
-`ChungTuTemplate` luồng GHI_SO ([:212](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)):
+`ChungTuTemplate` luồng GHI_SO ([:212](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)):
 
 ```
 doiHoiDinhDanh → khoaChungTu → kiemTraNghiepVu (G2, G3)

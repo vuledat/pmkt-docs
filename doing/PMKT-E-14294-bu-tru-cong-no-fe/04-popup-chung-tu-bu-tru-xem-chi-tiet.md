@@ -7,7 +7,8 @@
 | **SCR nguồn** | `5.screens/SCR_BTCN_ChungTu_XemChiTiet.md` |
 | **Matrix** | `Matrix/PMKT-E-14294_BuTruCongNo/SCR_BTCN_ChungTu_XemChiTiet_MaTranAnHien.md` |
 | **Figma** | ⚠ **KHÔNG có frame riêng** — xem §2 |
-| **Đường vào** | Danh sách Phiếu KTTH (Xem chi tiết / double-click / click Số chứng từ) · link tham chiếu từ chứng từ công nợ đã tham gia bù trừ |
+| **Route** | `/tong-hop/bu-tru-cong-no/:id` (mới, 2026-08-21) |
+| **Đường vào** | ✅ **ĐÃ NỐI ĐƯỢC (2026-08-21)** — danh sách Phiếu KTTH `/tong-hop/phieu-ke-toan-tong-hop` điều hướng sang route `/tong-hop/bu-tru-cong-no/:id` khi dòng có `loaiPhieu = 'BU_TRU_CONG_NO'` (D11 ở [00 §−1](00-ke-hoach-tong.md)) · link tham chiếu từ chứng từ công nợ đã tham gia bù trừ |
 | **Component gốc** | `components/ChungTuBuTruModal.tsx` với `mode='view'` (**cùng component với [file 03](03-popup-chung-tu-bu-tru-them-moi.md)** — D8) |
 
 ---

@@ -7,6 +7,7 @@
 | Màn hình | `5.screens/SCR_DanhSachTraLaiHangBan.md` (137 dòng) |
 | Endpoint phụ trách | **A1** `POST /search` · **A2** `GET /cot` · **A3** `POST /export` |
 | Quyền | `TraLaiHangBan.View` (A1, A2) · `TraLaiHangBan.Export` (A3) |
+| **Trạng thái** | ✅ **ĐÃ CODE** (2026-08-21) — `TraLaiHangBanController` + `TraLaiHangBanCrudService` + `TraLaiMapper`. Còn thiếu: **test** (R11) và **sửa lỗi §7** (R10) |
 
 ## 1. Quyết định riêng
 
@@ -127,12 +128,14 @@ Tên file: `Chung-tu-tra-lai-hang-ban.xlsx` (`tenFileExport()`).
 
 ## 3. Whitelist `@Searchable` — bắt buộc khai đủ
 
+> ✅ **Đã cài đủ** ở `TraLaiHangBan.java` (9 `@Searchable` + `@SearchableAudit`) — trừ một dòng thừa phải xoá (§7).
+
 | alias | path | `sortable` | `keyword` | Nhãn | Vì sao bắt buộc |
 |---|---|---|---|---|---|
 | `soChungTu` | (base) | ✅ | ✅ | Số chứng từ | đã có ở `BaseChungTuEntity.java:56-58` — **không khai lại** |
 | `ngayChungTu` | (base) | ✅ | — | Ngày chứng từ | `BaseChungTuEntity.java:60-62` |
 | `ngayHachToan` | (base) | ✅ | — | Ngày hạch toán | `BaseChungTuEntity.java:64-66` — sort mặc định + phễu ngày |
-| `trangThaiChungTu` | `status` | ✅ | — | Trạng thái chứng từ | base khai alias `status` (`:70-73`) ⇒ **phải khai lại ở entity con với `alias = "trangThaiChungTu"`** vì FE lọc theo tên đó (`api/traLaiHangBanApi.ts:71`) — xem §7 |
+| `trangThaiChungTu` | (base) | ✅ | — | Trạng thái chứng từ | ⟳ `BaseChungTuEntity.java:83-86` — alias mặc định **đã đúng** tên FE gửi. **KHÔNG khai lại** — xem §7 |
 | `chiNhanhId` | (base) | ✅ | — | Chi nhánh | `BaseChungTuEntity.java:44-46` |
 | `khachHangId` | `khachHangId` | ✅ | — | Khách hàng | cột `khach_hang_id` |
 | `tenKhachHang` | `tenKhachHang` | ✅ | ✅ | Tên khách hàng | lọc `like` + tìm nhanh (`UC:32`) |
@@ -230,19 +233,44 @@ Tập rỗng: `SUM` trả `NULL` ⇒ `TongHopTraLaiHangBanDto` phải `COALESCE(
 
 ---
 
-## 7. Điểm cài đặt cần cẩn thận: alias `trangThaiChungTu`
+## 7. ⚠️ LỖI CẦN SỬA — `@Searchable` trỏ vào thuộc tính không còn tồn tại
 
-`BaseChungTuEntity.java:70-73` khai `@Searchable(sortable = true, label = "Trạng thái chứng từ")` trên field `status` ⇒ alias mặc định là **`status`** (`Searchable.java:45-46`: *"Rỗng → dùng tên field Java"*).
+> **Mục này đã ĐẢO NGƯỢC so với bản 2026-08-14.** Bản cũ đề xuất khai thêm một alias cấp class để FE lọc được `trangThaiChungTu`. Base sau đó đổi thiết kế, mẹo ấy thành **thừa và sai** — nhưng code F1 đã kịp mang nó vào.
 
-Nhưng FE lọc/sort bằng **`trangThaiChungTu`** (`api/traLaiHangBanApi.ts:71`, `api/model.ts:171`). Hai cách:
+**Sự thật hiện tại:**
 
-| | A — FE đổi sang `status` | **B (chọn) — entity con khai thêm alias ở mức class** |
+`core/entity/BaseChungTuEntity.java:83-86` đã khai sẵn:
+
+```java
+@Searchable(sortable = true, label = "Trạng thái chứng từ")
+@Enumerated(EnumType.STRING)
+@Column(name = "trang_thai_chung_tu", nullable = false)
+private TrangThaiChungTu trangThaiChungTu = TrangThaiChungTu.CHUA_GHI_SO;
+```
+
+Alias mặc định = tên field = **`trangThaiChungTu`** — đúng thứ FE gửi (`api/traLaiHangBanApi.ts:71`). **Không cần làm gì thêm.**
+
+**Nhưng `tra_lai_hang_ban/internal/entity/TraLaiHangBan.java:34` lại có:**
+
+```java
+@Searchable(alias = "trangThaiChungTu", path = "status", sortable = true, …)
+public class TraLaiHangBan extends BaseChungTuEntity {
+```
+
+Hai lỗi trong một dòng:
+
+| # | Lỗi | Bằng chứng |
 |---|---|---|
-| Cách làm | sửa `api/traLaiHangBanApi.ts` + `model.ts` + test | `@Searchable(alias = "trangThaiChungTu", path = "status", sortable = true, label = "Trạng thái chứng từ")` trên `@Entity class TraLaiHangBan` |
-| Chi phí | sửa FE đã test xanh, và lệch với `ChungTuBanHangDto.java:84` (cũng phơi `trangThaiChungTu`) | 1 dòng annotation; `Searchable` là `@Repeatable` và khai ở mức class được (`Searchable.java:25-35`) |
-| Rủi ro | — | có **hai** alias cùng trỏ `status` (`status` từ base + `trangThaiChungTu`) ⇒ `GET /cot` trả trùng một cột hai lần. **Chốt an toàn:** unit test ghim danh sách `CotMoTa` — nếu trùng thì lọc bớt ở `moTaCot()` |
+| 1 | **`path = "status"` trỏ vào thuộc tính KHÔNG CÒN TỒN TẠI** — trường `status` đã bị gỡ khỏi `BaseChungTuEntity` khi `TrangThaiChungTu` rút từ 5 xuống 2 giá trị | `grep -n "status" core/entity/BaseChungTuEntity.java` → **rỗng** |
+| 2 | **Alias `trangThaiChungTu` bị khai HAI lần** — một ở base, một ở đây | `BaseChungTuEntity.java:83` + `TraLaiHangBan.java:34` |
 
-DTO phơi field tên `trangThaiChungTu` (kiểu `String`, giá trị = `status.name()`) — giống `ChungTuBanHangDto.java:84`.
+**Hệ quả:** `GET /cot` có thể trả cột trùng, và lọc/sort theo `trangThaiChungTu` có thể phân giải vào path chết tuỳ thứ tự `SearchableRegistry` duyệt.
+
+**Cách sửa:** **xoá hẳn dòng `@Searchable` cấp class** trên `TraLaiHangBan`. Base đã đủ.
+
+**Test ghim:** `TraLaiHangBanSearchableTest` — danh sách `CotMoTa` từ `GET /cot` **không có alias trùng nhau**, và alias `trangThaiChungTu` phân giải về property `trangThaiChungTu`.
+
+> Ghi ở **§9-R10** của [file gốc](00-ke-hoach-tong.md) như một rủi ro mức Cao, và là **việc số 2** trong thứ tự thực hiện (§8) vì nó chỉ tốn một dòng.
 
 ---
 
@@ -262,7 +290,7 @@ Chỉ đọc. `search`/`cot`/`export` đều `@Transactional(readOnly = true)` d
 |---|---|---|
 | `TraLaiMapperTest` | `traLaiHang` dẫn xuất | `kiemPhieuNhapKho = true` → `"Qua kho"`; `false`/`null` → `"Không qua kho"` |
 | | `hinhThucThanhToan` dẫn xuất | `thanhToanNgay = true` → `"Hoàn tiền ngay"`; `false`/`null` → `"Điều chỉnh công nợ"` |
-| | `trangThaiChungTu` | `status = DA_GHI_SO` → `"DA_GHI_SO"` (**không** phải "Đã ghi sổ") |
+| | `trangThaiChungTu` | `trangThaiChungTu = DA_GHI_SO` → `"DA_GHI_SO"` (**không** phải "Đã ghi sổ") |
 | | list DTO bỏ `chiTiet` | mapper danh sách → `chiTiet == null` |
 | `TraLaiHangBanSearchableTest` | whitelist **ghim** | tập alias sinh từ `SearchableRegistry` **chứa đủ** 4 alias lọc + 3 alias sort của FE; `GET /cot` không trả trùng alias (§7) |
 | `TraLaiHangBanCrudServiceTest` | sort mặc định | `defaultSortAlias()` == `"ngayHachToan:desc,ngayChungTu:desc,soChungTu:asc"` |

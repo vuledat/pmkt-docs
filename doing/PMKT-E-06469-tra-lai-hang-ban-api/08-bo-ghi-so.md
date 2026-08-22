@@ -7,6 +7,7 @@
 | Màn hình | `SCR_DanhSachTraLaiHangBan.md` §Chức năng · **BR15** (bỏ ghi sổ hàng loạt) · `SCR_XemChiTiet:20-21` |
 | Endpoint phụ trách | **A14** `POST /{id}/bo-ghi-so` · **A15** `POST /bo-ghi-so-hang-loat` |
 | Quyền | `TraLaiHangBan.Unpost` — ⚠ **có thể chưa seed trong DB dev**, xem [00 §10](00-ke-hoach-tong.md) |
+| **Trạng thái** | ☐ chưa code |
 
 ## 1. Quyết định riêng
 
@@ -14,7 +15,7 @@
 |---|---|---|
 | 1.1 | Bỏ ghi sổ = **XÓA VẬT LÝ** dòng sổ cái, **không** sinh bút toán đảo | `ChungTuTemplate.java:52-53` (quyết định chốt tại migration V56); `GhiSoApi.java:33-36` |
 | 1.2 | Hệ quả: chứng từ thuộc **kỳ đã khoá KHÔNG bỏ ghi sổ được** — hành vi đúng của mô hình xoá cứng, không phải thiếu sót | `GhiSoApi.java:40-42`; `BoGhiSoChungTuBanHang.java:22-23`; §12-Q7 file gốc |
-| 1.3 | Trạng thái sau bỏ ghi sổ: `NHAP` nếu chưa từng duyệt, `DA_DUYET` nếu đã duyệt | `BaseChungTuEntity.boGhiSo()` — `:176-180` |
+| 1.3 ⟳ | Trạng thái sau bỏ ghi sổ: **luôn `CHUA_GHI_SO`** | ⚠ **Đổi so với bản 2026-08-14.** Vòng đời duyệt (`DA_DUYET`, `nguoi_duyet_id`) **đã bị gỡ** khỏi `BaseChungTuEntity`; `TrangThaiChungTu` nay chỉ có 2 giá trị (`TrangThaiChungTu.java:8-17`) ⇒ `boGhiSo()` không còn nhánh rẽ |
 | 1.4 | **Gỡ sạch liên kết** `ctu_quan_he_chung_tu` trỏ tới chứng từ này | §5, giống [05](05-xoa.md) |
 | 1.5 | Popup xác nhận `_207` là **việc FE**, BE không trả confirm | `6.messages.md` `_207` loại `Confirm` |
 
@@ -29,7 +30,7 @@ Quyền: `TraLaiHangBan.Unpost` (`BaseChungTuController.java:102-108`). Không b
 ```jsonc
 // Response 200
 {
-  "data": { /* … DTO: trangThaiChungTu = "NHAP" | "DA_DUYET", nguoiGhiSo/thoiGianGhiSo = null … */ },
+  "data": { /* … DTO: trangThaiChungTu = "CHUA_GHI_SO", nguoiGhiSo/thoiGianGhiSo = null … */ },
   "message": "Bỏ ghi sổ chứng từ trả lại hàng bán thành công",
   "messageId": "MSG_PMKT-E-06469_005"
 }
@@ -82,7 +83,7 @@ Nguyên văn `UC_BoGhiSoTraLaiHangBan.md:523-530`:
 
 | # | Hậu điều kiện | Đợt 1 | Cơ chế |
 |---|---|---|---|
-| 1 | Trạng thái `Đã ghi sổ` → `Chưa ghi sổ` | ✅ | `ct.boGhiSo()` (1.3) |
+| 1 | Trạng thái `DA_GHI_SO` → `CHUA_GHI_SO` | ✅ | `ct.boGhiSo()` (1.3) |
 | 2 | Bút toán bị xóa khỏi **Sổ cái** | ✅ | `GhiSoApi.boGhiSo(id)` — xóa vật lý (1.1) |
 | 3 | **Sổ chi tiết công nợ** cập nhật theo | ✅ tự động | là view/báo cáo đọc từ `acc_so_cai` |
 | 4 | Phiếu nhập kho bị hủy, **tồn kho giảm** | ❌ | không có module kho (§0-D6); `coAnhHuongTonKho() = false` ⇒ `hoanTacTonKho` **không** được gọi |
@@ -185,11 +186,11 @@ Khớp `UC:499-510`: duyệt lần lượt, kiểm trạng thái `Đã ghi sổ`
 
 | Lớp test | Case | Input → kỳ vọng |
 |---|---|---|
-| `BoGhiSoTraLaiHangBanTest` | V61 | `status = NHAP` → 409 `NOT_POSTED` + `_211`; `GhiSoApi.boGhiSo` **never** |
+| `BoGhiSoTraLaiHangBanTest` | V61 | `trangThaiChungTu = CHUA_GHI_SO` → 409 `NOT_POSTED` + `_211`; `GhiSoApi.boGhiSo` **never** |
 | | thứ tự bất biến | `boGhiSo` (kernel) gọi **trước** `saveAndFlush` (`InOrder`) |
 | | `chuanBiChungTu` | `ghiNhanChungTu` được gọi (thiếu → `IllegalStateException` từ `doiHoiDinhDanh`) |
 | | không tính lại tiền | `TinhToanTraLai.apDung` **never** |
-| | trạng thái sau gỡ | chưa duyệt → `NHAP`; đã duyệt (`nguoiDuyetId ≠ null`) → `DA_DUYET`; `nguoiGhiSo`/`thoiGianGhiSo` == `null` |
+| | trạng thái sau gỡ | ⟳ **luôn** `CHUA_GHI_SO`; `nguoiGhiSo`/`thoiGianGhiSo` == `null` |
 | | `touch()` | được gọi trước `saveAndFlush` |
 | | gỡ liên kết | `goToanBoTheoDich` gọi **đúng 1 lần**, **sau** `luuEntity` |
 | | tồn kho | `hoanTacTonKho` **never** (`coAnhHuongTonKho() == false`) |
@@ -205,7 +206,7 @@ Khớp `UC:499-510`: duyệt lần lượt, kiểm trạng thái `Đã ghi sổ`
 | Lớp | Kiểm gì chỉ DB thật làm được |
 |---|---|
 | `BoGhiSoTraLaiHangBanIT` | ghi sổ rồi bỏ ghi sổ → `acc_so_cai` của chứng từ đó **rỗng hoàn toàn** (xóa vật lý, **không** có bút toán đảo) |
-| | trạng thái về `NHAP`, `nguoi_ghi_so`/`thoi_gian_ghi_so` `NULL` |
+| | trạng thái về `CHUA_GHI_SO`, `nguoi_ghi_so`/`thoi_gian_ghi_so` `NULL` |
 | | `ctu_quan_he_chung_tu` đã gỡ; `daTieuThu(dòng gốc)` về giá trị trước khi lập |
 | | sau khi bỏ ghi sổ → `PUT` sửa được (**không** còn 409 `_201`), và `doiSoatVoiSoCai` **không** nổ |
 | | kỳ đã khoá → 409 `_204`, chứng từ **vẫn** `DA_GHI_SO`, sổ cái **vẫn** còn dòng (rollback sạch) — chốt chặn 1.2 |

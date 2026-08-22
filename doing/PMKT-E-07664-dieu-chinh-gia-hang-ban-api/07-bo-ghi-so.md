@@ -1,5 +1,12 @@
 # F7 — Bỏ ghi sổ Chứng từ điều chỉnh giá (đơn + hàng loạt)
 
+> ### 🔄 CẬP NHẬT 2026-08-21
+>
+> 1. **`status`** → `trangThaiChungTu`; B2 kiểm `== DA_GHI_SO`, sau khi bỏ ghi sổ đặt về **`CHUA_GHI_SO`** (không phải `NHAP`).
+> 2. **B3 (`MSG_202` — HĐ đã ký phát hành) nay khả thi hơn:** module `hoa_don_ban_hang` đã tồn tại và có enum `TrangThaiPhatHanh`, nhưng **chưa mở `api/`** ⇒ vẫn phải đi qua `HoaDonDieuChinhPort` với adapter mặc định. Khi module đó mở `api/`, thay adapter là xong — không đụng luồng.
+> 3. **§4 "giữ liên kết nguồn khi bỏ ghi sổ"** vẫn là quyết định của plan này, vẫn **lệch** javadoc `QuanHeChungTuApi.goToanBoTheoDich` — cần Dev BE chốt.
+> 4. **BR48:** sau khi bỏ ghi sổ, form "Xem dữ liệu ghi sổ" (A18) **tự chuyển về chế độ Xem trước** — không cần code riêng, chế độ chọn theo trạng thái.
+
 | | |
 |---|---|
 | Mã chức năng | **F7** |
@@ -9,7 +16,7 @@
 
 ## 1. Quyết định riêng
 
-- **Bỏ ghi sổ = XOÁ VẬT LÝ dòng sổ cái**, không sinh bút toán đảo — quyết định nghiệp vụ đã chốt của hệ thống (migration V56, ghi trong javadoc [GhiSoApi.boGhiSo](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/hach_toan/api/GhiSoApi.java)). Hệ quả bắt buộc phải nói với BA: **chứng từ thuộc kỳ đã khoá KHÔNG bỏ ghi sổ được** — muốn gỡ phải mở kỳ trước (đúng BR17.1 dòng "Bỏ ghi sổ · kỳ đóng ⇒ chặn").
+- **Bỏ ghi sổ = XOÁ VẬT LÝ dòng sổ cái**, không sinh bút toán đảo — quyết định nghiệp vụ đã chốt của hệ thống (migration V56, ghi trong javadoc [GhiSoApi.boGhiSo](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/hach_toan/api/GhiSoApi.java)). Hệ quả bắt buộc phải nói với BA: **chứng từ thuộc kỳ đã khoá KHÔNG bỏ ghi sổ được** — muốn gỡ phải mở kỳ trước (đúng BR17.1 dòng "Bỏ ghi sổ · kỳ đóng ⇒ chặn").
 - **`MSG_202` "Hóa đơn đã ký phát hành, không thể bỏ ghi sổ" chưa kiểm được** — §12-Q3 file gốc. Cài **cấu trúc** để module hóa đơn sau này cắm vào mà không phải sửa luồng: interface `HoaDonDieuChinhPort` trong `internal/port/`, cài đặt mặc định `KhongCoHoaDonAdapter` trả "chứng từ không gắn hóa đơn đã phát hành". **Không chọn** bỏ hẳn luật: khi module hóa đơn lên, chỗ cắm đã có sẵn và có test chờ.
 - **Popup xác nhận của UC bước 5** (*"Nếu bỏ ghi sổ … thì Hóa đơn điều chỉnh được sinh ra cũng bị xóa…"*) là **của FE**; BE không trả câu này (không có mã trong `6.messages.md` — §12-Q5). FE đã dựng (`IMPLEMENT.md` dòng 300).
 
@@ -17,7 +24,7 @@
 
 ### A8 — `POST /{id}/bo-ghi-so` · quyền `DieuChinhGiaHangBan.Unpost`
 
-Không có body ([BaseChungTuController.java:102](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/controller/BaseChungTuController.java)).
+Không có body ([BaseChungTuController.java:102](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/controller/BaseChungTuController.java)).
 
 ```jsonc
 // Response 200
@@ -50,7 +57,7 @@ BR42.3: chứng từ "Chưa ghi sổ" trong lô bị **tự động bỏ qua** (
 
 ## 4. Luồng xử lý
 
-`ChungTuTemplate` luồng BO_GHI_SO ([:231](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)) — **gỡ tác động cũ TRƯỚC, đổi trạng thái SAU**:
+`ChungTuTemplate` luồng BO_GHI_SO ([:231](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)) — **gỡ tác động cũ TRƯỚC, đổi trạng thái SAU**:
 
 ```
 doiHoiDinhDanh → khoaChungTu → kiemTraNghiepVu (B2, B3)

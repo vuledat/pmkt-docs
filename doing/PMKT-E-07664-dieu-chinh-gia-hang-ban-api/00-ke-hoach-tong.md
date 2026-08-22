@@ -1,17 +1,36 @@
 # Kế hoạch triển khai API — Điều chỉnh giá hàng bán (PMKT-E-07664)
 
-> **Trạng thái:** BẢN NHÁP CHỜ REVIEW — chưa code gì
-> **Ngày cập nhật:** 2026-08-14
+> **Trạng thái:** BẢN NHÁP CHỜ REVIEW — **F1 (danh sách) đã code xong**, F2 mới có phần header, F3–F8 chưa code
+> **Ngày cập nhật:** 2026-08-21 (rà lại toàn bộ sau đợt refactor V5 của repo)
+> **Bản trước:** 2026-08-14 — xem §-1 để biết cái gì đã đổi và quyết định nào bị huỷ
 > **Người review cần có:** 1 BA (chốt §12) + 1 Dev BE/DBA (chốt §7, §9, §10)
 
 | Mục | Nội dung |
 |---|---|
 | Use case | PMKT-U-07665 Xem danh sách · U-07666 Thêm mới · U-07667 Xem chi tiết · U-07668 Xóa · U-07669 Ghi sổ · U-07670 Bỏ ghi sổ · U-07671 Sửa |
 | Màn hình | `SCR_DanhSachDieuChinhGia` · `SCR_ThemMoiDieuChinhGia` · `SCR_SuaDieuChinhGia` · `SCR_XemChiTietDieuChinhGia` |
-| Tài liệu nguồn | `pmkt-docs/ba/PMKT-E-07664_DieuChinhGiaHangBan/` + `pmkt-docs/ba/Common/business_rules.md` |
-| Module BE | `cell-app/src/main/java/vn/dopai/pmkt/cell/dieu_chinh_gia_hang_ban/` (**tạo mới**) |
-| Bảng DB | `sal_chung_tu_dieu_chinh_gia_hang_ban` (**đã có 63 cột**) · `sal_chung_tu_dieu_chinh_gia_hang_ban_chi_tiet` (**đã có 39 cột**) |
-| Kế hoạch FE đối ứng | `docs/doing/PMKT-E-07664-dieu-chinh-gia-hang-ban-fe/IMPLEMENT.md` — FE **đã code xong trên mock**, đã khai sẵn 11 endpoint |
+| Tài liệu nguồn | `pmkt-docs/ba/PMKT-E-07664_DieuChinhGiaHangBan/` + `pmkt-docs/ba/Common/business_rules.md` (**BR1…BR49**) + **`pmkt-docs/ba/Common/LDM_update/ldm-DieuChinhGiaHangBan.puml`** (mới) |
+| Module BE | `cell-app/src/main/java/vn/vtt/pmkt/cell/dieu_chinh_gia_hang_ban/` — **đã tồn tại, 17 file** |
+| Bảng DB | `sal_chung_tu_dieu_chinh_gia_hang_ban` (**69 cột**) · `…_chi_tiet` (**39 cột**) |
+| FE đối ứng | `client/src/features/banHang/dieuChinhGiaHangBan/` — **đã tắt mock** (`DUNG_MOCK = false`), đang gọi BE thật cho màn danh sách |
+
+---
+
+## -1. CÁI GÌ ĐÃ ĐỔI TỪ BẢN 2026-08-14
+
+Repo đã qua một đợt refactor lớn (`ManhDT/RefactorV5`) + 34 migration mới. Bảy thay đổi làm sai bản kế hoạch cũ:
+
+| # | Thay đổi | Ảnh hưởng lên plan |
+|---|---|---|
+| 1 | **Base package đổi `vn.dopai.pmkt` → `vn.vtt.pmkt`** | mọi đường dẫn đã sửa trong cả 10 file |
+| 2 | **Module `dieu_chinh_gia_hang_ban` ĐÃ ĐƯỢC DỰNG** — 17 file, màn danh sách chạy được | §2 chuyển từ *greenfield* sang *brownfield*; F1 xong, F2 dở |
+| 3 | **`BaseChungTuEntity` bỏ cột `status`** — trạng thái nay là `trangThaiChungTu` (cột `trang_thai_chung_tu`), enum còn **2 giá trị** `CHUA_GHI_SO`/`DA_GHI_SO` | **D7 huỷ** (không DROP cột nữa) · phát sinh **lỗi thật ở entity hiện tại**, xem §2.4-L1 |
+| 4 | **Engine đánh số chứng từ** (PMKT-U-16693) — `SoChungTuApi.sinhSo(entity, soNguoiDungGo)` + 3 bảng cấu hình, đã seed **4 quy tắc cho `DCGB`** | **D12 huỷ** — số chứng từ do engine cấp, không phải "người dùng tự nhập" |
+| 5 | **Mã loại chứng từ `DCGB` đã tồn tại** trong `mst_loai_chung_tu` | **§12-Q1 ĐÃ TRẢ LỜI** — không phải hỏi BA nữa, không phải seed |
+| 6 | **Migration đánh số theo timestamp** từ 2026-08-20 (`docs/rules/migration-danh-so-theo-timestamp.md`) | **§10 viết lại** — không còn `V3`; `V3__gop_thay_doi_sau_baseline.sql` đã bị dùng |
+| 7 | **BA bổ sung BR47/48/49** và **LDM riêng cho epic** (`ldm-DieuChinhGiaHangBan.puml`) | **D6 huỷ** (LDM dùng cột phẳng) · thêm A18 (BR48) · §14 thêm BR48/BR49 |
+| 8 | **Các module lân cận đã có**: `hoa_don_ban_hang`, `tra_lai_hang_ban`, `tien_mat_tien_gui`, và **`dieu_chinh_gia_hang_mua` (bản sinh đôi, code ĐẦY ĐỦ)** | **D3 đổi lý do** — không còn "thiếu module", mà là "thiếu `api/`" · có mẫu code 1:1 để bám (§2.3) |
+| 9 | **`sal_chung_tu_ban_dich_vu` đã gộp vào `sal_chung_tu_ban_hang`** (V1012, `loai_nghiep_vu = 'Bán dịch vụ'`) | **F8 đơn giản hơn** — bỏ `UNION ALL` |
 
 ---
 
@@ -19,20 +38,24 @@
 
 | # | Quyết định | Hệ quả |
 |---|---|---|
-| **D1** | Module mới `cell/dieu_chinh_gia_hang_ban/` theo shape Modulith `internal/` (KHÔNG có `api/`), kế thừa `BaseChungTuController` + `AbstractChungTuCrudService` + `ChungTuTemplate` y như `chung_tu_ban_hang/` | 11/17 endpoint là kế thừa, không viết lại (§4). Luồng ghi/sửa/xoá/ghi sổ đi qua `ChungTuTemplate.thucThi` ([ChungTuTemplate.java:103](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)) → thứ tự bước là bất biến, không tự viết. **Không chọn** đặt màn này thành sub-package của `chung_tu_ban_hang/`: module đó đang là shape `internal/` đầy đủ nhưng gộp vào sẽ biến nó thành module hai nghiệp vụ, và mọi entity/DTO của điều chỉnh giá sẽ nhìn thấy `internal/` của bán hàng — mất đúng ranh giới mà Modulith giữ |
-| **D2** | Module mới **dùng chung tiền tố bảng `sal_`** với `chung_tu_ban_hang` | Lệch quy ước "mỗi module một tiền tố" (`docs/be-khung-kien-truc-chuan.md` §6). Lý do: hai bảng đã tồn tại trong baseline với tên `sal_chung_tu_dieu_chinh_gia_hang_ban*` ([V1__baseline.sql:16257](../../cell-app/src/main/resources/db/migration/V1__baseline.sql), :16411) và đã có RLS/policy/trigger/FK gắn theo tên đó. **Không chọn** đổi tên bảng sang tiền tố mới: một lần rename kéo theo 2 policy set, 4 trigger, 6 FK, 5 index và toàn bộ comment — chi phí lớn hơn giá trị của một tiền tố. Phải ghi rõ ở `package-info.java` |
-| **D3** | Ghi sổ **chỉ sinh bút toán sổ cái** qua `GhiSoApi` ([GhiSoApi.java:31](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/hach_toan/api/GhiSoApi.java)). **KHÔNG** tạo bản ghi Phiếu thu / Phiếu chi / Giấy báo / Séc / Hóa đơn điều chỉnh | UC_GhiSo yêu cầu 6 tác động nguyên tử, nhưng BE hiện **không có** module nào của `cb_phieu_thu`, `cb_phieu_chi`, `sal_hoa_don_ban_hang`, `sal_dieu_chinh_hoa_don_ban_hang` (bằng chứng §2.1). Bút toán 2 (Nợ 131 / Có TK tiền, hoặc ngược lại) **vẫn sinh đủ** từ `tai_khoan_tien_id` trên header, nên sổ cái đúng; phần thiếu là *bản ghi phiếu* để người dùng thấy ở màn Tiền mặt. Xem §1.2, R1, §12-Q2 |
-| **D4** | Liên kết chứng từ nguồn ↔ chứng từ điều chỉnh đi qua `QuanHeChungTuApi`, **mức DÒNG**, loại đích `LoaiChungTu.SAL_DIEU_CHINH_GIA_HANG_BAN` ([LoaiChungTu.java:31](../../cell-app/src/main/java/vn/dopai/pmkt/cell/quan_he_chung_tu/api/LoaiChungTu.java)) | "Lưu ý quan trọng §1" của SCR (dòng 610-611) đòi liên kết cả 3 chứng từ để tính được giá trị còn lại của từng dòng — khoá liên kết phải ở mức dòng. `laTieuThu()` của loại này là `false` ([LoaiChungTu.java:65](../../cell-app/src/main/java/vn/dopai/pmkt/cell/quan_he_chung_tu/api/LoaiChungTu.java)) nên **không** áp ràng buộc "Σ tiêu thụ ≤ số lượng nguồn" — một dòng bán hàng được điều chỉnh giá nhiều lần là hợp lệ. **Không chọn** chỉ dùng cột FK `chi_tiet_chung_tu_ban_hang_id` trên bảng chi tiết: cột đó chỉ nối được 2 chứng từ, không mô tả được chuỗi CTBH → HĐ điều chỉnh → CT điều chỉnh giá |
-| **D5** | Module phải cài `DongChungTuPort` cho loại của mình | Bắt buộc — `laySoLuong` của bảng này trả `COALESCE(so_luong_tang, so_luong_giam)`, đúng như javadoc của port đã ghi sẵn ([DongChungTuPort.java:54](../../cell-app/src/main/java/vn/dopai/pmkt/cell/quan_he_chung_tu/api/DongChungTuPort.java)). Thiếu bean này thì tab "Chứng từ liên quan" của CTBH không hiển thị được chứng từ điều chỉnh giá |
-| **D6** | Giữ nguyên cặp cột `so_luong_tang/giam`, `don_gia_tang/giam`, `thanh_tien_tang/giam`, `chiet_khau_*_tang/giam` của bảng chi tiết; DTO **phẳng** (`soLuong`, `donGia`, `thanhTien`) do mapper chọn khối theo `loai_dieu_chinh` của header | Khớp `model.ts` của FE (`dieuChinhGiaChiTietSchema` — `soLuong`/`donGia`/`thanhTien` một bộ). **Không chọn** thêm cặp cột phẳng mới: base `DongChungTuPort` đã viết sẵn quy ước COALESCE cho đúng bảng này, đổi shape là làm hỏng hợp đồng đã có |
-| **D7** | Cột `trang_thai_chung_tu text NOT NULL CHECK ('Chưa ghi sổ','Đã ghi sổ')` bị **DROP** ở migration V3; trạng thái chỉ còn ở cột `status` (`TrangThaiChungTu`) do `BaseChungTuEntity` quản | Có tiền lệ: cột cùng tên của luồng bán hàng đã bị DROP ở V309 (ghi trong javadoc [TrangThaiChungTu.java](../../cell-app/src/main/java/vn/dopai/pmkt/cell/core/entity/TrangThaiChungTu.java)). Giữ cả hai = hai nguồn sự thật cho cùng một trạng thái, và `NOT NULL` + CHECK chuỗi tiếng Việt sẽ nổ ngay ở INSERT đầu tiên của entity mới |
-| **D8** | Thuế suất lưu bằng **enum text** (`thue_suat_gtgt_mac_dinh` + `gia_tri_thue_gtgt`) như `sal_chung_tu_ban_hang_chi_tiet`, cột `thue_suat_gtgt_id` hiện có để **deprecate** (không dùng, không xoá lần này) | FE gửi `thueSuatGtgt: '0'\|'5'\|'8'\|'10'\|'KCT'\|'KKKNT'\|'KHAC'` + `giaTriThueGtgt`, và `BR_KhongTongHopToKhaiGTGT` quyết định theo chính bộ mã đó. **Không chọn** FK vào danh mục thuế suất: mọi luật của epic (`KHAC`/`KKKNT` ⇒ tick "không tổng hợp tờ khai") viết theo mã, tra danh mục để suy ra mã là thêm một chỗ lệch được |
-| **D9** | Enum `ThueSuatGtgt` **khai lại** trong `internal/model/` của module mới | `chung_tu_ban_hang/internal/model/ThueSuatGtgt.java` nằm trong `internal/` của module khác — Modulith cấm import. **Không chọn** import xuyên `internal/`: module mới phải sạch tuyệt đối về ranh giới ngay từ đầu (`be-khung-kien-truc-chuan.md` §7 luật 2). Đề xuất nâng enum lên `accounting_core` là ticket riêng — xem R4 |
-| **D10** | Ba endpoint "chọn nguồn" (`/nguon/*`) đặt trong **cùng controller**, đúng tên FE đã khai | FE đã code và khai cứng 11 đường dẫn (`IMPLEMENT.md` dòng 178-188). Đổi tên đường dẫn = FE phải sửa 3 file hợp đồng. **Không chọn** tách controller riêng: chúng phục vụ đúng một màn và dùng chung mã quyền `DieuChinhGiaHangBan.Create` |
-| **D11** | Mã loại chứng từ (`maLoaiChungTu`) = **`CTDG`**, seed mới vào `mst_loai_chung_tu` | `ChungTuTemplate.maLoaiChungTu()` là bắt buộc với mọi chứng từ kể cả loại không sinh bút toán ([ChungTuTemplate.java:272](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)); chốt chặn kỳ khoá ở cả Java lẫn trigger DB đọc mã này. Danh sách seed hiện có 20 mã, **không có mã nào cho điều chỉnh giá** (§2.2), BR09 cũng không liệt kê → **`CTDG` là đề xuất của dev, cần BA chốt (§12-Q1)** |
-| **D12** | Số chứng từ **do người dùng nhập** (không tự sinh) | BR20.2: "Cho phép user nhập tay"; SCR khai ô "Số chứng từ" bắt buộc, max 50, ở cả tab Công nợ lẫn tab thanh toán. Vì vậy **không** gọi `sinhSoChungTu` ([ChungTuTemplate.java:322](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)); chống trùng dựa vào unique index đã có `uq_sal_dcg_so_ct` ([V1__baseline.sql:23661](../../cell-app/src/main/resources/db/migration/V1__baseline.sql)) + kiểm sớm ở service để trả `MSG_PMKT-E-07664_109` |
+| **D1** | Module `cell/dieu_chinh_gia_hang_ban/` shape Modulith `internal/`, phần ĐỌC kế thừa `BaseCrudController`, phần GHI sẽ chuyển sang `BaseChungTuController` + `ChungTuTemplate` | **Đã cài một nửa**: controller hiện `extends BaseCrudController<…, Void, Void>` và **chặn tường minh** 3 endpoint ghi. Khi làm F3 phải đổi sang `extends BaseChungTuController<E, D, CD, C, U>` — đây là một **breaking change nội bộ**, xem §8 bước 3 |
+| **D2** | Dùng chung tiền tố bảng `sal_` với `chung_tu_ban_hang` | ✅ giữ nguyên, đã ghi lý do ở `package-info.java` của module |
+| **D3** | Ghi sổ **chỉ sinh bút toán sổ cái** + đổi trạng thái. **KHÔNG** tạo Phiếu thu/Chi, Hóa đơn điều chỉnh | **Lý do đã đổi**: `tien_mat_tien_gui` (49 file) và `hoa_don_ban_hang` (19 file) **nay đã tồn tại**, nhưng **cả hai không có package `api/`** ⇒ Modulith cấm gọi vào. Muốn sinh phiếu/HĐ thì hai module đó phải mở `api/` trước — xem §12-Q2 (đã đổi nội dung) |
+| **D4** | Liên kết nguồn qua `QuanHeChungTuApi`, **mức DÒNG**, loại đích `LoaiChungTu.SAL_DIEU_CHINH_GIA_HANG_BAN` | ✅ giữ nguyên. `laTieuThu() = false` nên không áp ràng buộc "Σ tiêu thụ ≤ SL nguồn" |
+| **D5** | Module phải cài `DongChungTuPort` cho loại của mình | ✅ giữ nguyên — nhưng **hợp đồng đổi** theo D6: `laySoLuong` trả thẳng `so_luong` chứ không `COALESCE(tang, giam)` nữa. Javadoc của port ([DongChungTuPort.java:54](../../cell-app/src/main/java/vn/vtt/pmkt/cell/quan_he_chung_tu/api/DongChungTuPort.java)) vẫn ghi COALESCE ⇒ **phải sửa javadoc đó cùng lúc**, nếu không hai chỗ nói ngược nhau |
+| ~~**D6**~~ | ~~Giữ cặp cột `*_tang`/`*_giam`, DTO phẳng do mapper chọn khối~~ | **HUỶ.** LDM mới (`ldm-DieuChinhGiaHangBan.puml` dòng 96-98) khai **một bộ phẳng** `SoLuong`/`DonGia`/`ThanhTien`, và cả `ChietKhauPhanTram`/`ChietKhau` cũng phẳng. Thay bằng **D6′** |
+| **D6′** | **Chuyển bảng chi tiết sang cột phẳng**: thêm `so_luong`, `don_gia`, `thanh_tien`, `chiet_khau_phan_tram`, `chiet_khau` + backfill từ 10 cột `*_tang`/`*_giam`, và **deprecate 10 cột cũ** (không xoá lần này) | Bảng chi tiết chưa có dòng nghiệp vụ nào (module chưa cài luồng ghi) nên backfill rẻ. Hướng Tăng/Giảm đã nằm ở header `loai_dieu_chinh` — hai khối cột là mã hoá **thừa** cùng một thông tin, và mọi công thức của SCR đều viết trên một bộ số. **Không chọn** giữ hai khối: mọi truy vấn phải `COALESCE`, và `DonChungTuPort` của base đã phải viết riêng một ngoại lệ cho đúng bảng này |
+| ~~**D7**~~ | ~~DROP cột `trang_thai_chung_tu`~~ | **HUỶ.** Base đã tự đổi: cột `trang_thai_chung_tu text NOT NULL DEFAULT 'CHUA_GHI_SO'` **chính là** cột trạng thái chuẩn, cột `status` đã biến mất khỏi `BaseChungTuEntity` |
+| **D8** | Thuế suất lưu **enum text** (`thue_suat_gtgt_mac_dinh` + `gia_tri_thue_gtgt`), `thue_suat_gtgt_id` deprecate | ✅ giữ nguyên; LDM xác nhận (`ThueSuatGTGT: enum!` + `ThueSuatKhac`) |
+| **D9** | Enum `ThueSuatGtgt` khai lại trong `internal/model/` | ✅ giữ nguyên — `chung_tu_ban_hang` vẫn không có `api/` cho enum này (`api/` của nó chỉ có `GiaVonBanHangApi`) |
+| **D10** | Ba endpoint `/nguon/*` trong cùng controller, đúng tên FE đã khai | ⚠ **Sửa cách cài**: `chung_tu_mua_hang` đã mở `ChungTuMuaHangNguonApi` cho đúng bài toán này ([file](../../cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_mua_hang/api/ChungTuMuaHangNguonApi.java)). Bản bán hàng phải làm **đối xứng**: mở `chung_tu_ban_hang/api/ChungTuBanHangNguonApi` thay vì bắn SQL native xuyên bảng của module khác — xem D13 |
+| ~~**D11**~~ | ~~`maLoaiChungTu = "CTDG"`, seed mới~~ | **HUỶ — dùng `DCGB`**, đã seed sẵn tại [V1032:153](../../cell-app/src/main/resources/db/migration/V1032__tknd_va_cau_hinh_danh_so.sql). Sinh đôi mua hàng dùng `DCGM` ([DieuChinhGiaMuaSupport.java](../../cell-app/src/main/java/vn/vtt/pmkt/cell/dieu_chinh_gia_hang_mua/internal/DieuChinhGiaMuaSupport.java)) |
+| ~~**D12**~~ | ~~Số chứng từ người dùng nhập, không tự sinh~~ | **HUỶ.** Engine đánh số (PMKT-U-16693) đã lên: template gọi `SoChungTuApi.sinhSo(entity, soNguoiDungGo)` — ô để trống ⇒ cấp số kế tiếp, có chữ ⇒ đi 7 bước BR04. Xoá chứng từ phải gọi `thuHoi(...)` để trả số về pool (BR10) |
+| **D13** | **Đọc dữ liệu nguồn qua `api/` của module chủ sở hữu**, không SQL native xuyên bảng | Cần mở `chung_tu_ban_hang/api/ChungTuBanHangNguonApi` (đối xứng bản mua) và `tra_lai_hang_ban` phải cấp được "SL đã trả lại theo dòng nguồn". **Không chọn** SQL native như bản kế hoạch cũ: khi ấy các bảng đó chưa có chủ, nay đã có — bắn SQL vào bảng của module khác là đi vòng qua ranh giới Modulith mà lint không bắt được |
+| **D14** | **Bổ sung A18 `POST /xem-du-lieu-ghi-so`** — form "Xem dữ liệu ghi sổ" hai chế độ theo **BR48** | Chế độ *Dữ liệu sổ* dùng lại A10; chế độ *Xem trước* phải **tính bút toán tại chỗ từ dữ liệu form**, kể cả chứng từ chưa Lưu lần nào ⇒ phải là `POST` mang body, không phải `GET /{id}` |
+| **D15** | **Chiết khấu mức header** (`LoaiChietKhau` + `TyLeChietKhau` của LDM) đưa vào phạm vi | LDM khai hai trường này ở header; SCR chỉ ghi "Tham khảo phần chiết khấu của chứng từ bán hàng" (dòng 436-438). Lấy theo LDM vì nó cụ thể hơn, và `chung_tu_ban_hang` đã có sẵn cặp `loai_chiet_khau`/`gia_tri_chiet_khau` để bám |
 
-> ⚠️ **Cảnh báo môi trường:** repo có **việc song song** trong cùng domain bán hàng (`traLaiHangBan`, `hoaDonBanHang` phía FE — ghi ở `IMPLEMENT.md` §7). Trước khi code, đọc lại chữ ký `BaseChungTuController`, `ChungTuTemplate`, `QuanHeChungTuApi` — đây là ba lớp base mà kế hoạch này bám chặt nhất.
+> ⚠️ **Cảnh báo môi trường:** `cell-app/CLAUDE.md` vẫn ghi *"Migration: `V<N>__…`, N tăng dần"* — **đã lỗi thời** từ 2026-08-20, luật đúng nằm ở [docs/rules/migration-danh-so-theo-timestamp.md](../../docs/rules/migration-danh-so-theo-timestamp.md). Có arch-test `MigrationNamingArchTest` bắt lỗi này ở `unitTest`.
 
 ---
 
@@ -40,249 +63,201 @@
 
 ### 1.1 Trong phạm vi
 
-| # | Chức năng | Nguồn | File con |
-|---|---|---|---|
-| F1 | Xem danh sách + tìm kiếm/lọc/sắp xếp/phân trang + dòng tổng | UC-07665, `SCR_DanhSachDieuChinhGia` | [01](01-xem-danh-sach.md) |
-| F2 | Xem chi tiết + dòng chi tiết + bút toán đã ghi + nhân bản | UC-07667, `SCR_XemChiTietDieuChinhGia` | [02](02-xem-chi-tiet.md) |
-| F3 | Thêm mới (Lưu / Lưu và ghi sổ) | UC-07666, `SCR_ThemMoiDieuChinhGia` | [03](03-them-moi.md) |
-| F4 | Chỉnh sửa chứng từ chưa ghi sổ | UC-07671, `SCR_SuaDieuChinhGia` | [04](04-chinh-sua.md) |
-| F5 | Xóa (đơn + hàng loạt) | UC-07668 | [05](05-xoa.md) |
-| F6 | Ghi sổ (đơn + hàng loạt) | UC-07669 | [06](06-ghi-so.md) |
-| F7 | Bỏ ghi sổ (đơn + hàng loạt) | UC-07670 | [07](07-bo-ghi-so.md) |
-| F8 | Chọn chứng từ nguồn (Bước 1 của màn Thêm mới) | `SCR_ThemMoiDieuChinhGia` Bước 1 (dòng 18-172) | [08](08-chon-nguon-chung-tu.md) |
-| F9 | Migration + seed (mã loại chứng từ, quyền `.Clone`) | §7, §10 | [09](09-thiet-ke-db.md) |
+| # | Chức năng | Nguồn | File con | Tình trạng |
+|---|---|---|---|---|
+| F1 | Xem danh sách + lọc/sắp xếp/phân trang + dòng tổng | UC-07665 | [01](01-xem-danh-sach.md) | ✅ **ĐÃ CODE** — còn 1 lỗi §2.4-L1 |
+| F2 | Xem chi tiết + dòng chi tiết + bút toán + nhân bản | UC-07667 | [02](02-xem-chi-tiet.md) | 🟡 header xong; thiếu `chiTiet`, `/dong-chi-tiet`, `/thong-tin-hach-toan`, `/nhan-ban` |
+| F3 | Thêm mới (Lưu / Lưu và ghi sổ) | UC-07666 | [03](03-them-moi.md) | ❌ endpoint bị chặn tường minh |
+| F4 | Chỉnh sửa chứng từ chưa ghi sổ | UC-07671 | [04](04-chinh-sua.md) | ❌ như trên |
+| F5 | Xóa (đơn + hàng loạt) | UC-07668 | [05](05-xoa.md) | ❌ như trên |
+| F6 | Ghi sổ (đơn + hàng loạt) | UC-07669 | [06](06-ghi-so.md) | ❌ |
+| F7 | Bỏ ghi sổ (đơn + hàng loạt) | UC-07670 | [07](07-bo-ghi-so.md) | ❌ |
+| F8 | Chọn chứng từ nguồn (Bước 1) | SCR_ThemMoi Bước 1 | [08](08-chon-nguon-chung-tu.md) | ❌ |
+| **F10** | **Xem dữ liệu ghi sổ** (2 chế độ) — **MỚI, BR48** | BR48 | [06 §5](06-ghi-so.md) | ❌ |
+| F9 | Migration bổ sung cột + chuyển cột phẳng | §9, §10 | [09](09-thiet-ke-db.md) | ❌ |
 
 ### 1.2 NGOÀI phạm vi (không cài lần này)
 
-Không có UC nào bị loại nguyên vẹn — bảy UC đều được cài. Bị loại là các **tác động phụ** mà UC_GhiSo/UC_BoGhiSo mô tả nhưng không có module BE để đáp:
-
 | Bị loại | Bằng chứng | Endpoint kế thừa trả gì |
 |---|---|---|
-| Sinh bản ghi **Phiếu thu / Phiếu chi / Giấy báo Có / Séc TM / Séc CK / UNC** khi "Thanh toán ngay" (UC_GhiSo, Hậu điều kiện) | `grep -rl "PhieuThu" --include="*.java"` chỉ trúng `chung_tu_ban_hang` (dùng cột `phieu_thu_id`), **không có module `cb_*`** — §2.1 | `/ghi-so` vẫn 200; bút toán 2 sinh đủ; các cột `phieu_thu_id`/`phieu_chi_id`/… giữ `NULL` |
-| Sinh **Hóa đơn điều chỉnh** khi tick "Lập kèm hóa đơn điều chỉnh" (SCR "Lưu ý quan trọng" §2) | Không có module Java nào của `sal_dieu_chinh_hoa_don_ban_hang` / `sal_hoa_don_ban_hang` — §2.1 | Cờ `lapKemHoaDonDieuChinh` + toàn bộ trường tab Hóa đơn **được lưu**; `hoa_don_dieu_chinh_id` giữ `NULL`; validate `MSG_206` vẫn chạy |
-| **Cập nhật sổ thuế đầu ra** (UC_GhiSo, Hậu điều kiện) | Không có module sổ thuế trong `cell/` | Cột `khong_tong_hop_to_khai_gtgt` **được lưu** để module thuế sau này đọc |
-| **Cập nhật tồn quỹ / ngân hàng** | Hệ quả của việc không sinh phiếu thu/chi | — |
-| Tab **Thuế · Hạch toán · Đính kèm · Tham chiếu** (SCR dòng 563-568 — "tham chiếu tab của chứng từ bán hàng") | FE cũng chưa dựng (`IMPLEMENT.md` §5.3) | Bút toán *đã ghi* vẫn đọc được qua `/thong-tin-hach-toan` |
-| **Xuất Excel / Nhập Excel** | `DanhSachQuyen.md §B4.6` không bật quyền Xuất Excel (dẫn ở `IMPLEMENT.md` dòng 312) | `/export`, `/import` kế thừa từ `BaseCrudController` ([:171](../../cell-app/src/main/java/vn/dopai/pmkt/cell/core/controller/BaseCrudController.java), [:197](../../cell-app/src/main/java/vn/dopai/pmkt/cell/core/controller/BaseCrudController.java)) vẫn tồn tại nhưng **403** vì `DieuChinhGiaHangBan.Export/.Import` không được seed |
-| **Chiết khấu thương mại** (BR14, SCR dòng 488-493) và **ĐVT quy đổi** (BR13, dòng 487) | Bảng trường của lưới không có ô "Chiết khấu thương mại"; BR13 chỉ có một dòng chữ | §12-Q6, Q7 |
+| Sinh bản ghi **Phiếu thu / Phiếu chi / Giấy báo / Séc / UNC** khi Thanh toán ngay | `tien_mat_tien_gui` có 49 file nhưng **không có package `api/`** (`find … -type d -name api` không trúng) ⇒ không có hợp đồng để gọi | `/ghi-so` vẫn 200; bút toán vế tiền sinh đủ từ `tai_khoan_tien_id`; cột `phieu_thu_id`/`phieu_chi_id`/… giữ `NULL` |
+| Sinh **Hóa đơn điều chỉnh** khi tick "Lập kèm HĐ điều chỉnh" | `hoa_don_ban_hang` có 19 file, cũng **không có `api/`** | cờ + toàn bộ trường tab Hóa đơn được lưu; `hoa_don_dieu_chinh_id` giữ `NULL`; validate `MSG_206` vẫn chạy |
+| **Cập nhật sổ thuế đầu ra** | không có module sổ thuế trong `cell/` | cột `khong_tong_hop_to_khai_gtgt` được lưu cho module thuế sau này |
+| **BR49** Di chuyển chứng từ trước–sau ở màn chi tiết | BR mới, thuần điều hướng | FE tự làm từ danh sách đang cầm (cùng `sort` với A1). BE **không** thêm endpoint — xem §12-Q11 |
+| Tab **Thuế · Hạch toán · Đính kèm · Tham chiếu** | FE cũng chưa dựng (`IMPLEMENT.md` §5.3) | — |
+| **Xuất / Nhập Excel** | `DanhSachQuyen.md §B4.6` không bật quyền | `/export`, `/import` kế thừa nhưng **403** |
+| **Chiết khấu thương mại** (BR14 của SCR), **ĐVT quy đổi** (BR13 của SCR) | bảng trường của lưới không có ô tương ứng | §12-Q6, Q7 |
+| **`LoaiDongHang`** (dòng hàng / dòng ghi chú — LDM), `SoLo`, `HanSuDung`, `NhomHHDVMuaVao`, `DienGiaiThue` | có trong LDM nhưng **không có trong SCR** của epic | §12-Q12 |
 
 ---
 
-## 2. Hiện trạng đã khảo sát
+## 2. Hiện trạng đã khảo sát (đo 2026-08-21)
 
-### 2.1 Code hiện có — **GREENFIELD ở tầng Java**
-
-```bash
-grep -rniE "dieu_chinh_gia|dieuchinhgia" cell-app/src/main -l
-```
-```
-cell-app/src/main/resources/db/seed/iam_quyen_full_639_ba.sql
-cell-app/src/main/resources/db/migration/V1__baseline.sql
-cell-app/src/main/resources/db/migration/V2__seed_toan_cuc.sql
-cell-app/src/main/java/.../quan_he_chung_tu/api/LoaiChungTu.java
-cell-app/src/main/java/.../quan_he_chung_tu/api/DongChungTuPort.java
-cell-app/src/main/java/.../quan_he_chung_tu/api/QuanHeChungTuApi.java
-cell-app/src/main/java/.../common/constant/MaChucNang.java
-cell-app/src/main/java/.../master_data/...   ← vùng đóng băng, BỎ QUA
-```
-
-**Kết luận:** không có module Java nào cho nghiệp vụ này. Ba file `quan_he_chung_tu/api/*` chỉ **nhắc tên** chứng từ điều chỉnh giá trong enum/javadoc — tức hạ tầng liên kết đã dọn sẵn chỗ, chưa có ai cắm vào.
+### 2.1 Code hiện có — **BROWNFIELD**
 
 ```bash
-ls cell-app/src/main/java/vn/dopai/pmkt/cell/
+find cell-app/src/main/java/vn/vtt/pmkt/cell/dieu_chinh_gia_hang_ban -name "*.java" | wc -l
 ```
 ```
-accounting_core  chung_tu_ban_hang  chung_tu_mua_hang  common  core
-integration_ops  master_data  platform_iam  quan_he_chung_tu  reporting
+17
 ```
 
-**Kết luận thứ hai (quyết định D3):** không có module nào cho phiếu thu/chi (`cb_*`), hóa đơn bán hàng (`sal_hoa_don_ban_hang`), hóa đơn điều chỉnh (`sal_dieu_chinh_hoa_don_ban_hang`), chứng từ bán dịch vụ, hay chứng từ trả lại hàng bán. Bảng của chúng **đã có trong baseline** nhưng chưa có tầng Java.
+| Lớp | File | Ghi chú |
+|---|---|---|
+| controller | `DieuChinhGiaHangBanController` | `extends BaseCrudController<DieuChinhGiaHangBan, Dto, Void, Void>`; **override `create`/`update`/`delete` để ném 400 `CHUA_HO_TRO`** |
+| entity | `DieuChinhGiaHangBan` | chỉ HEADER; **chưa có** `ChiTietDieuChinhGiaHangBan` |
+| dto | `DieuChinhGiaHangBanDto` (44 trường, phẳng), `TongHopDieuChinhGiaDto` | **chưa có** `chiTiet`, `chungTuThanhToan`, `hoaDon`, request DTO |
+| model | `HuongDieuChinhGia`, `HinhThucThanhToanDcg`, `NguonChungTu`, `LyDoDieuChinhNguon`, `TrangThaiHoaDonDcg`, `MaDb`, `MaLoiDieuChinhGia` | đủ 6 enum + mã lỗi |
+| repository | `…Repository` + `…RepositoryCustom` + `…Impl` | có `tongHop(spec)` cho dòng tổng |
+| service | `DieuChinhGiaHangBanCrudService`, `business/DieuChinhGiaMapper` | `extends AbstractCrudService`, **chưa** `AbstractChungTuCrudService` |
 
-Hệ quả trực tiếp lên §8 (chọn nguồn): công thức BR2 của SCR ("Số lượng = SL trên CTBH − SL đã trả lại", có quy đổi ĐVT) phải đọc `sal_chung_tu_tra_lai_hang_ban_chi_tiet` **bằng SQL native / view**, vì không có repository nào của module đó để gọi.
+**Kết luận:** F1 chạy được thật (FE đã tắt mock). Phần GHI chưa có gì và **cố ý bị chặn** — javadoc controller ghi rõ lý do: `BaseCrudController` gọi thẳng `repository.save`, đúng cho danh mục nhưng sai cho chứng từ kế toán.
 
 ### 2.2 Hiện trạng DB
 
 ```bash
-ls cell-app/src/main/resources/db/migration/
-```
-```
-V1__baseline.sql   V2__seed_toan_cuc.sql
+ls cell-app/src/main/resources/db/migration/ | wc -l   # 36
+ls cell-app/src/main/resources/db/migration/ | sort -V | tail -1   # V1032__tknd_va_cau_hinh_danh_so.sql
 ```
 
-**Số hiệu migration lớn nhất hiện tại: `V2` ⇒ file mới là `V3`.**
+⚠ **Số hiệu mới KHÔNG phải `V1033`.** Từ 2026-08-20 lấy bằng `date +V%Y%m%d%H%M%S` — xem §10.
 
-⚠ `db/rollback/` còn giữ file mang số tới `V340` — đó là **rollback của các migration đã bị squash vào baseline**, không phải migration đang chạy. Đừng đánh số theo thư mục đó.
+Baseline đã đổi tên: `V1__baseline.sql` → **`V1__create_database.sql`** (squash V1 + V3…V7), kèm `V2__seed_data.sql`.
 
-Hai bảng chính **đã tồn tại đầy đủ** trong `V1__baseline.sql` (chi tiết ở [09-thiet-ke-db.md](09-thiet-ke-db.md)):
+**Bảng chính nay 69 cột** — 6 cột trong §9.2 của bản kế hoạch cũ **đã được thêm** (`thanh_toan_ngay`, `lap_kem_hoa_don_dieu_chinh`, `nguon_chung_tu`, `ly_do_dieu_chinh_nguon`, 4 cột `tong_*_quy_doi`), 2 CHECK đã có, và **2 index đề xuất cũng đã tạo** (`idx_sal_dcg_danh_sach`, `idx_sal_dcg_khach_hang`). **Bảng chi tiết vẫn nguyên 39 cột** — chưa động gì. Chi tiết: [09](09-thiet-ke-db.md).
 
-| Bảng | Dòng trong baseline | Số cột | Đã có |
-|---|---|---|---|
-| `sal_chung_tu_dieu_chinh_gia_hang_ban` | :16257 | 63 | PK, 4 CHECK, 1 CHECK status, unique `uq_sal_dcg_so_ct` (:23661), 3 index, RLS + policy phạm vi đơn vị (:29662, :30017, :30510), trigger audit (:25478) + trigger phạm vi (:26080, :26255), 6 FK |
-| `sal_chung_tu_dieu_chinh_gia_hang_ban_chi_tiet` | :16411 | 39 | PK, index `idx_sal_ct_dcg_parent` (:21750), RLS tenant (:31677), trigger audit (:25436), FK cha `ON DELETE CASCADE` (:27985) + 3 FK nguồn |
-
-| Bảng phụ (chỉ ĐỌC) | Vai trò | Cột khoá nối |
-|---|---|---|
-| `sal_chung_tu_ban_hang` + `_chi_tiet` | nguồn Bước 1 (loại "Chứng từ bán hàng, dịch vụ") | `chung_tu_ban_hang_id`, `chi_tiet_chung_tu_ban_hang_id` |
-| `sal_chung_tu_ban_dich_vu` + `sal_chi_tiet_chung_tu_ban_dv` | nguồn Bước 1 (loại dịch vụ) | `chung_tu_ban_dich_vu_id`, `chi_tiet_chung_tu_ban_dich_vu_id` |
-| `sal_dieu_chinh_hoa_don_ban_hang` + `sal_chi_tiet_hoa_don_dieu_chinh` | nguồn Bước 1 (loại "Hóa đơn điều chỉnh") | `hoa_don_dieu_chinh_id`, `chi_tiet_hd_ban_hang_id` |
-| `sal_chung_tu_tra_lai_hang_ban_chi_tiet` | trừ ra "số lượng đã trả lại" (BR2) | `chung_tu_ban_id`, `chi_tiet_hd_ban_hang_id` |
-| `ctu_quan_he_chung_tu` | liên kết dòng nguồn ↔ dòng đích (D4) | qua `QuanHeChungTuApi` |
-| `mst_loai_chung_tu` | mã loại chứng từ (D11) | `code` |
-| `iam_quyen` | 7 mã quyền đã seed, thiếu `.Clone` | `ma_quyen` |
-
-### 2.3 Hạ tầng base đã có sẵn những gì
+### 2.3 Hạ tầng base — cái gì có sẵn, và **mẫu code 1:1**
 
 | Cần | Đã có ở base | Vị trí |
 |---|---|---|
-| 8 endpoint CRUD + tìm kiếm động + `/cot` + export/import | `BaseCrudController` | [core/controller/BaseCrudController.java:121-198](../../cell-app/src/main/java/vn/dopai/pmkt/cell/core/controller/BaseCrudController.java) |
-| Ghi sổ / bỏ ghi sổ / nhân bản / bút toán đã ghi / dòng chi tiết / 3 thao tác hàng loạt | `BaseChungTuController` | [accounting_core/chung_tu/controller/BaseChungTuController.java:93,102,119,139,147,159,168,177](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/controller/BaseChungTuController.java) |
-| Trình tự bất biến 5 luồng chứng từ | `ChungTuTemplate.thucThi` | [ChungTuTemplate.java:103](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java) (luồng: :149 tạo · :171 sửa · :194 xoá · :212 ghi sổ · :231 bỏ ghi sổ) |
-| Hợp đồng service chứng từ (`ghiSo`/`boGhiSo`/`nhanBan`/`layDongChiTiet`/`traSoChungTu`/`kiemTraTonTai`) | `AbstractChungTuCrudService` | [accounting_core/chung_tu/service/AbstractChungTuCrudService.java:35-89](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/AbstractChungTuCrudService.java) |
-| Ghi/gỡ bút toán sổ cái (đường DUY NHẤT) | `GhiSoApi.ghiSo` / `.boGhiSo` / `.daGhiSo` | [GhiSoApi.java:31,48,51](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/hach_toan/api/GhiSoApi.java) |
-| Kiểm kỳ kế toán (BR17) | `KyKeToanApi.kiemTraKyMo` — **kernel tự gọi**, module không gọi lại | [KyKeToanApi.java:39](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/hach_toan/api/KyKeToanApi.java) |
-| Định khoản Nợ/Có (kernel tự tách 2 dòng sổ cái → BR36) | `DinhKhoan.cua(...)`, `.voiChiTiet(...)`, `.voiNgoaiTe(...)` | [hach_toan/api/dto/DinhKhoan.java:56,68,79](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/hach_toan/api/dto/DinhKhoan.java) |
-| Body tìm kiếm chuẩn (`page/pageSize/sort/keyword/filters/logic`) | `SearchRequest` | [core/request/SearchRequest.java:33](../../cell-app/src/main/java/vn/dopai/pmkt/cell/core/request/SearchRequest.java) |
-| Envelope danh sách `{data, pagination, summary}` (BR31) | `PageResponse` | [core/response/PageResponse.java:20](../../cell-app/src/main/java/vn/dopai/pmkt/cell/core/response/PageResponse.java) |
-| Whitelist lọc/sắp xếp | `@Searchable` + `SearchExecutor` + `DynamicSpecification` | `core/shared/search/` |
-| Cột chứng từ dùng chung + `@Searchable` sẵn (`soChungTu`, `ngayChungTu`, `ngayHachToan`, `status`, `chiNhanhId`) | `BaseChungTuEntity` | [core/entity/BaseChungTuEntity.java:44-85](../../cell-app/src/main/java/vn/dopai/pmkt/cell/core/entity/BaseChungTuEntity.java) |
-| Kiểm quyền `<MaChucNang>.<HanhDong>` | `QuyenChecker.require` | [core/controller/QuyenChecker.java:61](../../cell-app/src/main/java/vn/dopai/pmkt/cell/core/controller/QuyenChecker.java) |
-| Mã chức năng đã khai sẵn | `MaChucNang.DIEU_CHINH_GIA_HANG_BAN = "DieuChinhGiaHangBan"` | [common/constant/MaChucNang.java:229](../../cell-app/src/main/java/vn/dopai/pmkt/cell/common/constant/MaChucNang.java) |
-| Liên kết chứng từ đa hình | `QuanHeChungTuApi` + `LoaiChungTu.SAL_DIEU_CHINH_GIA_HANG_BAN` | [QuanHeChungTuApi.java:17](../../cell-app/src/main/java/vn/dopai/pmkt/cell/quan_he_chung_tu/api/QuanHeChungTuApi.java), [LoaiChungTu.java:31](../../cell-app/src/main/java/vn/dopai/pmkt/cell/quan_he_chung_tu/api/LoaiChungTu.java) |
-| Dòng tổng toàn tập lọc (mẫu) | `ChungTuBanHangRepositoryImpl.tongHop` | [chung_tu_ban_hang/internal/repository/ChungTuBanHangRepositoryImpl.java:30,49](../../cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_ban_hang/internal/repository/ChungTuBanHangRepositoryImpl.java) |
+| **Bản sinh đôi ĐÃ CODE ĐỦ** của chính nghiệp vụ này (bên mua) | `dieu_chinh_gia_hang_mua/` — 22 file: template 5 luồng, `DinhKhoan…`, `KiemTra…`, `TinhToan…`, `GhiSo`/`BoGhiSo`, `HangLoatService`, `…Support` | [dieu_chinh_gia_hang_mua/](../../cell-app/src/main/java/vn/vtt/pmkt/cell/dieu_chinh_gia_hang_mua/) — **đọc trước khi code F3–F7** |
+| 8 endpoint CRUD + tìm kiếm động | `BaseCrudController` | [core/controller/BaseCrudController.java](../../cell-app/src/main/java/vn/vtt/pmkt/cell/core/controller/BaseCrudController.java) |
+| Ghi sổ / bỏ ghi sổ / nhân bản / bút toán / dòng chi tiết / 3 thao tác hàng loạt | `BaseChungTuController` | [:95, :104, :121, :141, :158, :174, :183, :192](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/controller/BaseChungTuController.java) |
+| Trình tự 5 luồng bất biến | `ChungTuTemplate.thucThi` | [accounting_core/chung_tu/service/ChungTuTemplate.java](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java) |
+| Ghi/gỡ bút toán | `GhiSoApi` (`ghiSo`/`boGhiSo`/`daGhiSo`) | [hach_toan/api/GhiSoApi.java](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/hach_toan/api/GhiSoApi.java) |
+| Đọc sổ cái | `SoCaiApi.theoChungTu(id)` | [hach_toan/api/SoCaiApi.java](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/hach_toan/api/SoCaiApi.java) — ⚠ **thiếu lọc theo loại chứng từ**, xem §2.4-L2 |
+| **Đánh số chứng từ (MỚI)** | `SoChungTuApi.sinhSo(chungTu, soNguoiDungGo)` · `.thuHoi(chungTu, ngayHachToan)` | [hach_toan/api/SoChungTuApi.java](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/hach_toan/api/SoChungTuApi.java) |
+| **Tài khoản ngầm định (MỚI)** | `master_data/tai_khoan_ngam_dinh/api/TaiKhoanNgamDinhApi` | dùng cho BR7/BR8 của SCR (TK công nợ · doanh thu · giảm giá) thay vì tự tra danh mục |
+| Kiểm kỳ kế toán | `KyKeToanApi.kiemTraKyMo` — **kernel tự gọi** | [hach_toan/api/KyKeToanApi.java](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/hach_toan/api/KyKeToanApi.java) |
+| Liên kết chứng từ | `QuanHeChungTuApi` + `LoaiChungTu.SAL_DIEU_CHINH_GIA_HANG_BAN` | [quan_he_chung_tu/api/](../../cell-app/src/main/java/vn/vtt/pmkt/cell/quan_he_chung_tu/api/) |
+| **Mẫu `api/` cho dữ liệu nguồn** | `ChungTuMuaHangNguonApi.layNguonDieuChinhGia(id)` + 2 record | [chung_tu_mua_hang/api/ChungTuMuaHangNguonApi.java](../../cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_mua_hang/api/ChungTuMuaHangNguonApi.java) — D13 |
+| Envelope, quyền, whitelist lọc | `PageResponse` · `ApiResponse` · `QuyenChecker` · `@Searchable` | `core/` |
 
-**Quyền đã seed:** 7 mã, tại [iam_quyen_full_639_ba.sql:263-269](../../cell-app/src/main/resources/db/seed/iam_quyen_full_639_ba.sql) — `DieuChinhGiaHangBan.{Create, Delete, Edit, Post, Unpost, View, View.Detail}`.
-⚠ `IMPLEMENT.md` của FE (dòng 191-192) ghi "7 mã quyền … chưa được seed" — **thông tin đó đã cũ**, chúng có trong file seed. Thiếu thật là `.Clone` (§10).
+**Quyền:** 7 mã `DieuChinhGiaHangBan.{View, View.Detail, Create, Edit, Delete, Post, Unpost}` đã seed. **`.Clone` vẫn CHƯA seed** ⇒ A11 sẽ 403 (§10).
+
+### 2.4 Lỗi/nợ phát hiện khi rà lại — **cần xử lý**
+
+| # | Vấn đề | Bằng chứng | Xử lý |
+|---|---|---|---|
+| **L1** | Entity khai `@Searchable(alias = "trangThaiChungTu", **path = "status"**)` nhưng `BaseChungTuEntity` **không còn field `status`** (`grep -n "status" BaseChungTuEntity.java` → rỗng) ⇒ lọc/sắp xếp theo trạng thái của màn danh sách **trỏ vào một property không tồn tại** | [DieuChinhGiaHangBan.java:49-50](../../cell-app/src/main/java/vn/vtt/pmkt/cell/dieu_chinh_gia_hang_ban/internal/entity/DieuChinhGiaHangBan.java) | **Xoá cả annotation** — base nay đã đặt tên field đúng bằng `trangThaiChungTu` nên alias thừa. `tra_lai_hang_ban/internal/entity/TraLaiHangBan.java:34` **dính y hệt** ⇒ báo để chủ module đó sửa, không tự sửa sang module khác |
+| **L2** | `SoCaiApi.theoChungTu(chungTuId)` chỉ lọc theo `chungTuId`, trong khi **BR48.3 bắt buộc lọc đồng thời `ChungTuId` + `LoaiChungTuId`** — hai chứng từ khác loại có thể trùng `ChungTuId` | [SoCaiApi.java](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/hach_toan/api/SoCaiApi.java) vs `business_rules.md` BR48.3 | Không tự sửa `accounting_core`. **Mở ticket cho chủ kernel**, và ghi rõ ở [02](02-xem-chi-tiet.md) rằng A10/A18 đang thiếu vế lọc thứ hai |
+| **L3** | Quy tắc đánh số seed cho `DCGB` chỉ có **4 dòng, đều là "Giảm giá"** — không có dòng nào cho **Tăng giá** | [V1032:1166-1169](../../cell-app/src/main/resources/db/migration/V1032__tknd_va_cau_hinh_danh_so.sql) | Chứng từ Tăng giá sẽ ném `QUY_TAC_KHONG_TON_TAI` lúc Lưu. Phải seed bổ sung — §10, và **§12-Q13** hỏi BA tên quy tắc |
+| **L4** | `dieu_kien` của quy tắc đánh số dùng `{"hinhThucThanhToan": "CHI_TIEN_MAT"}` (SCREAMING_SNAKE) trong khi CHECK của bảng là `'ChiTienMat'` (PascalCase) | [V1032:1167](../../cell-app/src/main/resources/db/migration/V1032__tknd_va_cau_hinh_danh_so.sql) vs [V1:16387](../../cell-app/src/main/resources/db/migration/V1__create_database.sql) | Phải xác định engine so bằng **tên hằng Java** hay **giá trị DB** trước khi cài F3; sai là mọi chứng từ Thanh toán ngay không cấp được số. **§12-Q14** |
+| **L5** | Javadoc `DongChungTuPort.laySoLuong` chỉ đích danh bảng này với `COALESCE(so_luong_tang, so_luong_giam)` | [DongChungTuPort.java:54](../../cell-app/src/main/java/vn/vtt/pmkt/cell/quan_he_chung_tu/api/DongChungTuPort.java) | Theo **D6′** thì câu đó thành sai — sửa javadoc **cùng PR** với migration chuyển cột phẳng |
 
 ---
 
 ## 3. Kiến trúc
 
-### 3.1 Phân tầng
+### 3.1 Phân tầng đích (sau F3)
 
 ```
-DieuChinhGiaHangBanController                       extends BaseChungTuController<…>
-        │  kế thừa 11 endpoint, override 3 CRUD chỉ để gắn messageId
-        │  + 3 endpoint /nguon/* viết mới (D10)
+DieuChinhGiaHangBanController          extends BaseChungTuController<E, D, CD, C, U>
+        │  (hiện tại: BaseCrudController<E, D, Void, Void> — phải ĐỔI ở bước F3)
+        │  + A15/A16/A17 /nguon/*   + A18 /xem-du-lieu-ghi-so
         ▼
-DieuChinhGiaHangBanCrudService                      extends AbstractChungTuCrudService<…>
-        │  ├── kế thừa : search / cot / get / export (phần ĐỌC của core)
-        │  ├── override: create · update · delete · ghiSo · boGhiSo · nhanBan · layDongChiTiet
-        │  └── uỷ quyền: LuuDieuChinhGiaTemplate (5 hành động) — ChungTuTemplate
+DieuChinhGiaHangBanCrudService         extends AbstractChungTuCrudService<E, D, CD, C, U>
+        │  (hiện tại: AbstractCrudService — phải ĐỔI)
+        │  └── uỷ quyền: LuuDieuChinhGiaTemplate  (5 luồng, ChungTuTemplate)
         ▼
-DieuChinhGiaHangBanRepository                       extends BaseRepository<DieuChinhGiaHangBan>
-   + DieuChinhGiaHangBanRepositoryCustom/Impl       (dòng tổng, nạp kèm chi tiết)
-   + NguonDieuChinhGiaRepository                    (SQL native cho Bước 1 — §08)
+DieuChinhGiaHangBanRepository (+Custom/Impl)     NguonDieuChinhGiaService → ChungTuBanHangNguonApi
         ▼
-DieuChinhGiaHangBan                                 extends BaseChungTuEntity
-   @Table("sal_chung_tu_dieu_chinh_gia_hang_ban")
-   └─ @OneToMany cascade=ALL orphanRemoval  ChiTietDieuChinhGiaHangBan
-                                            @Table("…_chi_tiet")
+DieuChinhGiaHangBan  ──1..n──▶  ChiTietDieuChinhGiaHangBan   (cả hai extends Base…Entity)
 ```
 
 ### 3.2 Lựa chọn kiến trúc + lý do
 
-| | Phương án A — service tự viết CRUD + tự gọi `GhiSoApi` | **Phương án B (CHỌN) — kế thừa `BaseChungTuController` + `ChungTuTemplate`** |
+| | Phương án A — giữ `BaseCrudController`, tự viết ghi sổ | **Phương án B (CHỌN) — chuyển sang `BaseChungTuController` + `ChungTuTemplate`** |
 |---|---|---|
-| Số endpoint phải viết | 17 | 6 (3 override CRUD chỉ để gắn messageId + 3 endpoint nguồn) |
-| Trình tự ghi sổ / bỏ ghi sổ | tự giữ, dễ lệch | bất biến do base cưỡng chế; 5 luồng `private`, lớp con không đảo được ([ChungTuTemplate.java:149-247](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)) |
-| Kiểm kỳ kế toán (BR17) | phải tự nhớ gọi ở 5 chỗ | kernel `GhiSoApi` tự kiểm với đúng cặp (ngày, mã loại) sắp INSERT |
-| Đối soát cờ trạng thái ↔ sổ cái | không có | `doiSoatVoiSoCai` chạy ở luồng sửa/xoá, trả 409 khi lệch |
-| Thao tác hàng loạt (BR45) | tự viết 3 endpoint | có sẵn `HangLoatChungTuService` |
-| Rủi ro | trôi khỏi chuẩn ngay từ sprint đầu | phải cài đủ hook trừu tượng, sai một hook là 500 lúc chạy → chốt bằng unit test cho từng hook (§16 các file con) |
+| Endpoint phải viết | 17 | 6 |
+| Trình tự ghi sổ | tự giữ | base cưỡng chế, 5 luồng `private` |
+| Đánh số chứng từ (BR04) | tự gọi `SoChungTuApi` ở 5 chỗ | template gọi một lần |
+| Có mẫu 1:1 để bám | không | **có** — `dieu_chinh_gia_hang_mua` |
+| Chi phí đổi | 0 | phải đổi generic của controller + service (1 lần, ~2 file) |
+| Rủi ro | trôi khỏi chuẩn | đổi generic làm gãy `create/update/delete` đang ném 400 — phải xoá 3 override đó cùng lúc |
 
-### 3.3 Cấu trúc thư mục
+### 3.3 Cấu trúc thư mục đích
 
 ```
 cell/dieu_chinh_gia_hang_ban/
-├── package-info.java                 @ApplicationModule(displayName = "dieu_chinh_gia_hang_ban")
-│                                     + ghi rõ dùng chung tiền tố sal_ (D2)
+├── package-info.java                      ✅ đã có (cập nhật lại phần "Phạm vi ĐANG cài" khi F3 xong)
 └── internal/
-    ├── adapter/
-    │   └── DongDieuChinhGiaAdapter.java        cài DongChungTuPort (D5)
-    ├── controller/
-    │   └── DieuChinhGiaHangBanController.java  package-private
-    ├── dto/
-    │   ├── DieuChinhGiaHangBanDto.java
-    │   ├── ChiTietDieuChinhGiaHangBanDto.java
-    │   ├── ChungTuThanhToanDto.java            object con — tab thanh toán
-    │   ├── HoaDonDieuChinhDto.java             object con — tab Hóa đơn
-    │   ├── LuuDieuChinhGiaHangBanRequest.java
-    │   ├── LuuChiTietDieuChinhGiaRequest.java
-    │   ├── TongHopDieuChinhGiaDto.java         dòng tổng (BR31)
-    │   ├── NguonDongDto.java   NguonChungTuDto.java   TimNguonRequest.java
-    ├── entity/
-    │   ├── DieuChinhGiaHangBan.java
-    │   └── ChiTietDieuChinhGiaHangBan.java
-    ├── model/
-    │   ├── HuongDieuChinhGia.java     TangGia | GiamGia
-    │   ├── HinhThucThanhToanDcg.java  8 giá trị theo CHECK của bảng
-    │   ├── NguonChungTu.java          CTBH | HOA_DON_DIEU_CHINH
-    │   ├── LoaiDieuChinhHoaDon.java   Điều chỉnh giá | Sai sót | Khác
-    │   ├── ThueSuatGtgt.java          khai lại (D9)
-    │   └── MaLoiDieuChinhGia.java     mã lỗi + messageId của epic
-    ├── repository/
-    │   ├── DieuChinhGiaHangBanRepository.java
-    │   ├── DieuChinhGiaHangBanRepositoryCustom.java / …Impl.java
-    │   └── NguonDieuChinhGiaRepository.java
+    ├── DieuChinhGiaSupport.java           ➕ gom repo + mapper + tinhToan + kiemTra + dinhKhoan (mẫu: DieuChinhGiaMuaSupport)
+    ├── adapter/DongDieuChinhGiaAdapter.java   ➕ cài DongChungTuPort (D5)
+    ├── controller/DieuChinhGiaHangBanController.java   ✏️ đổi base class
+    ├── dto/  ✅ DieuChinhGiaHangBanDto · TongHopDieuChinhGiaDto
+    │         ➕ ChiTietDieuChinhGiaDto · ChungTuThanhToanDto · HoaDonDieuChinhDto
+    │         ➕ LuuDieuChinhGiaRequest · LuuChiTietRequest
+    │         ➕ NguonDongDto · NguonChungTuDto · TimNguonRequest
+    │         ➕ XemDuLieuGhiSoRequest · DongButToanDto        (BR48 — D14)
+    ├── entity/  ✅ DieuChinhGiaHangBan   ➕ ChiTietDieuChinhGiaHangBan
+    ├── model/   ✅ 6 enum + MaDb + MaLoiDieuChinhGia   ➕ ThueSuatGtgt · LoaiDieuChinhHoaDon · LoaiChietKhau
+    ├── repository/  ✅ 3 file   ➕ ChiTietRepository (nếu cần đọc riêng)
     └── service/
-        ├── DieuChinhGiaHangBanCrudService.java
-        ├── DieuChinhGiaHangLoatService.java
-        ├── NguonDieuChinhGiaService.java
+        ├── DieuChinhGiaHangBanCrudService.java    ✏️ đổi base class
+        ├── DieuChinhGiaHangLoatService.java       ➕
+        ├── NguonDieuChinhGiaService.java          ➕
+        ├── XemDuLieuGhiSoService.java             ➕ (BR48)
         └── business/
-            ├── LuuDieuChinhGiaTemplate.java   TaoDieuChinhGia · SuaDieuChinhGia · XoaDieuChinhGia
-            ├── GhiSoDieuChinhGia.java  BoGhiSoDieuChinhGia.java  NhanBanDieuChinhGia.java
-            ├── DinhKhoanDieuChinhGia.java     4 kịch bản bút toán
-            ├── TinhToanDieuChinhGia.java      BR3 · BR10 · BR15 · BR18
-            ├── KiemTraDieuChinhGia.java       ma trận validation
-            ├── DieuChinhGiaMapper.java
-            └── LienKetNguonDieuChinhGia.java  D4
+            ├── DieuChinhGiaMapper.java            ✅ (mở rộng)
+            ├── LuuDieuChinhGiaTemplate.java + Tao/Sua/Xoa/GhiSo/BoGhiSo/NhanBan   ➕
+            ├── DinhKhoanDieuChinhGia.java · TinhToanDieuChinhGia.java · KiemTraDieuChinhGia.java   ➕
+            └── LienKetNguonDieuChinhGia.java      ➕
 ```
 
 ---
 
 ## 4. Danh mục API mục tiêu
 
-Base path: **`/api/ban-hang/dieu-chinh-gia-hang-ban`** · Mã chức năng: **`DieuChinhGiaHangBan`**
+Base path **`/api/ban-hang/dieu-chinh-gia-hang-ban`** · Mã chức năng **`DieuChinhGiaHangBan`** · Mã loại chứng từ **`DCGB`**
 
-| # | Nguồn | Method | Path | Quyền | Trả về | File con |
+| # | Nguồn | Method | Path | Quyền | Trạng thái | File con |
 |---|---|---|---|---|---|---|
-| A1 | base | POST | `/search` | `.View` | `PageResponse<DieuChinhGiaHangBanDto>` | [01](01-xem-danh-sach.md) |
-| A2 | base | GET | `/cot` | `.View` | `ApiResponse<List<CotMoTa>>` | [01](01-xem-danh-sach.md) |
-| A3 | base (override) | GET | `/{id}` | `.View.Detail` | `ApiResponse<…Dto>` (kèm `chiTiet`) | [02](02-xem-chi-tiet.md) |
-| A4 | base (override) | POST | `` (rỗng) | `.Create` | `201 ApiResponse<…Dto>` | [03](03-them-moi.md) |
-| A5 | base (override) | PUT | `/{id}` | `.Edit` | `ApiResponse<…Dto>` | [04](04-chinh-sua.md) |
-| A6 | base (override) | DELETE | `/{id}` | `.Delete` | `ApiResponse<Void>` | [05](05-xoa.md) |
-| A7 | base | POST | `/{id}/ghi-so` | `.Post` | `ApiResponse<…Dto>` | [06](06-ghi-so.md) |
-| A8 | base | POST | `/{id}/bo-ghi-so` | `.Unpost` | `ApiResponse<…Dto>` | [07](07-bo-ghi-so.md) |
-| A9 | base | GET | `/{id}/dong-chi-tiet` | `.View.Detail` | `ApiResponse<List<ChiTiet…Dto>>` | [02](02-xem-chi-tiet.md) |
-| A10 | base | GET | `/{id}/thong-tin-hach-toan` | `.View.Detail` | `ApiResponse<List<DongSoCaiDto>>` | [02](02-xem-chi-tiet.md) |
-| A11 | base | GET | `/{id}/nhan-ban` | `.Clone` | `ApiResponse<…Dto>` | [02](02-xem-chi-tiet.md) |
-| A12 | base | POST | `/ghi-so-hang-loat` | `.Post` | `ApiResponse<KetQuaHangLoatDto>` | [06](06-ghi-so.md) |
-| A13 | base | POST | `/bo-ghi-so-hang-loat` | `.Unpost` | `ApiResponse<KetQuaHangLoatDto>` | [07](07-bo-ghi-so.md) |
-| A14 | base | POST | `/xoa-hang-loat` | `.Delete` | `ApiResponse<KetQuaHangLoatDto>` | [05](05-xoa.md) |
-| A15 | **mới** | POST | `/nguon/search` | `.Create` | `PageResponse<NguonDongDto>` | [08](08-chon-nguon-chung-tu.md) |
-| A16 | **mới** | POST | `/nguon/chung-tu` | `.Create` | `PageResponse<NguonChungTuDto>` | [08](08-chon-nguon-chung-tu.md) |
-| A17 | **mới** | POST | `/nguon/chung-tu/{id}/dong` | `.Create` | `ApiResponse<List<NguonDongDto>>` | [08](08-chon-nguon-chung-tu.md) |
-| — | base, **không dùng** | POST | `/export`, `/import` | `.Export`, `.Import` | **403** — quyền không seed (§1.2) | — |
-| — | base, **không dùng** | POST | `/them-moi` | `.Create` | trùng chức năng với A4; FE dùng A4 | — |
+| A1 | base | POST | `/search` | `.View` | ✅ chạy | [01](01-xem-danh-sach.md) |
+| A2 | base | GET | `/cot` | `.View` | ✅ chạy | [01](01-xem-danh-sach.md) |
+| A3 | base | GET | `/{id}` | `.View.Detail` | 🟡 thiếu `chiTiet` | [02](02-xem-chi-tiet.md) |
+| A4 | override | POST | `/them-moi` | `.Create` | ❌ **400 CHUA_HO_TRO** | [03](03-them-moi.md) |
+| A5 | override | PUT | `/{id}` | `.Edit` | ❌ 400 | [04](04-chinh-sua.md) |
+| A6 | override | DELETE | `/{id}` | `.Delete` | ❌ 400 | [05](05-xoa.md) |
+| A7 | base | POST | `/{id}/ghi-so` | `.Post` | ❌ chưa có | [06](06-ghi-so.md) |
+| A8 | base | POST | `/{id}/bo-ghi-so` | `.Unpost` | ❌ | [07](07-bo-ghi-so.md) |
+| A9 | base | GET | `/{id}/dong-chi-tiet` | `.View.Detail` | ❌ | [02](02-xem-chi-tiet.md) |
+| A10 | base | GET | `/{id}/thong-tin-hach-toan` | `.View.Detail` | ❌ | [02](02-xem-chi-tiet.md) |
+| A11 | base | GET | `/{id}/nhan-ban` | `.Clone` ⚠ chưa seed | ❌ | [02](02-xem-chi-tiet.md) |
+| A12-A14 | base | POST | `/ghi-so-hang-loat` · `/bo-ghi-so-hang-loat` · `/xoa-hang-loat` | `.Post`/`.Unpost`/`.Delete` | ❌ | [05](05-xoa.md), [06](06-ghi-so.md), [07](07-bo-ghi-so.md) |
+| A15-A17 | mới | POST | `/nguon/search` · `/nguon/chung-tu` · `/nguon/chung-tu/{id}/dong` | `.Create` | ❌ | [08](08-chon-nguon-chung-tu.md) |
+| **A18** | **mới (D14)** | POST | `/xem-du-lieu-ghi-so` | kế thừa quyền màn gọi (BR48.1) | ❌ | [06 §5](06-ghi-so.md) |
+| — | base | POST | `/export`, `/import` | `.Export`/`.Import` | **403** cố ý | — |
 
-**Envelope lỗi**: `ApiResponse` chuẩn của dự án, dựng tập trung ở `core/config/GlobalExceptionHandler.java`; lỗi nghiệp vụ ném `ApiException.badRequest/conflict(maLoi, messageId, chiTiet)`.
+⚠ **Đường dẫn thêm mới:** bản kế hoạch cũ ghi `POST /` (rỗng) theo FE. **Sinh đôi mua hàng dùng `POST /them-moi`** (đường dẫn chuẩn của base). Phải chốt một đường — §12-Q15.
 
-**Quy ước enum trên wire**: **tên hằng Java** cho `trangThaiChungTu` (`NHAP`/`DA_GHI_SO`/… — FE đã chốt ở `model.ts` dòng 237) và cho `huongDieuChinhGia` (`TangGia`/`GiamGia` — đúng CHECK của DB tại [V1__baseline.sql:16322](../../cell-app/src/main/resources/db/migration/V1__baseline.sql)), `hinhThucThanhToan` (8 giá trị theo CHECK tại :16321). Dùng chung cho cả `filters[].field/value` lẫn `data` — vì `DynamicSpecification` chuyển giá trị lọc bằng chính converter của cột, một bảng dịch riêng cho tầng lọc là chỗ lệch âm thầm.
+**Envelope lỗi:** `ApiResponse` + `GlobalExceptionHandler`; lỗi nghiệp vụ ném `ApiException.badRequest/conflict(maLoi, messageId, chiTiet)`.
+
+**Quy ước enum trên wire:** **TÊN HẰNG Java**, chuỗi xuống DB là `MaDb.maDb()` — đã cài và ghi rõ ở `package-info.java` của module. Lý do: bộ lọc động ép giá trị bằng `Enum.valueOf(name)`.
 
 ---
 
 ## 5. Ma trận UC → endpoint → tài liệu
 
-| UC | Tên | Endpoint | Màn hình | File con |
+| UC | Tên | Endpoint | File con | Tình trạng |
 |---|---|---|---|---|
-| PMKT-U-07665 | Xem danh sách | A1, A2 | SCR_DanhSachDieuChinhGia | 01 |
-| PMKT-U-07666 | Thêm mới | A4 (+ A15/A16/A17 cho Bước 1) | SCR_ThemMoiDieuChinhGia | 03, 08 |
-| PMKT-U-07667 | Xem chi tiết | A3, A9, A10, A11 | SCR_XemChiTietDieuChinhGia | 02 |
-| PMKT-U-07668 | Xóa | A6, A14 | SCR_DanhSachDieuChinhGia | 05 |
-| PMKT-U-07669 | Ghi sổ | A7, A12 | SCR_DanhSachDieuChinhGia | 06 |
-| PMKT-U-07670 | Bỏ ghi sổ | A8, A13 | SCR_DanhSachDieuChinhGia | 07 |
-| PMKT-U-07671 | Sửa | A5 | SCR_SuaDieuChinhGia | 04 |
+| PMKT-U-07665 | Xem danh sách | A1, A2 | 01 | ✅ |
+| PMKT-U-07666 | Thêm mới | A4 (+A15-A17) | 03, 08 | ❌ |
+| PMKT-U-07667 | Xem chi tiết | A3, A9, A10, A11 | 02 | 🟡 |
+| PMKT-U-07668 | Xóa | A6, A14 | 05 | ❌ |
+| PMKT-U-07669 | Ghi sổ | A7, A12 (+A18 BR48) | 06 | ❌ |
+| PMKT-U-07670 | Bỏ ghi sổ | A8, A13 | 07 | ❌ |
+| PMKT-U-07671 | Sửa | A5 | 04 | ❌ |
 
 ---
 
@@ -290,65 +265,56 @@ Base path: **`/api/ban-hang/dieu-chinh-gia-hang-ban`** · Mã chức năng: **`D
 
 ```mermaid
 flowchart TD
-    subgraph B1["Bước 1 — chọn nguồn (A15/A16/A17)"]
-        N1[FE: chọn nguồn CTBH hoặc HĐ điều chỉnh] --> N2[POST /nguon/search<br/>lọc KH + khoảng ngày]
-        N2 --> N3[Chọn dòng → FE tự tính Tỷ lệ ĐC · Đơn giá ĐC · Giá trị ĐC theo BR3]
-    end
-    B1 --> C1[POST / — Lưu, ghiSo=false]
-    B1 --> C2[POST / — Lưu và ghi sổ, ghiSo=true]
-
+    N[POST /nguon/search · /nguon/chung-tu · /{id}/dong] -->|D13: qua ChungTuBanHangNguonApi| F[FE dựng form]
+    F --> C1[POST /them-moi · ghiSo=false]
+    F --> C2[POST /them-moi · ghiSo=true]
     C1 --> T[ChungTuTemplate.thucThi]
     C2 --> T
-    T --> V[kiemTraNghiepVu — ma trận validate §03]
-    V --> L[luuEntity: header + chi tiết + liên kết nguồn]
-    L --> S{coGhiSoNgay?}
-    S -- không --> K[kiemTraKyMo — BR17.1 lưu nháp]
-    S -- có --> D[sauKhiLuu: dựng DinhKhoan theo 4 kịch bản]
-    D --> G[GhiSoApi.ghiSo — kernel tự kiểm kỳ, tự chống ghi trùng]
-    G --> ST[status = DA_GHI_SO]
-    ST --> A[NhatKyKiemToan — trong transaction]
-
-    ST -.-> BG[POST /{id}/bo-ghi-so]
-    BG --> X[GhiSoApi.boGhiSo — xoá VẬT LÝ dòng sổ cái]
-    X --> Y[goToanBoTheoDich — gỡ liên kết nguồn]
-    Y --> Z[status = NHAP · nguoiGhiSo/thoiGianGhiSo = null]
+    T --> V[kiemTraNghiepVu]
+    V --> S[truocKhiLuu: TinhToan + SoChungTuApi.sinhSo]
+    S --> L[luuEntity: header + chi tiết]
+    L --> K[sauKhiLuu: QuanHeChungTuApi.lienKet + DinhKhoan]
+    K --> G{ghiSo?}
+    G -- không --> KY[kiemTraKyMo — BR17.1]
+    G -- có --> GS[GhiSoApi.ghiSo]
+    GS --> ST[trangThaiChungTu = DA_GHI_SO]
+    ST -.-> BG[POST /{id}/bo-ghi-so] --> X[GhiSoApi.boGhiSo — xoá vật lý] --> Z[về CHUA_GHI_SO]
+    F -.BR48.-> P[POST /xem-du-lieu-ghi-so<br/>chưa ghi sổ ⇒ tính tại chỗ · đã ghi sổ ⇒ đọc acc_so_cai]
 ```
 
 ---
 
-## 7. Migration dự kiến `V3`
-
-File: `cell-app/src/main/resources/db/migration/V3__sal_dieu_chinh_gia_hang_ban_bo_sung.sql`
+## 7. Migration dự kiến
 
 | # | Việc | Vì sao bắt buộc |
 |---|---|---|
-| 1 | DROP cột `trang_thai_chung_tu` (D7) | `NOT NULL` + CHECK chuỗi tiếng Việt sẽ chặn INSERT của entity mới (entity dùng cột `status`) |
-| 2 | Thêm 12 cột header (tab thanh toán, cờ nghiệp vụ, tổng quy đổi) | SCR có trường, DB chưa có cột — §9.2 ở [09](09-thiet-ke-db.md) |
-| 3 | Thêm 11 cột chi tiết (thuế enum, cột quy đổi, chiều phân tích, `khong_tong_hop_to_khai_gtgt`) | BR_KhongTongHopToKhaiGTGT + BR18 + panel Xem nhanh |
-| 4 | Index `(tenant_id, ngay_hach_toan DESC, so_chung_tu DESC)` | sắp xếp mặc định BR2 / SCR_DanhSach dòng 37 |
-| 5 | Seed `mst_loai_chung_tu` mã `CTDG` (D11) | `maLoaiChungTu()` bắt buộc; chốt chặn kỳ khoá đọc mã này |
-| 6 | Seed quyền `DieuChinhGiaHangBan.Clone` | `BaseChungTuController.nhanBan` gọi `QuyenChecker.CLONE`; không seed = 403 cho mọi người kể cả Admin |
-| 7 | Kiểm dữ liệu trước khi DROP/ALTER | Bảng có thể đã có dữ liệu ở tenant dev — §9.6 |
+| 1 | **Bảng chi tiết → cột phẳng** (D6′): thêm `so_luong`, `don_gia`, `thanh_tien`, `chiet_khau_phan_tram`, `chiet_khau` + backfill + deprecate 10 cột `*_tang`/`*_giam` | LDM mới khai một bộ; giữ hai khối là mã hoá thừa cùng thông tin |
+| 2 | Thêm 11 cột chi tiết còn thiếu (thuế enum, 3 cột quy đổi, cờ tờ khai, 4 chiều phân tích, `chung_tu_nguon_id`) | SCR + LDM có, DB chưa |
+| 3 | Thêm cột header còn thiếu: 12 cột tab thanh toán/Hóa đơn + 2 cột chiết khấu header (D15) | 6 cột đã được thêm ở đợt trước — chỉ còn phần này |
+| 4 | **Seed quy tắc đánh số cho DCGB nhánh Tăng giá** (L3) | thiếu ⇒ `QUY_TAC_KHONG_TON_TAI` khi Lưu chứng từ Tăng giá |
+| 5 | Seed quyền `DieuChinhGiaHangBan.Clone` | không seed ⇒ nút Nhân bản 403 với mọi người |
+| — | ~~DROP `trang_thai_chung_tu`~~ | **HUỶ** (D7) |
+| — | ~~Seed `mst_loai_chung_tu` mã `CTDG`~~ | **HUỶ** — `DCGB` đã có (D11) |
+| — | ~~2 index sắp xếp/lọc~~ | **ĐÃ CÓ** — `idx_sal_dcg_danh_sach`, `idx_sal_dcg_khach_hang` |
 
-Chi tiết SQL: [09-thiet-ke-db.md](09-thiet-ke-db.md).
-
-**File có sẵn phải sửa kèm:** không có. `MaChucNang.DIEU_CHINH_GIA_HANG_BAN` đã tồn tại ([:229](../../cell-app/src/main/java/vn/dopai/pmkt/cell/common/constant/MaChucNang.java)); `LoaiChungTu.SAL_DIEU_CHINH_GIA_HANG_BAN` đã tồn tại ([:31](../../cell-app/src/main/java/vn/dopai/pmkt/cell/quan_he_chung_tu/api/LoaiChungTu.java)).
+Đánh số: **`date +V%Y%m%d%H%M%S`**, prefix `sal_`. SQL đầy đủ: [09](09-thiet-ke-db.md) §10.
 
 ---
 
 ## 8. Thứ tự thực hiện
 
-1. Đọc lại chữ ký `BaseChungTuController` · `ChungTuTemplate` · `QuanHeChungTuApi` (cảnh báo §0).
-2. **Migration V3** + seed → chạy Flyway trên DB dev, kiểm bằng `mcp__idea__execute_sql_query`.
-3. `model/` (6 enum + mã lỗi) + unit test converter — **không phụ thuộc gì**.
-4. `entity/` + whitelist `@Searchable` + test pin whitelist.
-5. `repository/` (gồm `NguonDieuChinhGiaRepository` — SQL native).
-6. `service/business/` theo thứ tự: `TinhToanDieuChinhGia` → `KiemTraDieuChinhGia` → `DinhKhoanDieuChinhGia` → `LienKetNguonDieuChinhGia` → `LuuDieuChinhGiaTemplate` → `GhiSo`/`BoGhiSo`/`NhanBan`. Mỗi lớp một bộ unit test.
-7. `service/` điều phối + `adapter/DongDieuChinhGiaAdapter` (D5).
-8. `controller/` + 3 endpoint nguồn.
-9. `./gradlew unitTest` → smoke test trên DB dev qua IntelliJ → xuất Postman → PR.
+1. **Sửa L1 ngay** (xoá `@Searchable(path = "status")`) — 1 dòng, đang làm hỏng bộ lọc trạng thái của màn đang chạy.
+2. Đọc **`dieu_chinh_gia_hang_mua/`** từ đầu đến cuối — đó là bản sinh đôi đã chạy được.
+3. **Migration** (§7) → chạy Flyway trên DB dev, kiểm bằng `mcp__idea__execute_sql_query`.
+4. `model/` bổ sung (`ThueSuatGtgt`, `LoaiDieuChinhHoaDon`, `LoaiChietKhau`) + unit test converter.
+5. `entity/ChiTietDieuChinhGiaHangBan` + quan hệ cascade trên header + test pin whitelist `@Searchable`.
+6. **Đổi base class** của controller + service (`BaseChungTuController` / `AbstractChungTuCrudService`), xoá 3 override ném 400 — làm **một lần, một commit**.
+7. `business/`: `TinhToan` → `KiemTra` → `DinhKhoan` → `LienKetNguon` → `LuuTemplate` → `Tao/Sua/Xoa/GhiSo/BoGhiSo/NhanBan`.
+8. `NguonDieuChinhGiaService` + **mở `chung_tu_ban_hang/api/ChungTuBanHangNguonApi`** (D13) — phối hợp với chủ module bán hàng.
+9. `XemDuLieuGhiSoService` (A18, BR48).
+10. `./gradlew unitTest` → smoke test trên DB dev qua IntelliJ → xuất Postman → PR.
 
-**Phụ thuộc giữa các file con:** 09 (DB) chặn tất cả · 03 (thêm mới) chặn 04/05/06/07 vì dùng chung `LuuDieuChinhGiaTemplate` · 08 (nguồn) độc lập, làm song song được · 01/02 chỉ cần entity + mapper.
+**Phụ thuộc:** 09 (DB) chặn 5-9 · bước 6 chặn 7 · 08 (nguồn) làm song song được sau bước 3.
 
 ---
 
@@ -356,13 +322,14 @@ Chi tiết SQL: [09-thiet-ke-db.md](09-thiet-ke-db.md).
 
 | # | Rủi ro | Mức | Giảm thiểu |
 |---|---|---|---|
-| **R1** | UC_GhiSo đòi 6 tác động nguyên tử, ta chỉ làm được 2 (bút toán + trạng thái) vì thiếu module phiếu thu/chi và hóa đơn (D3) | **Cao** | Ghi rõ ở §1.2 và §12-Q2; header đã có sẵn cột `phieu_thu_id`/`phieu_chi_id`/`hoa_don_dieu_chinh_id` để module sau điền vào mà không phải đổi schema. Bút toán vẫn đủ nên **sổ cái không sai** |
-| **R2** | Công thức BR2 (số lượng chưa trả lại + quy đổi ĐVT) phải viết SQL native đọc bảng của module chưa có Java | **Cao** | Cô lập trong đúng một lớp `NguonDieuChinhGiaRepository`; viết integration test trên DB thật; **không** phát tán SQL ra service |
-| **R3** | Không có Docker trên máy dev ⇒ 25 test Testcontainers không chạy được | TB | Cổng xanh là `./gradlew unitTest`; test tích hợp chạy ở CI. Báo cáo phải nói rõ phần chưa chạy (`CLAUDE.md` §"CHẠY CODE") |
-| **R4** | Enum `ThueSuatGtgt` bị khai lại ở 2 module (D9) — sửa một chỗ quên chỗ kia | TB | Test đồng bộ đọc CHECK constraint của cả hai bảng chi tiết và so với enum; mở ticket nâng enum lên `accounting_core` |
-| **R5** | `ApplicationModules.verify()` chưa chạy trần được (96 vi phạm có sẵn) | TB | Viết test kiểu `ProxyModularityTest` chỉ soi vi phạm có nhắc tên `dieu_chinh_gia_hang_ban` — module mới giữ chuẩn tuyệt đối |
-| **R6** | FE đã code xong trên mock với tên trường tự suy (`model.ts` dòng 6-11 tự khai "HỢP ĐỒNG CHƯA ĐƯỢC BE XÁC NHẬN") | TB | Kế hoạch này bám đúng `model.ts`; mọi lệch tên được liệt kê ở §5 của từng file con để FE sửa **một lần** ở 3 file (`model.ts`, `payload.ts`, `formDetail.ts`) |
-| **R7** | Bảng đã có dữ liệu ở DB dev với `trang_thai_chung_tu` NOT NULL — DROP cột là không đảo ngược | Thấp | Query kiểm trước (§9.6 của [09](09-thiet-ke-db.md)); có file rollback tương ứng |
+| **R1** | Ghi sổ không sinh Phiếu thu/Chi và HĐĐT vì hai module đó chưa mở `api/` (D3) | **Cao** | §12-Q2; header đã có sẵn cột `phieu_thu_id`/… để module sau điền vào mà không đổi schema |
+| **R2** | Công thức BR2 (SL chưa trả lại + quy đổi ĐVT) cần dữ liệu của `tra_lai_hang_ban` — module đó **có 14 file nhưng chưa có luồng ghi và chưa có `api/`** | **Cao** | D13: mở `api/` hai chiều; nếu chưa kịp thì tạm đọc `ctu_quan_he_chung_tu` qua `QuanHeChungTuApi.daTieuThu` và **ghi rõ sai số** — xem [08 §7-N1](08-chon-nguon-chung-tu.md) |
+| **R3** | Đổi base class ở bước 6 làm gãy 3 endpoint đang trả 400 có kiểm soát | TB | Làm một commit riêng, chạy `unitTest` + smoke `/search` trước/sau |
+| **R4** | Engine đánh số: quy tắc DCGB thiếu nhánh Tăng giá (L3) và lệch dạng giá trị `hinhThucThanhToan` (L4) | **Cao** | Chốt Q13/Q14 **trước** khi code F3; viết integration test cấp số cho cả 2 hướng × 2 hình thức |
+| **R5** | Migration timestamp + `out-of-order` — nhánh sống lâu có thể chạy lệch thứ tự trên DB rỗng | TB | Renumber lúc rebase bằng `git mv` (§4.1 của luật đánh số) |
+| **R6** | Không có Docker ⇒ test Testcontainers không chạy | TB | Cổng xanh là `./gradlew unitTest`; báo rõ phần chưa chạy |
+| **R7** | `SoCaiApi` thiếu vế lọc `LoaiChungTuId` (L2) ⇒ A10/A18 có thể trộn bút toán của chứng từ khác loại trùng id | TB | Ticket cho `accounting_core`; test dựng 2 chứng từ khác loại cùng `chungTuId` để chứng minh |
+| **R8** | Enum `ThueSuatGtgt` khai lại ở ≥2 module (D9) | Thấp | Test đồng bộ đọc CHECK constraint |
 
 ---
 
@@ -370,133 +337,91 @@ Chi tiết SQL: [09-thiet-ke-db.md](09-thiet-ke-db.md).
 
 | Mã quyền | Đã seed? | Dùng ở |
 |---|---|---|
-| `DieuChinhGiaHangBan.View` | ✅ [seed:268](../../cell-app/src/main/resources/db/seed/iam_quyen_full_639_ba.sql) | A1, A2 |
-| `DieuChinhGiaHangBan.View.Detail` | ✅ :269 | A3, A9, A10 |
-| `DieuChinhGiaHangBan.Create` | ✅ :263 | A4, A15, A16, A17 |
-| `DieuChinhGiaHangBan.Edit` | ✅ :265 | A5 |
-| `DieuChinhGiaHangBan.Delete` | ✅ :264 | A6, A14 |
-| `DieuChinhGiaHangBan.Post` | ✅ :266 | A7, A12 |
-| `DieuChinhGiaHangBan.Unpost` | ✅ :267 | A8, A13 |
-| **`DieuChinhGiaHangBan.Clone`** | ❌ **CHƯA** | A11 — **phải seed ở V3**, nếu không nút "Nhân bản" của `SCR_XemChiTiet` trả 403 với mọi người dùng kể cả Admin |
-| `DieuChinhGiaHangBan.Export` / `.Import` | ❌ cố ý không seed | endpoint kế thừa vẫn tồn tại nhưng 403 — đúng ý `DanhSachQuyen.md §B4.6` |
+| `.View` · `.View.Detail` · `.Create` · `.Edit` · `.Delete` · `.Post` · `.Unpost` | ✅ `db/seed/iam_quyen_full_639_ba.sql` | A1-A10, A12-A18 |
+| **`.Clone`** | ❌ **CHƯA** | A11 — phải seed, nếu không nút Nhân bản 403 với mọi người kể cả Admin |
+| `.Export` / `.Import` | ❌ cố ý | endpoint kế thừa vẫn tồn tại nhưng 403 |
 
-BR25: thiếu quyền → 403 kèm body; FE ẩn nút chứ không để bấm rồi mới báo (`IMPLEMENT.md` dòng 292).
+A18 **không có mã quyền riêng** — kế thừa quyền màn gọi (BR48.1).
 
 ---
 
 ## 11. Mã thông báo
 
-Lấy **nguyên văn** từ [`6.messages.md`](../../pmkt-docs/ba/PMKT-E-07664_DieuChinhGiaHangBan/6.messages.md).
+Bảng 26 mã giữ nguyên như bản trước (lấy nguyên văn từ [6.messages.md](../../pmkt-docs/ba/PMKT-E-07664_DieuChinhGiaHangBan/6.messages.md)) — file BA này **không đổi** trong đợt vừa rồi. Hằng đặt ở `MaLoiDieuChinhGia` (đã tồn tại).
 
-| Hằng (đề xuất, trong `MaLoiDieuChinhGia`) | messageId | Nội dung nguyên văn | Dùng ở |
-|---|---|---|---|
-| `MSG_TAO_THANH_CONG` | `MSG_PMKT-E-07664_001` | Thêm mới chứng từ điều chỉnh giá thành công | A4 |
-| `MSG_SUA_THANH_CONG` | `MSG_PMKT-E-07664_002` | Cập nhật chứng từ điều chỉnh giá thành công | A5 |
-| `MSG_XOA_THANH_CONG` | `MSG_PMKT-E-07664_003` | Xóa chứng từ điều chỉnh giá thành công | A6, A14 |
-| `MSG_GHI_SO_THANH_CONG` | `MSG_PMKT-E-07664_004` | Ghi sổ thành công | A7, A12 |
-| `MSG_BO_GHI_SO_THANH_CONG` | `MSG_PMKT-E-07664_005` | Bỏ ghi sổ thành công | A8, A13 |
-| `MSG_LOI_HE_THONG` | `MSG_PMKT-E-07664_006` | Lỗi hệ thống | `GlobalExceptionHandler` |
-| `MSG_KHONG_CO_QUYEN` | `MSG_PMKT-E-07664_007` | Không có quyền truy cập | 403 mọi endpoint |
-| `MSG_KHONG_CO_DU_LIEU` | `MSG_PMKT-E-07664_008` | Không tìm thấy dữ liệu | A1 (FE hiển thị, BE trả list rỗng) |
-| `MSG_THIEU_SO_CHUNG_TU` | `MSG_PMKT-E-07664_101` | Số chứng từ không được để trống | A4, A5 |
-| `MSG_THIEU_PHUONG_THUC` | `MSG_PMKT-E-07664_102` | Vui lòng chọn phương thức điều chỉnh | A4, A5 |
-| `MSG_NGAY_CT_KHONG_HOP_LE` | `MSG_PMKT-E-07664_103` | Ngày chứng từ không hợp lệ | A4, A5 |
-| `MSG_THIEU_DONG_CHI_TIET` | `MSG_PMKT-E-07664_104` | Vui lòng nhập ít nhất một dòng chi tiết điều chỉnh | A4, A5 |
-| `MSG_SO_LUONG_KHONG_HOP_LE` | `MSG_PMKT-E-07664_105` | Số lượng phải lớn hơn 0 | A4, A5 |
-| `MSG_DON_GIA_KHONG_HOP_LE` | `MSG_PMKT-E-07664_106` | Đơn giá phải lớn hơn 0 | A4, A5 |
-| `MSG_THIEU_NGAY_CHUNG_TU` | `MSG_PMKT-E-07664_107` | Vui lòng nhập ngày chứng từ | A4, A5 |
-| `MSG_TRUNG_SO_CHUNG_TU` | `MSG_PMKT-E-07664_109` | Số chứng từ đã tồn tại, vui lòng nhập số khác | A4, A5, A7 |
-| `MSG_THIEU_LY_DO` | `MSG_PMKT-E-07664_110` | Vui lòng nhập lý do điều chỉnh | A4, A5 |
-| `MSG_DA_GHI_SO` | `MSG_PMKT-E-07664_201` | Chứng từ đã ghi sổ | A5, A6, A7 |
-| `MSG_HOA_DON_DA_KY_PHAT_HANH` | `MSG_PMKT-E-07664_202` | Hóa đơn đã ký phát hành | A8 — **chưa kiểm được**, xem §12-Q3 |
-| `MSG_KY_KE_TOAN_DONG` | `MSG_PMKT-E-07664_203` | Ngày hạch toán không thuộc kỳ kế toán đang mở | A4, A5, A7, A8 (kernel ném `PeriodLockedException`, map sang mã này) |
-| `MSG_CHUNG_TU_GOC_KHONG_TON_TAI` | `MSG_PMKT-E-07664_204` | Chứng từ gốc không tồn tại | A4, A5 |
-| `MSG_NGAY_HT_NHO_HON_NGAY_CT` | `MSG_PMKT-E-07664_205` | Ngày hạch toán không được nhỏ hơn ngày chứng từ | A4, A5 |
-| `MSG_THIEU_HOA_DON_GOC` | `MSG_PMKT-E-07664_206` | Bạn cần chọn hóa đơn gốc trên tab Hóa đơn | A4, A5 |
-| `MSG_THIEU_LOAI_DIEU_CHINH` | `MSG_PMKT-E-07664_207` | Vui lòng chọn loại điều chỉnh trên tab Hóa đơn | A4, A5 |
-| `MSG_XAC_NHAN_XOA` | `MSG_PMKT-E-07664_300` | Bạn có chắc chắn muốn xóa chứng từ này? | FE (confirm), BE không dùng |
-| `MSG_TRUNG_SO_HOA_DON` | `MSG_PMKT-E-07664_301` | Số hóa đơn [{soHD}] đã tồn tại cho khách hàng này. Vui lòng kiểm tra lại | A4, A5 — **chưa kiểm được**, xem §12-Q3 |
+Bổ sung 3 mã lỗi **của engine đánh số** mà module sẽ nhận và phải chuyển tiếp nguyên văn (không bọc lại):
 
-⚠ Hai mã **không có trong `6.messages.md`** nhưng SCR/UC dùng: câu ghi sổ trùng số ("Số chứng từ {SoChungTu} đã tồn tại. Vui lòng kiểm tra lại trước khi ghi sổ." — UC_GhiSo) và câu xác nhận bỏ ghi sổ ("Nếu bỏ ghi sổ … Hóa đơn điều chỉnh được sinh ra cũng bị xóa…" — UC_BoGhiSo). Xem §12-Q5.
+| Mã lỗi engine | HTTP | Khi nào |
+|---|---|---|
+| `QUY_TAC_KHONG_TON_TAI` | 400 | chưa seed quy tắc cho tổ hợp (loại · hướng · hình thức TT) — L3 |
+| `SO_KHONG_KHOP_QUY_TAC` (`MSG_PMKT-U-14741_025`) | 400 | người dùng gõ số không khớp mẫu và không tách lại được |
+| `SO_CHUNG_TU_DA_TON_TAI` | **409** | BR19.1 — chặn, **không** nhảy số. ⚠ khác `MSG_109` (400) mà epic khai — §12-Q16 |
 
 ---
 
-## 12. ⚠️ Điểm cần BA xác nhận
+## 12. ⚠️ Điểm cần BA / Dev xác nhận
 
-| # | Vấn đề | Bằng chứng mâu thuẫn / thiếu | Xử lý tạm để code chạy tiếp |
+| # | Vấn đề | Bằng chứng | Xử lý tạm |
 |---|---|---|---|
-| **Q1** | **Mã loại chứng từ** cho điều chỉnh giá hàng bán là gì? | BR09 (`business_rules.md:283-312`) liệt kê 27 mã, **không có** mã nào cho điều chỉnh giá hàng bán · seed `20_loai_chung_tu.sql:8-29` có 20 mã, cũng không có. Trong khi `ChungTuTemplate.maLoaiChungTu()` ([:272](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)) là **bắt buộc** và chốt chặn kỳ khoá đọc mã này | Dùng `CTDG` (D11), seed ở V3. Đổi mã sau = sửa 1 hằng + 1 dòng seed |
-| **Q2** | Ghi sổ có **bắt buộc** sinh Phiếu thu/Phiếu chi/Giấy báo và Hóa đơn điều chỉnh ngay lần này không? | UC_GhiSo "Ràng buộc nguyên tử" liệt kê 6 tác động phải thành công đồng thời · nhưng BE **không có module** nào của `cb_phieu_thu`, `cb_phieu_chi`, `sal_dieu_chinh_hoa_don_ban_hang` (§2.1) — không có gì để gọi | Ghi sổ chỉ sinh bút toán + đổi trạng thái (D3). Nếu BA/PO bắt buộc có, phải mở phiếu yêu cầu cho module Phiếu thu/chi + Hóa đơn điều chỉnh trước |
-| **Q3** | Hai luật **chưa kiểm được ở BE**: `MSG_202` "Hóa đơn đã ký phát hành, không thể bỏ ghi sổ" và `MSG_301` "Số hóa đơn đã tồn tại cho khách hàng này" | Cả hai đọc trạng thái/số của **hóa đơn**, mà bảng `sal_hoa_don_ban_hang` chưa có tầng Java và `sal_dieu_chinh_hoa_don_ban_hang.trang_thai_phat_hanh_hoa_don` ([V1__baseline.sql](../../cell-app/src/main/resources/db/migration/V1__baseline.sql)) chưa được module nào ghi | Cài **cấu trúc kiểm** (interface `HoaDonPort`) nhưng cài đặt mặc định trả "không có hóa đơn" ⇒ hai luật này không chặn ai. Ghi rõ ở [07](07-bo-ghi-so.md) |
-| **Q4** | **Số lượng / Đơn giá phải > 0** (`MSG_105`, `MSG_106`) mâu thuẫn với dòng **Dịch vụ** | SCR dòng 582-583 (bảng Validate): "Số lượng phải lớn hơn 0", "Đơn giá phải lớn hơn 0" · SCR dòng 112-115 (BR2) và 137-139 (BR3): dòng Dịch vụ có `SL = ĐG = 0`, `Thành tiền ≠ 0`, và hai ô đó **disable, luôn = 0`. Áp thẳng bảng Validate thì **không bao giờ lưu được** chứng từ điều chỉnh giá dịch vụ | Miễn hai luật cho dòng có `soLuong == 0 && donGia == 0 && thanhTien != 0` — **giống hệt cách FE đã chọn** (`IMPLEMENT.md` §6 mục 1). Hai bên phải cùng luật, nếu không FE cho lưu mà BE chặn |
-| **Q5** | Hai câu thông báo dùng ở UC nhưng **không có mã** trong `6.messages.md` | UC_GhiSo mục "Kiểm tra trùng số chứng từ": *"Số chứng từ {SoChungTu} đã tồn tại. Vui lòng kiểm tra lại trước khi ghi sổ."* — khác câu của `MSG_109` · UC_BoGhiSo bước 5: *"Nếu bỏ ghi sổ chứng từ điều chỉnh giá hàng bán [Số chứng từ] thì Hóa đơn điều chỉnh được sinh ra cũng bị xóa…"* — không có mã nào | Ghi sổ trùng số dùng lại `MSG_109`; câu xác nhận bỏ ghi sổ là **của FE** (popup), BE không trả. Cần BA cấp mã hoặc xác nhận cách này |
-| **Q6** | BR14 "Chiết khấu thương mại" (SCR dòng 488-493) mô tả hành vi cho một ô **không tồn tại** trong bảng trường của lưới (dòng 444-465) | Bảng trường 20 cột không có ô "Chiết khấu thương mại" · BR14 lại mô tả tick nó thì thành tiền âm, disable chiết khấu, disable hàng khuyến mại | Không cài BR14 lần này (§1.2). FE cũng không dựng (`IMPLEMENT.md` §5.3) |
-| **Q7** | BR13 "ĐVT khác chuẩn ⇒ hiển thị thêm các trường ĐVT quy đổi" (SCR dòng 487) — một dòng chữ, không có bảng trường | Bảng chi tiết DB chỉ có `don_vi_tinh_id`, không có cột hệ số/ĐVT quy đổi | Không cài; lưu `don_vi_tinh_id` như nguồn đưa sang. Nếu BA cần, phải bổ sung cột `he_so_quy_doi` + `don_vi_tinh_goc_id` — ảnh hưởng cả công thức BR2 |
-| **Q8** | **Trường "Thanh toán ngay"** là cột riêng hay suy từ `hinh_thuc_thanh_toan`? | SCR khai `Thanh toán ngay` (checkbox) **và** `Hình thức thanh toán` (dropdown, chỉ hiện khi checkbox = true) là hai trường · CHECK của DB gộp cả hai vào một cột: `hinh_thuc_thanh_toan ∈ {DieuChinhCongNo, ThanhToanNgay, ThuTienMat, GiayBaoCo, ChiTienMat, UyNhiemChi, SecChuyenKhoan, SecTienMat}` ([V1__baseline.sql:16321](../../cell-app/src/main/resources/db/migration/V1__baseline.sql)) · FE gửi **cả hai** (`model.ts` dòng 193-195) | Thêm cột `thanh_toan_ngay boolean` (§9.2) và giữ `hinh_thuc_thanh_toan` mang giá trị cụ thể; `thanhToanNgay = false` ⇒ `hinh_thuc_thanh_toan = 'DieuChinhCongNo'`. Suy ngược được nhưng lưu tường minh để khớp FE và tránh phải đoán |
-| **Q9** | Cột `loai_dieu_chinh` của DB (`TangGia`/`GiamGia`) đang mang **"Phương thức điều chỉnh"** của SCR, còn "Loại điều chỉnh" của tab Hóa đơn (Điều chỉnh giá/Sai sót/Khác) chưa có cột | SCR dòng 264: "Phương thức điều chỉnh" — field `HuongDieuChinhGia`, 2 giá trị Tăng/Giảm · SCR dòng 422: "Loại điều chỉnh" — field `LoaiDieuChinh`, 3 giá trị · DB chỉ có một cột `loai_dieu_chinh` với CHECK 2 giá trị | Giữ `loai_dieu_chinh` = hướng Tăng/Giảm (DTO tên `huongDieuChinhGia` theo FE), **thêm** cột `loai_dieu_chinh_hoa_don` cho 3 giá trị của tab Hóa đơn (§9.2). Tên cột DB lệch tên BA — đánh dấu ở §5 của [03](03-them-moi.md) |
-| **Q10** | BR mà SCR liệt kê ở cuối (dòng 635-651) **lệch số** so với `business_rules.md` | SCR ghi "BR26. Phân quyền", "BR30. Chính sách xóa dữ liệu", "BR31. Tùy biến giao diện", "BR35. Chỉnh sửa từ màn Xem", "BR37. Ghi nhận bút toán", "BR38. Kiểm tra kỳ kế toán" · `business_rules.md` thật: BR25 phân quyền, BR29 xóa, BR30 ẩn/hiện cột, BR34 sửa từ màn xem, BR36 ghi bút toán, BR17 kỳ kế toán. Toàn bộ lệch +1 | Đọc theo **`business_rules.md`** (nguồn sự thật). §14 của kế hoạch này ghi số đúng |
+| ~~Q1~~ | ~~Mã loại chứng từ~~ | **ĐÃ TRẢ LỜI: `DCGB`** — [V1032:153](../../cell-app/src/main/resources/db/migration/V1032__tknd_va_cau_hinh_danh_so.sql) | đóng |
+| **Q2** | Ghi sổ có phải sinh **Phiếu thu/Chi + HĐ điều chỉnh** ngay lần này? (nội dung đã đổi) | UC_GhiSo "Ràng buộc nguyên tử" liệt kê 6 tác động · `tien_mat_tien_gui` và `hoa_don_ban_hang` **đã có** nhưng **không có `api/`** ⇒ Modulith chặn | D3: chỉ bút toán + trạng thái. Nếu BA/PO bắt buộc ⇒ phải mở `api/` ở hai module đó **trước**, là việc của chủ module |
+| **Q3** | `MSG_202` (HĐ đã ký phát hành) và `MSG_301` (trùng số HĐ theo KH) | `hoa_don_ban_hang` nay **đã có entity + `TrangThaiPhatHanh`** nhưng không có `api/` | cài `HoaDonDieuChinhPort` trong module mình, adapter mặc định trả "không có hóa đơn" |
+| **Q4** | `MSG_105/106` (SL, ĐG > 0) vs dòng **Dịch vụ** (`SL = ĐG = 0`) | SCR dòng 582-583 vs 112-115 & 137-139 | miễn trừ cho dòng dịch vụ — **cùng cách FE đã code** |
+| **Q5** | Hai câu thông báo của UC không có mã trong `6.messages.md` | UC_GhiSo (trùng số trước ghi sổ) · UC_BoGhiSo (cảnh báo xoá HĐĐT) | dùng lại `MSG_109`; câu bỏ ghi sổ là của FE |
+| **Q6** | BR14 "Chiết khấu thương mại" tả hành vi cho ô không có trong bảng trường | SCR dòng 488-493 vs 444-465 | không cài |
+| **Q7** | BR13 "ĐVT khác chuẩn ⇒ thêm trường quy đổi" — một dòng chữ | SCR dòng 487 · LDM **có** `DonViTinhChinhId` + `HeSoQuyDoi` | **LDM cụ thể hơn ⇒ theo LDM**, thêm 2 cột. Cần BA xác nhận |
+| ~~Q8~~ | ~~"Thanh toán ngay" là cột riêng?~~ | **ĐÃ GIẢI QUYẾT** — cột `thanh_toan_ngay` đã tồn tại | đóng |
+| **Q9** | "Phương thức điều chỉnh" vs "Loại điều chỉnh" (tab HĐ) | DB chỉ có `loai_dieu_chinh` (Tăng/Giảm) · LDM khai **cả hai**: `PhuongThucDieuChinh` + `LoaiDieuChinh` | thêm cột `loai_dieu_chinh_hoa_don` (§9.2) |
+| **Q10** | SCR liệt kê BR lệch số +1 so với `business_rules.md` | SCR dòng 635-651 | đọc theo `business_rules.md` |
+| **Q11** | **BR49** (di chuyển chứng từ trước–sau) BE có phải cấp endpoint không? | BR49.2 nói thứ tự "giống hệt màn danh sách" ⇒ FE tự suy từ trang đang cầm; nhưng chứng từ **đầu/cuối trang** thì FE phải gọi lại `/search` | tạm: **không** thêm endpoint, FE tự xử. Nếu BA muốn mượt tuyệt đối thì thêm `GET /{id}/lien-ke?huong=truoc|sau` |
+| **Q12** | LDM có 6 trường **không có trong SCR**: `LoaiDongHang`, `SoLo`, `HanSuDung`, `NhomHHDVMuaVao`, `DienGiaiThue`, `LoaiVatTuId` | `ldm-DieuChinhGiaHangBan.puml` dòng 74, 111-113, 116-117 vs `SCR_ThemMoi` bảng lưới dòng 444-465 | **không cài lần này** (§1.2). Nếu BA xác nhận cần thì là một đợt cột mới |
+| **Q13** | Quy tắc đánh số **DCGB nhánh Tăng giá** chưa seed (L3) | [V1032:1166-1169](../../cell-app/src/main/resources/db/migration/V1032__tknd_va_cau_hinh_danh_so.sql) — 4 dòng đều "Giảm giá hàng bán" | seed thêm 2-4 dòng "Tăng giá hàng bán – …"; **cần BA đặt tên quy tắc** cho khớp bộ chuẩn |
+| **Q14** | Dạng giá trị trong `dieu_kien` của quy tắc đánh số: `CHI_TIEN_MAT` hay `ChiTienMat`? (L4) | V1032 dùng SCREAMING_SNAKE · CHECK bảng dùng PascalCase | **Dev kernel đánh số chốt.** Sai là chứng từ Thanh toán ngay không cấp được số |
+| **Q15** | Đường dẫn thêm mới: `POST /` (FE đã khai) hay `POST /them-moi` (chuẩn base, sinh đôi mua hàng dùng) | `IMPLEMENT.md` dòng 181 vs [DieuChinhGiaMuaController.java:49](../../cell-app/src/main/java/vn/vtt/pmkt/cell/dieu_chinh_gia_hang_mua/internal/controller/DieuChinhGiaMuaController.java) | đề xuất **`/them-moi`** cho đồng bộ toàn repo; FE sửa 1 dòng trong `dieuChinhGiaApi.ts` |
+| **Q16** | Trùng số chứng từ: epic khai `MSG_109` (400) nhưng engine ném `SO_CHUNG_TU_DA_TON_TAI` (**409**) | `6.messages.md` vs [SoChungTuApi javadoc](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/hach_toan/api/SoChungTuApi.java) | trả nguyên 409 của engine, gắn kèm `messageId = MSG_PMKT-E-07664_109` để FE hiển thị đúng câu |
 
 ---
 
 ## 13. Điều kiện nghiệm thu
 
 ### BA xác nhận
-- [ ] Đủ 7 UC, đúng điều kiện hiển thị/ẩn nút theo trạng thái (BR12, BR13, BR42).
-- [ ] Bộ lọc, thứ tự sắp xếp mặc định, dòng tổng đúng `SCR_DanhSachDieuChinhGia`.
-- [ ] Bốn kịch bản bút toán (§06) đúng "Cách hạch toán" của SCR dòng 528-559 và UC_GhiSo.
-- [ ] Trả lời Q1…Q10 (§12).
+- [ ] Đủ 7 UC + form "Xem dữ liệu ghi sổ" (BR48) hai chế độ.
+- [ ] Bốn kịch bản bút toán đúng SCR dòng 528-559 và UC_GhiSo.
+- [ ] Trả lời Q2–Q7, Q9–Q16.
 
 ### Dev BE xác nhận
-- [ ] Controller không gọi repository; business logic ở service; Entity không lọt ra ngoài.
-- [ ] Dùng lại `SearchRequest` · `DynamicSpecification` · `PageResponse` · `ApiResponse` · `QuyenChecker` · `GhiSoApi` · `QuanHeChungTuApi` thay vì tự viết.
-- [ ] Mọi filter/sort đều whitelist `@Searchable`; tenant / phạm vi đơn vị / soft-delete không nhận từ client.
-- [ ] Mọi handler gọi `quyen.require(...)`.
-- [ ] Không hardcode magic value; enum có converter + test đồng bộ với CHECK constraint.
-- [ ] Không N+1: dòng chi tiết nạp bằng `join fetch`, dòng tổng là query riêng.
-- [ ] Module mới **0 vi phạm ranh giới Modulith**.
-- [ ] `./gradlew unitTest` xanh; phần Testcontainers **báo rõ là chưa chạy** (không có Docker).
+- [ ] L1 đã sửa; L2/L3/L4/L5 đã có ticket hoặc đã xử lý.
+- [ ] Controller không gọi repository; Entity không lọt ra ngoài.
+- [ ] Dùng lại `SearchRequest` · `PageResponse` · `QuyenChecker` · `GhiSoApi` · **`SoChungTuApi`** · `QuanHeChungTuApi` · **`TaiKhoanNgamDinhApi`**.
+- [ ] Migration đặt tên bằng `date +V%Y%m%d%H%M%S`; `MigrationNamingArchTest` xanh.
+- [ ] Module **0 vi phạm ranh giới Modulith**.
+- [ ] `./gradlew unitTest` xanh; phần Testcontainers **báo rõ chưa chạy**.
 
 ---
 
 ## 14. Quy chuẩn nghiệp vụ (BR) áp dụng
 
+Giữ nguyên bảng của bản trước, **thêm/sửa 5 dòng**:
+
 | BR | Áp ở đâu |
 |---|---|
-| **BR1** Phân trang | A1 — mặc định **10** bản ghi/trang theo `SCR_DanhSach` BR1 (lệch mặc định 20 của BR1 chung; epic thắng trong phạm vi màn này) |
-| **BR2** Hiển thị & sắp xếp | A1 — sort mặc định `ngayHachToan desc, soChungTu desc` ([01](01-xem-danh-sach.md) §6.2) |
-| **BR3** Popup | FE |
-| **BR5 / BR10** Combogrid, chọn nguồn | A15/A16/A17 ([08](08-chon-nguon-chung-tu.md)) |
-| **BR7** Precision & làm tròn | domain DB: `money_vnd numeric(18,2)`, `quantity numeric(18,3)`, `percent_rate numeric(5,2)`, `exchange_rate numeric(18,6)` — đúng bảng 7.1 ([09](09-thiet-ke-db.md) §9.4) |
-| **BR8** Khoảng thời gian | A1 lọc theo `ngayHachToan`; A15 mặc định "từ đầu tháng tới hiện tại" |
-| **BR11** Tìm kiếm / lọc / sắp xếp | A1 — server-side toàn tập, whitelist `@Searchable` |
-| **BR12** Trạng thái chứng từ | `status` (`TrangThaiChungTu`); sửa/xoá/ghi sổ chỉ khi chưa ghi sổ; bỏ ghi sổ chỉ khi đã ghi sổ |
-| **BR13** Nút thao tác | DTO trả đủ cờ để FE ẩn/hiện ([01](01-xem-danh-sach.md) §5.3) |
-| **BR15** Validation | ma trận đầy đủ ở [03](03-them-moi.md) §5 |
-| **BR16** Cảnh báo nghiệp vụ | `MSG_COMMON_001` cho thao tác sai trạng thái (BR42.1) |
-| **BR17** Kỳ kế toán | kernel `GhiSoApi`/`KyKeToanApi` kiểm; template tự kiểm ở ca lưu nháp |
-| **BR18** Ngoại tệ | cột `*_quy_doi` = gốc × tỷ giá; sổ cái ghi bằng tiền hạch toán + `DinhKhoan.voiNgoaiTe` |
-| **BR19** Kiểm trùng số chứng từ | unique `uq_sal_dcg_so_ct` + kiểm sớm → `MSG_109` |
-| **BR20** Số chứng từ | nhập tay, ≤ 50 ký tự, không dấu tiếng Việt (D12) |
-| **BR21** Grid chi tiết con | `thu_tu` lưu thứ tự dòng; cascade + orphanRemoval |
-| **BR25** Phân quyền | §10 |
-| **BR28** Multi-tenant | RLS `tenant_isolation` + policy phạm vi đơn vị đã có sẵn trên cả hai bảng |
-| **BR29** Chính sách xóa | xóa mềm `da_xoa` + `nguoi_xoa` + `ngay_xoa`; dòng con cascade theo cha |
-| **BR31** Dòng tổng | `summary` của `PageResponse`, tính trên **toàn tập sau lọc** |
-| **BR36** Ghi bút toán, không gộp dòng | mỗi cặp TK là một `DinhKhoan` riêng; kernel tách 2 dòng sổ cái |
-| **BR37** Ngày hạch toán | validate `ngayHachToan ≥ ngayChungTu` → `MSG_205` |
-| **BR41** Tham chiếu chéo | quan hệ nguồn↔đích của epic này là **ràng buộc nghiệp vụ**, KHÔNG thuộc BR41 (BR41 tự loại trừ "chứng từ điều chỉnh trỏ chứng từ gốc") |
-| **BR42** Bỏ ghi sổ | chỉ chứng từ đã ghi sổ; hàng loạt tự bỏ qua chứng từ chưa ghi sổ |
-| **BR45** Thao tác hàng loạt | A12/A13/A14 trả `KetQuaHangLoatDto` (thành công/thất bại từng dòng) |
-| **BR46** Trường hệ thống | `BaseEntity`/`BaseChungTuEntity` quản `nguoi_tao`/`ngay_tao`/`nguoi_cap_nhat`/`ngay_cap_nhat`/`nguoi_xoa`/`ngay_xoa`/`nguoi_ghi_so`/`thoi_gian_ghi_so` |
+| **BR04 / BR09 / BR10 / BR12 / BR19.1** (đánh số chứng từ) | **MỚI** — toàn bộ nằm sau `SoChungTuApi.sinhSo`/`thuHoi`; module không tự sinh số, không tự kiểm trùng |
+| **BR12** Trạng thái chứng từ | `trangThaiChungTu` — enum nay đúng **2 giá trị** `CHUA_GHI_SO`/`DA_GHI_SO`, khớp BR12 |
+| **BR48** Xem dữ liệu ghi sổ | **MỚI** — A18, hai chế độ (D14); ⚠ vế lọc `LoaiChungTuId` của BR48.3 hiện base chưa có (L2) |
+| **BR49** Di chuyển chứng từ trước–sau | **MỚI** — §1.2, §12-Q11: FE xử lý, BE giữ nguyên thứ tự sắp xếp của A1 |
+| **BR7 / BR18** | precision theo domain DB; cột `*_quy_doi` = gốc × tỷ giá |
 
-**BR chưa xử lý được:** BR38 (nhóm cột), BR39 (xuất Excel — quyền không bật), BR22/BR23/BR40 (danh mục cây — không thuộc màn chứng từ), BR32/BR44 (thuần FE).
+Các BR còn lại (BR1, BR2, BR5, BR8, BR10, BR11, BR13, BR15, BR16, BR17, BR20, BR21, BR25, BR28, BR29, BR31, BR36, BR37, BR41, BR42, BR45, BR46) giữ nguyên như bản trước.
+
+**BR chưa xử lý được:** BR38 · BR39 (quyền Excel không bật) · BR22/BR23/BR40 (danh mục cây) · BR32/BR44 (thuần FE) · BR47 (danh mục mặc định — không thuộc màn chứng từ) · phần sổ thuế/HĐĐT/phiếu thu-chi của BR36 (D3).
 
 ---
 
 ## 15. Tài liệu tham chiếu
 
-- `pmkt-docs/ba/PMKT-E-07664_DieuChinhGiaHangBan/1.function-breakdown.md` · `2.usecase.puml` · `3.crud-matrix.puml` · `4.usecases/**` · `5.screens/**` · `6.messages.md` · `Matrix/**`
-- `pmkt-docs/ba/Common/business_rules.md` — BR1, BR2, BR5, BR7, BR8, BR10, BR11, BR12, BR13, BR15, BR16, BR17, BR18, BR19, BR20, BR21, BR25, BR28, BR29, BR31, BR36, BR37, BR41, BR42, BR45, BR46
-- `CLAUDE.md` · `cell-app/CLAUDE.md` · `docs/conventions.md` · `docs/be-khung-kien-truc-chuan.md` · `docs/_bieu-mau-plan-api.md`
-- Kế hoạch FE đối ứng: `docs/doing/PMKT-E-07664-dieu-chinh-gia-hang-ban-fe/IMPLEMENT.md` + `client/src/features/banHang/dieuChinhGiaHangBan/api/model.ts`
-- Mẫu code tham khảo: `cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_ban_hang/**` · `accounting_core/**` · `core/**`
+- `pmkt-docs/ba/PMKT-E-07664_DieuChinhGiaHangBan/**`
+- **`pmkt-docs/ba/Common/LDM_update/ldm-DieuChinhGiaHangBan.puml`** (mới — nguồn sự thật về hình dạng dữ liệu)
+- `pmkt-docs/ba/Common/business_rules.md` — BR1…**BR49**
+- `CLAUDE.md` · `cell-app/CLAUDE.md` · `docs/rules/be-khung-kien-truc-chuan.md` · `docs/rules/conventions.md` · **`docs/rules/migration-danh-so-theo-timestamp.md`**
+- Mẫu code: **`cell/dieu_chinh_gia_hang_mua/`** (sinh đôi, đủ luồng) · `cell/chung_tu_ban_hang/` · `accounting_core/` · `core/`
+- FE: `docs/doing/PMKT-E-07664-dieu-chinh-gia-hang-ban-fe/IMPLEMENT.md` + `client/src/features/banHang/dieuChinhGiaHangBan/api/model.ts`

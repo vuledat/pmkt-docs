@@ -6,7 +6,8 @@
 | UC nguồn | `PMKT-U-06477` — ⚠ **không có thư mục `4.usecases/`**, chỉ có ở `README.md:64`; xem §12-Q4 file gốc |
 | Màn hình | `5.screens/SCR_XemChiTietTraLaiHangBan.md` (36 dòng) + `Matrix/…/SCR_XemChiTietTraLaiHangBan_MaTranAnHien.md` |
 | Endpoint phụ trách | **A4** `GET /{id}` · **A5** `GET /{id}/dong-chi-tiet` · **A6** `GET /{id}/thong-tin-hach-toan` |
-| Quyền | `TraLaiHangBan.View.Detail` — cả ba (`BaseCrudController.java:137-141`, `BaseChungTuController.java:139-151`) |
+| Quyền | `TraLaiHangBan.View.Detail` — cả ba |
+| **Trạng thái** | ◐ **A4 đã code ở mức HEADER** (`TraLaiHangBanCrudService` kế thừa `get` của base). Thiếu: `chiTiet[]`, `dinhKhoan[]`, A5, A6 — cả ba cần entity `ChiTietTraLaiHangBan` chưa tồn tại |
 
 ## 1. Quyết định riêng
 
@@ -33,7 +34,7 @@
     "soChungTu": "CTTL-000012",
     "ngayChungTu": "2026-08-10",
     "ngayHachToan": "2026-08-10",
-    "trangThaiChungTu": "CHUA_GHI_SO_PLACEHOLDER → thực tế: NHAP | CHO_DUYET | DA_DUYET | DA_GHI_SO | HUY",
+    "trangThaiChungTu": "CHUA_GHI_SO",   // hoặc "DA_GHI_SO" — ĐÚNG HAI giá trị,
 
     /* ── Nguồn (BR1 · BR5) ──────────────────────────────── */
     "nguonChungTu": "Chứng từ bán hàng hóa, dịch vụ",
@@ -216,7 +217,7 @@ Cột **dẫn xuất/tính toán** (không đọc thẳng từ DB):
 |---|---|---|
 | `traLaiHang` | `kiemPhieuNhapKho ? "Qua kho" : "Không qua kho"` | [01 §4.1](01-xem-danh-sach.md) |
 | `hinhThucThanhToan` | `thanhToanNgay ? "Hoàn tiền ngay" : "Điều chỉnh công nợ"` | [01 §4.1](01-xem-danh-sach.md) |
-| `soChungTuLienQuan` | `COUNT` chứng từ con đang liên kết = `(phieu_nhap_kho_id ≠ null) + (phieu_chi_id ≠ null) + (dieu_chinh_hoa_don_ban_hang_id ≠ null)` | `api/model.ts:181-182`; BR19 bộ chứng từ (`README.md` §BR19). Đợt 1 **luôn = 0** (D6) |
+| `soChungTuLienQuan` | ⟳ **hiện luôn `null`** ở F1/F2 (DTO đã ghi rõ lý do: đếm nó cần `QuanHeChungTuApi` và liên kết chỉ được tạo ở luồng GHI; trả `0` sẽ là *"một lời khẳng định sai"*). Khi có F10: `COUNT` chứng từ con đang liên kết = `(phieu_nhap_kho_id ≠ null) + (phieu_chi_id ≠ null) + (dieu_chinh_hoa_don_ban_hang_id ≠ null)` | `api/model.ts:181-182`; BR19 bộ chứng từ (`README.md` §BR19). Đợt 1 **luôn = 0** (D6) |
 | `chiTiet[].thanhTien` | `soLuong × donGia` | `SCR:470` |
 | `chiTiet[].tienThueGtgt` | `(thanhTien − chietKhau) × thueSuat%` | `SCR:473` |
 | `chiTiet[].giaVon` | `soLuong × donGiaVon` | `SCR:462` |

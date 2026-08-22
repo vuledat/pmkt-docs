@@ -7,6 +7,7 @@
 | **Màn hình nguồn** | `SCR_HDBanHang_Xoa.md` |
 | **Endpoint phụ trách** | **A8** `DELETE /{id}` · **A9** `POST /xoa-hang-loat` |
 | **File gốc** | [`00-ke-hoach-tong.md`](00-ke-hoach-tong.md) |
+| **Trạng thái** | ⬜ **CHƯA CÀI** — `DELETE /{id}` hiện trả 400 `HOA_DON_BAN_HANG_CHUA_HO_TRO` (`HoaDonBanHangController.java:82-86`); `POST /xoa-hang-loat` chưa có |
 
 ---
 
@@ -16,8 +17,8 @@
 |---|---|---|
 | F5-a | **Xóa mềm** (`da_xoa = true`, `ngay_xoa`, `nguoi_xoa`), lan xuống dòng chi tiết cũng bằng xóa mềm. **Không** xóa vật lý. | `UC_HDBanHang_Xoa.md:17,75-76`; BR29.1 |
 | F5-b | HĐ **đã lập chứng từ** thì **CHO xóa**, kèm gỡ toàn bộ liên kết — theo `SCR_HDBanHang_Xoa.md` BR10, **không** theo `UC_HDBanHang_Xoa.md:71` (chặn). Đây là **mâu thuẫn tài liệu**, xem §9-Q1 và [00 §12-Q7](00-ke-hoach-tong.md). | ★ |
-| F5-c | Xóa hàng loạt chạy **lỗi từng phần**: mỗi HĐ một transaction riêng; HĐ hỏng không kéo đổ cả mẻ. | `UC_HDBanHang_Xoa.md:47`; BR45; mẫu `KetQuaHangLoatDto.java:9-11` |
-| F5-d | Endpoint hàng loạt là **`POST /xoa-hang-loat`**, không phải `DELETE` với body. `DELETE` mang body là vùng xám của HTTP, nhiều proxy nuốt body. | `XuLyHangLoatRequest.java:12` là mẫu sẵn có |
+| F5-c | Xóa hàng loạt chạy **lỗi từng phần**: mỗi HĐ một transaction riêng; HĐ hỏng không kéo đổ cả mẻ. | `UC_HDBanHang_Xoa.md:47`; BR45; mẫu `chung_tu_ban_hang/internal/dto/KetQuaHangLoatDto.java` |
+| F5-d | Endpoint hàng loạt là **`POST /xoa-hang-loat`**, không phải `DELETE` với body. `DELETE` mang body là vùng xám của HTTP, nhiều proxy nuốt body. | `chung_tu_ban_hang/internal/dto/XuLyHangLoatRequest.java` là mẫu sẵn có |
 | F5-e | Kiểm tra tính hợp lệ của **từng** HĐ diễn ra lúc **bấm xác nhận**, không lúc tích chọn. | `UC_HDBanHang_Xoa.md:72` nguyên văn |
 | F5-f | Popup xác nhận (`_027`, `_055`) là việc của **FE**; BE **không** đòi field "đã xác nhận" trong request. | `SCR_HDBanHang_Xoa.md:63-64` |
 
@@ -82,7 +83,7 @@ Không gửi body → bỏ kiểm optimistic-lock (`BaseCrudController.java:155-
 }
 ```
 
-Bốn field `id`, `soHoaDon`, `ngayHoaDon`, `tenKhachHang`, `lyDo` là **đúng 5 cột** của bảng "Danh sách không xóa được" (`SCR_HDBanHang_Xoa.md:51-55`) trừ `STT` (FE đánh).
+Bốn field `id`, `soHoaDon`, `ngayHoaDon`, `tenKhachHang`, `lyDo` là **đúng 5 cột** của bảng "Danh sách không xóa được" (`SCR_HDBanHang_Xoa.md:49-55`) trừ `STT` (FE đánh).
 
 | Điều kiện | HTTP | `code` |
 |---|---|---|
@@ -115,7 +116,7 @@ Chỉ ghi vào 3 cột hệ thống (không có cột nghiệp vụ nào bị đ
 |---|---|---|---|---|
 | V01 | HĐ tồn tại, `da_xoa = false`, thuộc tenant | trước mọi việc | 404 `_012` | `UC:53` |
 | V02 | Token `updatedAt` khớp (nếu client gửi) | sau V01 | 409 `STALE_DATA` | `BaseCrudController.java:155-158` |
-| V03 | `trangThaiPhatHanh == "Chưa phát hành"` | sau V02 | 409 **`_010`** | `UC:54,67-68`; `SCR_…Xoa.md:73` |
+| V03 | `trangThaiPhatHanhHoaDon == CHUA_PHAT_HANH` | sau V02 | 409 **`_010`** | `UC:54,67-68`; `SCR_…Xoa.md:73` |
 | V04 | HĐ **không** là nguồn của chứng từ **đã ghi sổ** | sau V03 | 409 — mã? §9-Q2 | suy từ `QuanHeChungTuApi.coLienKet` là **guard xóa** (`QuanHeChungTuApi.java:62-69`) |
 | V05 | `ids` không rỗng, ≤ 200 (chỉ A9) | controller | 400 | BR45 |
 
@@ -163,7 +164,7 @@ Chỉ ghi vào 3 cột hệ thống (không có cột nghiệp vụ nào bị đ
 
 ★ **Lời gọi `crudService.delete` phải đi qua proxy Spring**, không phải self-invocation — self-invocation bỏ qua `@Transactional`, GUC tenant không được bind và RLS trả tập rỗng. Đây đúng là cái bẫy đã ghi ở `ChungTuBanHangCrudService.java:170-173`. Vì vậy `HoaDonBanHangHangLoatService` là **bean riêng** inject `HoaDonBanHangCrudService`, không phải method cùng lớp.
 
-**Dữ liệu để dựng bảng lỗi** (`soHoaDon`, `ngayHoaDon`, `tenKhachHang`): nạp **một lượt trước vòng lặp** bằng `repository.findByIdInAndDaXoaFalse(ids)` (mẫu `ChungTuBanHangCrudService.java:174-182`) — nếu tra trong `catch` thì HĐ vừa rollback có thể không đọc được.
+**Dữ liệu để dựng bảng lỗi** (`soHoaDon`, `ngayHoaDon`, `tenKhachHang`): nạp **một lượt trước vòng lặp** bằng `repository.findByIdInAndDaXoaFalse(ids)` (mẫu `chung_tu_ban_hang/…/ChungTuBanHangCrudService.java#traSoChungTu`) — nếu tra trong `catch` thì HĐ vừa rollback có thể không đọc được.
 
 ```mermaid
 flowchart TD
@@ -237,7 +238,7 @@ flowchart TD
 | | Bản ghi `ctu_quan_he_chung_tu` xuất phát từ HĐ đã bị gỡ mềm |
 | | Xóa hàng loạt 50 HĐ, chèn 1 HĐ đã phát hành ở giữa → 49 xóa được, response đúng |
 | | Xóa HĐ tenant khác → 404 (RLS) |
-| | Audit trigger `trg_audit_sal_hoa_don_ban_hang` (`V1:25495`) ghi nhận bản ghi UPDATE |
+| | Audit trigger `trg_audit_sal_hoa_don_ban_hang` (`V1:25492`) ghi nhận bản ghi UPDATE |
 
 ---
 

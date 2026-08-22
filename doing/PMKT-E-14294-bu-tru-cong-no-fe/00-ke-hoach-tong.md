@@ -25,6 +25,75 @@
 
 ---
 
+## −1. CẬP NHẬT 2026-08-21 — soát lại tài liệu & code sau 10 ngày
+
+> Mục này **đè lên** các phần đã cũ ở dưới. Chỗ nào bị đè đều có dấu ⟹ trỏ về đây.
+
+### Đã kiểm những gì
+
+| Nguồn | Cách kiểm | Kết luận |
+|---|---|---|
+| **Tài liệu BA của epic** | `git fetch` + `git diff HEAD origin/main -- ba/PMKT-E-14294_BuTruCongNo ba/Common` | ✅ **KHÔNG đổi**. Repo `pmkt-docs` sau origin 4 commit, nhưng cả 4 chỉ chạm `ldm-TaiSanCoDinh*.puml`. `business_rules.md` cũng không đổi. |
+| **Plan (7 file `.md`)** | mtime | ✅ Không ai sửa từ 2026-08-11. |
+| **Code module** | `git log -- src/features/tongHop/buTruCongNo` | Đã **commit** (`f23dcff3`). Sau đó chỉ có `66ce49f4` thêm `// @vitest-environment node` vào 5 file test thuần — hợp lý, chạy nhanh hơn nhiều; **giữ nguyên**. Không ai sửa code nghiệp vụ. |
+| **Cổng nghiệm thu hiện tại** | chạy lại | typecheck **0 lỗi** ở module (nền repo giảm 193 → **184**), test **56/56 PASS**. |
+
+### Thay đổi LỚN ở xung quanh — ba việc
+
+| # | Việc | Ảnh hưởng |
+|---|---|---|
+| **U1** | **`features/tongHop/phieuKeToanTongHop/` ĐÃ ĐƯỢC DỰNG** (commit `32b8a6ca`, 28 file). Route `/tong-hop/phieu-ke-toan-tong-hop`, dựng trên engine `@domain-kit/chungTu` (`defineChungTu` + `ChungTuListPage`), quyền `PhieuKeToan.*`, và **đã biết `loaiPhieu = 'BU_TRU_CONG_NO'`** (`fields/options.ts:76`, nhãn "Bù trừ công nợ") | **Gỡ chặn R1/Q1.** Màn danh sách mà plan ghi là "chưa tồn tại" nay đã có, và giá trị wire khớp đúng `LOAI_NGHIEP_VU_BU_TRU` của module này |
+| **U2** | Leaf **`tong-hop` trên sidebar đã mở** (`menuRegistry.tsx:184-189`), trỏ `/tong-hop/khoa-so-ky-ke-toan`, `matchPrefixes: ['/tong-hop']`, gác bằng `HTKhoaSo.View` | **R6 sai một nửa**: menu Tổng hợp vào được rồi, nhưng vẫn **không** dẫn tới màn Bù trừ công nợ |
+| **U3** | Phân hệ Tổng hợp dựng thành **màn nhiều tab**. BA đã xác nhận **bỏ tab "Bỏ khoá sổ kỳ kế toán"** (2026-08-13) | Không đụng epic này, nhưng cho thấy câu hỏi cho BA **có** được trả lời — nên Q2 đáng chờ |
+
+### Quyết định mới
+
+#### D11 — Nối danh sách ↔ popup xem chi tiết bằng **URL**, không import chéo
+
+`SCR_BTCN_DanhSach.md:29` bắt: dòng có Loại nghiệp vụ "Bù trừ công nợ" phải mở **popup xem chi tiết
+của epic này**, không mở popup Phiếu KTTH chung. Chỗ nối đã được chừa sẵn:
+`phieuKeToanTongHop/hooks/usePhieuKttHPage.ts` — hàm `moForm(row)` hiện chỉ toast "chưa hỗ trợ",
+kèm chú thích *"Popup thuộc ĐỢT SAU"*.
+
+**Không** cho `phieuKeToanTongHop` import popup của `buTruCongNo`: SSOT luật tầng ghi rõ
+*"sibling leaves stay sealed"* (`eslint.boundaries.js:89-100` — `leaf` chỉ với được tầng dưới,
+`_shared` của **chính domain mình** và `_shared` của chính mình).
+
+⇒ Danh sách **điều hướng bằng URL** sang route xem chi tiết của module này — đúng cơ chế plan đã
+chọn cho mọi link sang module khác ([04 §5.4](04-popup-chung-tu-bu-tru-xem-chi-tiet.md)).
+
+**Hệ quả lên code:**
+- thêm route `/tong-hop/bu-tru-cong-no/:id` → `BuTruCongNoPage` ở chế độ `view`;
+- `usePhieuKttHPage.moForm(row)`: `row?.loaiPhieu === 'BU_TRU_CONG_NO'` ⇒ `navigate(...)`; còn lại giữ nguyên toast. **Diff trong module bạn đúng một hàm.**
+
+#### D12 — Dựng `features/tongHop/_shared/constants/paths.ts`
+
+Hai leaf cần **cùng một** slug route. Chép đôi chuỗi là mầm mục. Domain `tongHop` nay có **3 module
+thật** (`khoaSo` · `phieuKeToanTongHop` · `buTruCongNo`) nên `_shared/` đã hợp lệ
+(`client/CLAUDE.md:250-252`), và `leaf → domain _shared` là đường **được luật tầng cho phép**.
+
+Đặt ở đó **chỉ** hằng đường dẫn cấp domain — không kéo component nào xuống, giữ `_shared/` mỏng.
+
+#### D13 — Đóng/lưu xong thì về **danh sách Phiếu KTTH**, không `navigate(-1)`
+
+Bản đầu dùng `navigate(-1)` vì lúc đó chưa có màn danh sách. Đó là **lỗi thật** khi mở thẳng bằng
+URL (history rỗng ⇒ bấm Đóng không đi đâu cả). Nay đích đã có, và đúng bằng câu SCR:
+*"đóng màn hình, quay về danh sách và làm mới"* (`SCR_BTCN_ChungTu_ThemMoi.md:104`).
+
+### Vẫn còn treo
+
+**Q2 (đường vào menu)** — chưa đổi. BA vẫn yêu cầu **Bán hàng → Bù trừ công nợ** và
+**Mua hàng → Bù trừ công nợ**; sidebar vẫn 2 cấp, mỗi module một leaf. Sau D11 thì màn **đã vào được
+bằng chuột** qua đường xem chi tiết từ danh sách, nhưng **luồng TẠO MỚI vẫn chỉ deep-link** —
+`SCR_BTCN_DanhSach.md:24` cấm tạo chứng từ bù trừ từ nút "Thêm mới" của danh sách.
+
+**Q11 (Lưu và ghi sổ nguyên tử hay 2 pha)** — chưa đổi, vẫn chặn khi nối BE thật.
+
+**BE** — vẫn trắng: `cell-app` chưa có `bu_tru_cong_no`. `api/mock.ts` còn nguyên là nợ.
+
+
+---
+
 ## 0. Quyết định đã chốt
 
 ### D1 — Một module phẳng `features/tongHop/buTruCongNo/`, mọi popup là component
@@ -55,7 +124,7 @@ không được với sang leaf anh em, `client/CLAUDE.md:108-109`).
 còn dữ liệu, quyền (`PhieuKeToan.*`) và màn danh sách đều thuộc Tổng hợp. Đặt ở `banHang` sẽ buộc
 `muaHang` import ngang sang leaf anh em — lint tầng chặn.
 
-### D3 — KHÔNG dựng danh sách Chứng từ bù trừ trong epic này
+### D3 — KHÔNG dựng danh sách Chứng từ bù trừ trong epic này  ⟹ *xem §−1/U1: màn danh sách nay ĐÃ CÓ; quyết định giữ nguyên (không dựng lại), nhưng phần tích hợp đã actionable — D11*
 
 `SCR_BTCN_DanhSach.md:5` nói rõ: *"không xây màn hình danh sách độc lập"*, mọi bố cục lấy theo
 `SCR_PhieuKTTH_DanhSach.md` của epic PMKT-E-09980. Repo **chưa có** module Phiếu KTTH
@@ -473,12 +542,12 @@ Chuỗi động dùng interpolation (`msg.xacNhanXoa` có `{{soChungTu}}`, `msg.
 
 | # | Rủi ro | Giảm thiểu |
 |---|---|---|
-| **R1** | **Không có màn danh sách để đặt chân.** Xem chi tiết / Ghi sổ / Bỏ ghi / Xóa (3/5 UC) đều khởi phát từ danh sách Phiếu KTTH — module đó chưa tồn tại. | Module export popup + hook hành động qua `index.ts`; luồng tạo mới tự chủ qua route riêng. Khi module Phiếu KTTH lên, phần dùng chung chuyển xuống `features/tongHop/_shared/` (leaf **không** với được leaf anh em — `client/CLAUDE.md:108-109`). → Q1 |
+| **R1** ✅ **ĐÃ GỠ** (§−1/U1) | **Không có màn danh sách để đặt chân.** Xem chi tiết / Ghi sổ / Bỏ ghi / Xóa (3/5 UC) đều khởi phát từ danh sách Phiếu KTTH — module đó chưa tồn tại. | Module export popup + hook hành động qua `index.ts`; luồng tạo mới tự chủ qua route riêng. Khi module Phiếu KTTH lên, phần dùng chung chuyển xuống `features/tongHop/_shared/` (leaf **không** với được leaf anh em — `client/CLAUDE.md:108-109`). → Q1 |
 | **R2** | **BE trắng.** Không có endpoint, không có DTO, không có plan BE. Đoán sai shape ⇒ đập lại `api/` + `helpers/`. | B0 chốt hợp đồng trước; `mock.ts` khoanh gọn trong `api/`; mọi dữ liệu ngoài đi qua Zod `parse` nên đổi shape là lỗi biên dịch, không phải lỗi giữa màn |
 | **R3** | **Nạp toàn bộ 2 danh sách (D6).** Đối tượng nhiều giao dịch ⇒ vài nghìn dòng × 15 cột trong RAM + 2 bảng cùng lúc. | Đo thật trước khi phát hành; nếu vượt trần → yêu cầu BE cấp endpoint phân bổ server-side. Trần cần BA chốt → Q4 |
 | **R4** | **Hai popup chồng nhau** (Figma vẽ popup 2 đè lên popup 1). Focus trap của antd, Esc đóng nhầm lớp, guard "bỏ dở" của lớp dưới bị kích hoạt sai. | `CommonModalShell` có `zIndex` + `escClosable` + `dirty`/`discardConfirm` riêng cho từng lớp (`CommonModalShell.tsx:48-65`); test render phải phủ đúng ca "Esc khi popup 2 đang mở" |
 | **R5** | **Tràn ngang khi ngoại tệ.** 15 cột trong vùng rộng 1328px — chính mock Figma (`41383:670216`) cũng vẽ tràn ra ngoài hộp thoại. | Bảng cuộn ngang trong khung riêng; cân nhắc ghim cột `Số chứng từ`; Design chốt bộ độ rộng cột → Q9 |
-| **R6** | **Không vào được từ menu.** Leaf `tong-hop` đang `disabled: true` (`menuRegistry.tsx:177`), và submenu 3 cấp mà BA mô tả thì shell chưa hỗ trợ. | → Q2. Trong lúc chờ, màn vẫn deep-link được bằng URL và test được |
+| **R6** ⚠ **ĐÃ CŨ MỘT NỬA** (§−1/U2) | **Không vào được từ menu.** ~~Leaf `tong-hop` đang `disabled: true`~~ — leaf đã mở, nhưng trỏ sang Khoá sổ (`menuRegistry.tsx:184-189`), và submenu 3 cấp mà BA mô tả thì shell chưa hỗ trợ. | → Q2. Trong lúc chờ, màn vẫn deep-link được bằng URL và test được |
 | **R7** | **Sai số làm tròn quy đổi.** Tổng đại số cột "Chênh lệch tỷ giá" **phải** đúng bằng Số tiền quy đổi dòng hạch toán 2 (`SCR_BTCN_ChungTu_ThemMoi.md:95`). Cộng từng dòng đã làm tròn ≠ làm tròn của tổng. | `helpers/quyDoi.ts` là điểm làm tròn **duy nhất**; dòng 2 tính từ **tổng chưa làm tròn** rồi mới làm tròn một lần (BR7.3: lưu đủ, chỉ tròn khi hiển thị). Có test riêng cho ca lệch |
 | **R8** | **Số dư đổi giữa chừng** (`MSG_PMKT-E-14294_018`). FE không kiểm được, chỉ hiển thị lỗi BE trả. | `api/` map mã lỗi BE → khoá i18n; FE **không** tự sinh câu chữ cho ca này |
 | **R9** | **"Lưu và ghi sổ" không rõ có nguyên tử không.** BA (`AD_BTCN_ThemMoi.puml`, `UC_BTCN_ThemMoi.md:122,135`) mô tả **2 pha** — lưu xong rồi ghi sổ hỏng thì **giữ lại** chứng từ Chưa ghi sổ; kernel FE lại khai *"MỘT request, MỘT transaction"* (`ChungTuDescriptor.ts:174-181`). Chọn sai ⇒ người dùng bấm Lưu lần hai và **tạo chứng từ trùng**. | Chốt **Q11** trước bước B9; response lỗi phải mang `id` nếu là 2 pha. Hệ quả chi tiết: [03 §7.2](03-popup-chung-tu-bu-tru-them-moi.md) · [06 §1.4](06-hop-dong-api-va-i18n.md) |
@@ -511,7 +580,7 @@ Chuỗi động dùng interpolation (`msg.xacNhanXoa` có `{{soChungTu}}`, `msg.
 
 ## 12. ⚠️ Điểm cần BA / Design xác nhận
 
-**Q1 — Ai dựng màn danh sách Phiếu kế toán tổng hợp, và bao giờ?**
+**Q1 — Ai dựng màn danh sách Phiếu kế toán tổng hợp, và bao giờ?** ✅ **ĐÃ TRẢ LỜI** — dựng xong ở commit `32b8a6ca`, xem §−1/U1. Phần dưới giữ để đối chiếu.
 `SCR_BTCN_DanhSach.md:5` đẩy toàn bộ danh sách sang epic PMKT-E-09980; FE **chưa có** module đó
 (grep `phieuKeToan|phieuKTTH|keToanTongHop` trong `client/src` = 0 kết quả). Không có nó thì
 UC-14688 / 14691 / 14692 / 14693 **không có đường vào**.

@@ -7,15 +7,20 @@
 | **SCR nguồn** | `5.screens/SCR_BTCN_DanhSach.md` — chỉ mô tả **điểm khác biệt** so với `SCR_PhieuKTTH_DanhSach.md` (epic PMKT-E-09980) |
 | **Matrix** | **SKIP** — `Matrix/.../_scope.md:10` (màn danh sách, ngoài phạm vi ma trận Ẩn/Hiện) |
 | **Figma** | node `41322:651294` "Danh sách" (1440×1024) |
-| **Route** | Của epic 09980 — đề xuất `/tong-hop/phieu-ke-toan-tong-hop` (**chưa tồn tại**) |
+| **Route** | ✅ **ĐÃ CÓ** — `/tong-hop/phieu-ke-toan-tong-hop` (`features/tongHop/phieuKeToanTongHop/constants/paths.ts`) |
 | **Phạm vi epic này** | ⛔ **KHÔNG dựng màn này** (quyết định D1/D3 ở [00-ke-hoach-tong.md](00-ke-hoach-tong.md)). File này chốt **hợp đồng tích hợp** để module Phiếu KTTH cắm chứng từ bù trừ vào. |
 
 > **Lý do không dựng:** `SCR_BTCN_DanhSach.md:5` — *"Chứng từ bù trừ công nợ hiển thị chung trên danh
 > sách Phiếu kế toán tổng hợp … **không xây màn hình danh sách độc lập**. Toàn bộ bố cục, thành phần
 > … theo tài liệu SCR_PhieuKTTH_DanhSach.md — **không mô tả lại**."*
 >
-> Repo hiện **chưa có** module Phiếu KTTH: `grep -rniE "phieuKeToan|phieuKTTH|keToanTongHop" client/src`
-> → 0 kết quả. Đây là chặn cứng R1 / Q1.
+> **CẬP NHẬT 2026-08-21 — chặn cứng R1/Q1 đã được gỡ.** Module `features/tongHop/phieuKeToanTongHop/`
+> đã được dựng (commit `32b8a6ca`, 28 file): route `/tong-hop/phieu-ke-toan-tong-hop`, dựng trên
+> engine `@domain-kit/chungTu` (`defineChungTu` + `ChungTuListPage`), quyền `PhieuKeToan.*`, và **đã
+> biết `loaiPhieu = 'BU_TRU_CONG_NO'`** với nhãn "Bù trừ công nợ" (`fields/options.ts:76`).
+>
+> Quyết định **không dựng lại** màn này vẫn giữ nguyên. Cái đổi là **phần tích hợp ở §8 nay làm được
+> ngay** — xem D11/D12 ở [00 §−1](00-ke-hoach-tong.md).
 
 ---
 
@@ -160,11 +165,21 @@ Phiếu KTTH (epic 09980):
 | Popup xác nhận Xóa / Bỏ ghi | **epic 14294** | `buTruCongNo/components/XacNhanBuTruModal.tsx` |
 | Chữ i18n riêng của chứng từ bù trừ trên danh sách | **epic 14294** | `buTruCongNo/i18n/vi.ts` — nhánh `danhSach.*` |
 
-⚠ **Ràng buộc tầng phải xử lý khi 09980 lên:** `features/tongHop/phieuKeToanTongHop/` và
-`features/tongHop/buTruCongNo/` là **hai leaf anh em**; leaf **không** import được leaf anh em
-(`client/CLAUDE.md:108-109`). Khi đó phần dùng chung (popup chứng từ, tab cặp ghép, hook hành động)
-phải chuyển xuống `features/tongHop/_shared/` — lúc đó domain đã có ≥2 module thật nên `_shared/` hợp lệ
-(`client/CLAUDE.md:250-252`). **Ghi vào backlog của 09980, đừng dựng `_shared/` sớm.**
+### Cách nối — ĐÃ CHỐT (D11/D12, cập nhật 2026-08-21)
+
+Ràng buộc tầng là thật và SSOT nói rõ: *"sibling leaves stay sealed"*
+(`eslint.boundaries.js:89-100`) — `leaf` chỉ với được tầng dưới, `_shared` của **chính domain mình**,
+và `_shared` của chính mình. Nên `phieuKeToanTongHop` **không được** import popup của `buTruCongNo`.
+
+**Không** chuyển popup xuống `_shared/` (sẽ moi rỗng cả leaf). Thay vào đó nối bằng **URL**:
+
+| Bên | Làm gì |
+|---|---|
+| `buTruCongNo` | Mở thêm route `/tong-hop/bu-tru-cong-no/:id` → `BuTruCongNoPage` chế độ `view` |
+| `tongHop/_shared/constants/paths.ts` | Hằng đường dẫn cấp domain, để hai leaf dùng **cùng một** chuỗi (`leaf → domain _shared` là đường luật tầng cho phép) |
+| `phieuKeToanTongHop` | `usePhieuKttHPage.moForm(row)`: `row?.loaiPhieu === 'BU_TRU_CONG_NO'` ⇒ `navigate(...)`; các loại phiếu khác giữ nguyên toast "chưa hỗ trợ". **Diff đúng một hàm** |
+
+Chỗ nối này vốn đã được chừa sẵn trong module bạn — chú thích của `moForm` ghi *"Popup thuộc ĐỢT SAU"*.
 
 ---
 

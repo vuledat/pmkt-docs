@@ -7,6 +7,7 @@
 | Màn hình | `5.screens/SCR_SuaTraLaiHangBan.md` (49 dòng — dùng chung popup với Thêm mới) + `Matrix/…/SCR_SuaTraLaiHangBan_MaTranAnHien.md` |
 | Endpoint phụ trách | **A8** `PUT /{id}` |
 | Quyền | `TraLaiHangBan.Edit` |
+| **Trạng thái** | ☐ chưa code — `update` đang chặn 400 `CHUA_HO_TRO` |
 
 ## 1. Quyết định riêng
 
@@ -63,9 +64,9 @@ Khi `ghiSo = true`: `"Ghi sổ chứng từ trả lại hàng bán thành công"
 | `ngayChungTu` | mặc định hôm nay | **read-only**, không đổi | `SCR_Sua:12`, `UC:157,176` |
 | `ngayHachToan` | nhập | **cho sửa** (kéo theo kiểm kỳ mới) | `SCR:287,301` |
 | `updatedAt` | không có | **token khoá** | `api/model.ts:187-188` |
-| `status` | server đặt `NHAP`/`DA_GHI_SO` | **giữ nguyên** nếu chỉ Lưu; `DA_GHI_SO` nếu Lưu và ghi sổ | `SCR_Sua:14` |
+| `status` | server đặt `CHUA_GHI_SO`/`DA_GHI_SO` | **giữ nguyên** nếu chỉ Lưu; `DA_GHI_SO` nếu Lưu và ghi sổ | `SCR_Sua:14` |
 | `don_vi_id` | trigger gán | **BẤT BIẾN** — trigger `fn_pv_sal_chung_tu_tra_lai_hang_ban` ném `PV_BB_001` nếu đổi | `V1:2871-2879,26251` |
-| dòng chi tiết | insert hết | **replace toàn bộ**: `cascade = ALL` + `orphanRemoval = true` ⇒ dòng không còn trong request bị xoá vật lý khỏi collection | `be-khung-kien-truc-chuan.md:201-202` |
+| dòng chi tiết | insert hết | **replace toàn bộ**: `cascade = ALL` + `orphanRemoval = true` ⇒ dòng không còn trong request bị xoá vật lý khỏi collection | `docs/rules/be-khung-kien-truc-chuan.md:201-202` |
 | Mã hàng của dòng | cho sửa | **FE khoá** khi lập từ chứng từ nguồn (`SCR:204-205`: *"Không cho sửa Mã hàng nhưng vẫn cho xóa cả dòng"*); **BE không cưỡng chế** — xem §9 |
 
 > **Lưu ý nguyên văn `UC_Sua:182`:** *"Người dùng có quyền sửa toàn bộ thông tin trên phiếu (kể cả loại điều chỉnh là tăng/giảm)"* ⇒ BE **không** khoá thêm field nào ngoài `soChungTu`/`ngayChungTu`.
@@ -153,7 +154,7 @@ if (coGhiSoNgay(ctx)) { … themDinhKhoan … }
 
 | Lớp test | Case | Input → kỳ vọng |
 |---|---|---|
-| `SuaTraLaiHangBanTest` | V30 | `status = DA_GHI_SO` → 409 `ALREADY_POSTED` + `messageId = _201` |
+| `SuaTraLaiHangBanTest` | V30 | `trangThaiChungTu = DA_GHI_SO` → 409 `ALREADY_POSTED` + `messageId = _201` |
 | | V31 | request đổi `soChungTu` → 400 `IMMUTABLE_FIELD`; đổi `ngayHachToan` → **hợp lệ** |
 | | V32 | `updatedAt` lệch 1 ms → 409 `STALE_DATA`; `updatedAt = null` → đi tiếp |
 | | thứ tự `chuanBiChungTu` | `ghiNhanChungTu` được gọi **trước** `mapper.apDung` (verify order bằng `InOrder`) |
@@ -167,7 +168,7 @@ if (coGhiSoNgay(ctx)) { … themDinhKhoan … }
 
 | Lớp | Kiểm gì |
 |---|---|
-| `SuaTraLaiHangBanIT` | V33: tay ghi 1 dòng `acc_so_cai` rồi set `status = NHAP` → `PUT` trả 409 `SO_CAI_LECH` |
+| `SuaTraLaiHangBanIT` | V33: tay ghi 1 dòng `acc_so_cai` rồi set `trangThaiChungTu = CHUA_GHI_SO` → `PUT` trả 409 `SO_CAI_LECH` |
 | | `orphanRemoval`: xoá 1 dòng chi tiết → bảng con còn đúng n−1 dòng |
 | | trigger bất biến: đổi `don_vi_id` → `PV_BB_001` (`V1:2875`) |
 | | liên kết: sửa từ 2 dòng gốc xuống 1 dòng → `ctu_quan_he_chung_tu` còn 1 bản ghi; `daTieuThu` của dòng bị bỏ về 0 |

@@ -5,18 +5,19 @@
 | Mã chức năng | **F9** |
 | UC nguồn | `PMKT-U-06471` bước 4 (`UC_ThemMoiTraLaiHangBan.md:108`) |
 | Màn hình | `SCR_ThemMoiTraLaiHangBan.md:42-253` — §Chọn chứng từ bán hàng gốc · **BR1** (quy tắc load) · **BR2** (công thức SL/ĐG/Thành tiền) · **BR5** (quy tắc fill) |
-| Endpoint phụ trách | **A17** `POST /nguon/chung-tu-ban-hang` · **A18** `POST /nguon/hoa-don-dieu-chinh` |
+| Endpoint phụ trách | ⟳ **A17** `GET /nguon?keyword=&limit=` · **A18** `GET /nguon/{id}?excludeReturnId=` |
 | Quyền | `TraLaiHangBan.Create` — người dùng đang lập chứng từ mới |
 | Nợ FE tương ứng | `IMPLEMENT.md:143` (N2) — *"Lưới cần endpoint tra DÒNG HÀNG của chứng từ nguồn (kèm SL đã trả lại)… Hàm nạp được TIÊM qua props (`useNguonChuaCoApi`) nên nối API là sửa đúng một hook"* |
+| **Trạng thái** | ☐ chưa code |
 
 ## 1. Quyết định riêng
 
 | # | Quyết định | Vì sao KHÔNG chọn phương án kia |
 |---|---|---|
-| 1.1 | **Endpoint mới** thuộc module trả lại hàng bán, không mở rộng `/chung-tu-ban-hang/search` | `/chung-tu-ban-hang/search` là màn danh sách của epic E-06194 và chỉ trả **header**; thêm projection dòng hàng + cột "SL đã trả lại" vào đó là làm nặng một API đang chạy cho nhu cầu của epic khác. §0-D8 |
+| 1.1 ⟳ | **Endpoint mới, dạng `GET /nguon` + `GET /nguon/{id}`** theo quy ước sibling `TraLaiHangMuaController.java:122,133` — không mở rộng `/chung-tu-ban-hang/search` | `/chung-tu-ban-hang/search` là màn danh sách của epic E-06194 và chỉ trả **header**; thêm projection dòng hàng + cột "SL đã trả lại" vào đó là làm nặng một API đang chạy cho nhu cầu của epic khác. §0-D8 |
 | 1.2 | Trả về **DÒNG HÀNG** (grain dòng), không phải chứng từ | BR1 nói *"Load tất cả các **dòng** trên chứng từ thỏa mãn"* (`SCR:81`), và lưới kết quả của popup là lưới dòng hàng (`SCR:59-73`) |
 | 1.3 | `Số lượng` (còn được trả) tính bằng `QuanHeChungTuApi.daTieuThu`, **không** thêm cột đếm trên bảng bán hàng | `QuanHeChungTuApi.java:11-15` — *"Không có `capNhatLienKet` — và đó là chủ ý"*; đồ thị quan hệ là nguồn sự thật duy nhất, thêm counter là nguồn thứ hai phải đồng bộ |
-| 1.4 | **A18 luôn trả rỗng đợt 1** nhưng vẫn khai endpoint | FE đã dựng popup và inject hàm nạp; endpoint rỗng ⇒ FE không phải sửa gì khi module hóa đơn điều chỉnh ra đời. §1.2 file gốc |
+| 1.4 ⟳ | **Nguồn "Hóa đơn điều chỉnh" trả rỗng đợt 1** nhưng endpoint vẫn khai | FE đã dựng popup và inject hàm nạp; endpoint rỗng ⇒ FE không phải sửa gì khi module hóa đơn điều chỉnh ra đời. §1.2 file gốc |
 | 1.5 | BE **không** làm phần "fill dữ liệu sang form" (BR5) — chỉ trả dòng hàng đầy đủ trường, FE tự đổ | BR5 là quy tắc **giao diện** (trường nào readonly, tab nào lấy từ đâu — `SCR:168-243`); FE đã cài trong `helpers/nguon.ts` (`IMPLEMENT.md:49`) |
 | 1.6 | Endpoint chỉ đọc, `@Transactional(readOnly = true)`, **không** khoá dòng nguồn | khoá chỉ có nghĩa trong transaction ghi; chốt chặn trả vượt nằm ở `lienKet` lúc Lưu ([03 §4](03-them-moi.md) V10) |
 
@@ -24,114 +25,90 @@
 
 ## 2. Hợp đồng API
 
-### A17 — `POST /api/ban-hang/tra-lai-hang-ban/nguon/chung-tu-ban-hang`
+> ⟳ **Hình dạng đã đổi so với bản 2026-08-14** (khi đó là 2 endpoint `POST /nguon/<loai>`). Nay theo đúng quy ước module anh em `tra_lai_hang_mua`: **một cặp `GET`**, phân biệt "tra nhanh danh sách chứng từ" ⇄ "nạp dòng hàng của một chứng từ".
 
-Quyền `TraLaiHangBan.Create`.
+### A17 — `GET /api/ban-hang/tra-lai-hang-ban/nguon`
+
+Quyền `TraLaiHangBan.Create`. Mẫu: `TraLaiHangMuaController.java:122-131`.
+
+| Query param | Kiểu | Bắt buộc | Ý nghĩa |
+|---|---|---|---|
+| `keyword` | string ≤ 100 | N | `like` trên số chứng từ / tên khách hàng |
+| `limit` | int | N | mặc định 20 (`SCR:144`) |
+| `khachHangId` | UUID | N | lọc theo khách hàng (`SCR:54`) |
+| `ngayTu` · `ngayDen` | `LocalDate` | N | lọc `ngay_hach_toan` (`SCR:56`) |
 
 ```jsonc
-// Request — NguonChungTuBanHangRequest
+// Response 200 — ApiResponse<List<NguonTraLaiHangBanDto>>
 {
-  "khachHangId": "a1b2…",              // BẮT BUỘC (SCR:54)
-  "keyword": "CTBH-000",               // lọc theo số chứng từ (SCR:55)
-  "ngayTu": "2026-08-01",              // BẮT BUỘC (SCR:56) — mặc định FE: từ đầu tháng
-  "ngayDen": "2026-08-14",             // BẮT BUỘC
-  "apDungDonGiaSauTraLai": false,      // SCR:57 — đổi công thức Đơn giá/Thành tiền (§4)
-  "chungTuBanHangId": null,            // ≠ null ⇒ chỉ lấy dòng của ĐÚNG chứng từ đó (combo chọn nguồn, SCR:142-145)
-  "page": 1,
-  "pageSize": 20                       // SCR:144 — mặc định 20, scroll load tiếp 20
+  "data": [
+    { "id": "aa11…", "soChungTu": "CTBH-000201", "ngayChungTu": "2026-08-05",
+      "soHoaDon": "00000098", "tenKhachHang": "Công ty TNHH A",
+      "khachHangId": "a1b2…", "maLoaiTien": "VND", "tyGia": 1.000000 }
+  ]
 }
 ```
 
-| Field | Kiểu | Bắt buộc | Ràng buộc | Nguồn BA |
-|---|---|---|---|---|
-| `khachHangId` | UUID | **Y** | *"Lần đầu NSD mở form ra không ngầm định load dữ liệu (do Khách hàng đang để trống)"* ⇒ thiếu → trả **rỗng**, không lỗi | `SCR:54,79` |
-| `keyword` | string ≤ 100 | N | `like` trên `so_chung_tu` | `SCR:55` |
-| `ngayTu` / `ngayDen` | `LocalDate` | **Y** | `ngayDen ≥ ngayTu`, lọc trên `ngay_hach_toan` | `SCR:56` · `_103` |
-| `apDungDonGiaSauTraLai` | boolean | N | mặc định `false` | `SCR:57,108-113` |
-| `chungTuBanHangId` | UUID | N | dùng cho combo "chỉ cho chọn 1 chứng từ" (`SCR:145`) | `SCR:142-145` |
+Chỉ trả **header** chứng từ thoả BR1 (§3.1) — vừa đủ cho combo "Chọn chứng từ" ở thanh tiêu đề và cho lưới trên của popup nâng cao.
+
+### A18 — `GET /api/ban-hang/tra-lai-hang-ban/nguon/{id}`
+
+Quyền `.Create`. Nạp **DÒNG HÀNG** của đúng chứng từ `{id}`, kèm `soLuong` còn được trả theo BR2.
+
+| Query param | Kiểu | Ý nghĩa |
+|---|---|---|
+| `excludeReturnId` | UUID | ⟳ **Quan trọng** — khi đang **SỬA** một chứng từ trả lại, phải **trừ ra** phần chính chứng từ đó đã trả, nếu không số lượng còn lại bị tính thiếu và người dùng không sửa tăng được. Mẫu: `TraLaiHangMuaCrudService.layNguon(UUID id, UUID excludeReturnId)` (`:116`) |
+| `apDungDonGiaSauTraLai` | boolean | `SCR:57` — đổi công thức Đơn giá/Thành tiền (§4.2) |
 
 ```jsonc
-// Response 200 — PageResponse<DongNguonBanHangDto>
+// Response 200 — ApiResponse<NguonTraLaiHangBanDto>
 {
-  "data": [
-    {
-      /* ── Định danh để tạo liên kết ────────────────────── */
-      "chungTuBanHangId": "aa11…",
-      "chiTietChungTuBanHangId": "ct01…",
-      "hoaDonBanHangId": "hd77…",
-      "chiTietHoaDonBanHangId": "chd01…",
+  "data": {
+    "chungTuBanHangId": "aa11…",
+    "soChungTu": "CTBH-000201",
+    "ngayChungTu": "2026-08-05",
+    "khachHangId": "a1b2…", "tenKhachHang": "Công ty TNHH A",
+    "maSoThue": "0101234567", "diaChi": "12 Trần Duy Hưng, Hà Nội",
+    "nhanVienBanHangId": "b7c8…",
+    "loaiTienId": "vnd0…", "maLoaiTien": "VND", "tyGia": 1.000000,
+    "kiemPhieuXuatKhoCtbh": true, "lapKemHoaDonCtbh": true,
 
-      /* ── Cột hiển thị của lưới (SCR:61-73) ───────────── */
-      "ngayChungTu": "2026-08-05",
-      "soChungTu": "CTBH-000201",
-      "soHoaDon": "00000098",
-      "maHang": "VT-001",
-      "maHangId": "vt01…",
-      "tenHang": "Bàn gỗ A",
-      "donViTinhId": "dvt01…",
-      "tenDonViTinh": "Cái",
+    "dongHang": [
+      {
+        "chiTietChungTuBanHangId": "ct01…",
+        "hoaDonBanHangId": "hd77…", "chiTietHoaDonBanHangId": "chd01…",
+        "soHoaDon": "00000098",
+        "maHang": "VT-001", "maHangId": "vt01…", "tenHang": "Bàn gỗ A",
+        "loaiVatTuId": "lvt01…", "laDichVu": false,
+        "donViTinhId": "dvt01…", "tenDonViTinh": "Cái",
 
-      /* ── Ba cột theo công thức BR2 (§4) ──────────────── */
-      "soLuong": 8.000,                 // = SL bán − SL đã trả lại
-      "donGia": 5000000.00,
-      "thanhTien": 40000000.00,
+        "soLuong": 8.000,            // = SL bán − SL đã trả lại (§4.1)
+        "donGia": 5000000.00,
+        "thanhTien": 40000000.00,
 
-      /* ── Trường để FE fill sang lưới chi tiết (BR5) ──── */
-      "loaiVatTuId": "lvt01…",
-      "laDichVu": false,
-      "khoId": "kho01…",
-      "taiKhoanKhoId": "tk156…",
-      "taiKhoanGiaVonId": "tk632…",
-      "taiKhoanTraLaiId": "tk5212…",    // SCR:210 — theo DM VTHH
-      "taiKhoanCongNoId": "tk131…",     // SCR:211 — theo CTBH gốc
-      "taiKhoanThueGtgtId": "tk33311…",
-      "chietKhauPhanTram": 5.00,
-      "thueSuatGtgt": "10",
-      "tinhChatThueGtgtId": "tc01…",
-      "donGiaVon": 3500000.00,
-      "hangKhuyenMai": false,
-
-      /* ── Kiểm tra cùng loại tiền / tỷ giá (SCR:97-98) ── */
-      "loaiTienId": "vnd0…",
-      "maLoaiTien": "VND",
-      "tyGia": 1.000000,
-
-      /* ── Thông tin khách hàng để fill header (BR5) ───── */
-      "khachHangId": "a1b2…",
-      "tenKhachHang": "Công ty TNHH A",
-      "maSoThue": "0101234567",
-      "diaChi": "12 Trần Duy Hưng, Hà Nội",
-      "nhanVienBanHangId": "b7c8…",
-      "kiemPhieuXuatKhoCtbh": true,     // BR5: quyết định giá trị mặc định của "Kiêm phiếu nhập kho"
-      "lapKemHoaDonCtbh": true          // BR5: tab Hóa đơn lấy từ CTBH hay từ DM khách hàng
-    }
-  ],
-  "pagination": { "page": 1, "pageSize": 20, "totalItems": 34, "totalPages": 2 },
-  "summary": null
+        "khoId": "kho01…",
+        "taiKhoanKhoId": "tk156…", "taiKhoanGiaVonId": "tk632…",
+        "taiKhoanTraLaiId": "tk5212…", "taiKhoanCongNoId": "tk131…",
+        "taiKhoanThueGtgtId": "tk33311…",
+        "chietKhauPhanTram": 5.00,
+        "thueSuatGtgt": "10",         // TÊN HẰNG = mã, xem §0-D10
+        "tinhChatThueGtgtId": "tc01…",
+        "donGiaVon": 3500000.00,
+        "hangKhuyenMai": false
+      }
+    ]
+  }
 }
 ```
 
 | Lỗi | HTTP | messageId |
 |---|---|---|
 | Thiếu `.Create` | 403 | `_007` |
-| `ngayDen < ngayTu` | 400 | `_103` |
-| Không có dòng nào thỏa | 200, `data: []` | FE hiển thị `_008` |
-| Thiếu `khachHangId` | 200, `data: []` | — (đúng BR1 dòng 79) |
+| `{id}` không tồn tại / `da_xoa` / chưa ghi sổ | 404 | `_100` |
+| `ngayDen < ngayTu` (A17) | 400 | `_103` |
+| Không có dòng nào thoả | 200, `dongHang: []` | FE hiển thị `_008` |
 
-### A18 — `POST /api/ban-hang/tra-lai-hang-ban/nguon/hoa-don-dieu-chinh`
-
-Quyền `.Create`. Request tương tự A17 nhưng lọc trên `ngay_hoa_don`, **không** có `apDungDonGiaSauTraLai` (`SCR:57`: checkbox đó *"Chỉ hiển thị khi chọn nguồn là Chứng từ bán hàng hóa, dịch vụ"*).
-
-**Đợt 1 luôn trả:**
-```jsonc
-{ "data": [], "pagination": { "page": 1, "pageSize": 20, "totalItems": 0, "totalPages": 0 }, "summary": null }
-```
-
-Kèm `ApiResponse` không dùng được (PageResponse không có messageId) ⇒ FE tự hiển thị "Không tìm thấy dòng hàng nào" như hiện tại (`IMPLEMENT.md:143`).
-
-**Vì sao rỗng chứ không 400/501:** FE đã dựng popup, lọc, validate và inject hàm nạp; trả 400 sẽ làm popup hiện lỗi đỏ trong khi nghiệp vụ không có gì sai — chỉ là chưa có dữ liệu. Bảng `sal_dieu_chinh_hoa_don_ban_hang` **có thật** (`V1:16706`) nhưng không có module Java đọc nó (§0-D6). Khi module ra đời: cài thân hàm, FE **không** phải sửa.
-
----
+**Nguồn "Hóa đơn điều chỉnh"** (`SCR:87-94`): A17 **không trả** hóa đơn điều chỉnh đợt này ⇒ popup thứ hai của FE hiện rỗng. Xem §5.
 
 ## 3. BR1 — quy tắc load dòng nguồn (nguyên văn `SCR:77-99`)
 
@@ -239,20 +216,27 @@ Dòng **Dịch vụ** `SL = ĐG = 0, Thành tiền ≠ 0` (`SCR:114-117`): `than
 
 ---
 
-## 5. Phạm vi dữ liệu đợt 1
+## 5. Phạm vi dữ liệu đợt 1 · ⚠ **Q19 — đọc dòng bán hàng qua đường nào**
 
-| Nguồn BA yêu cầu | Bảng | Module Java | Đợt 1 |
+| Nguồn BA yêu cầu | Bảng | Module Java | `api/`? | Đợt 1 |
+|---|---|---|---|---|
+| Chứng từ bán hàng | `sal_chung_tu_ban_hang` + `..._chi_tiet` | ✅ `chung_tu_ban_hang` | ❌ **không có** | ⚠ **cần Q19** |
+| Chứng từ bán **dịch vụ** | `sal_chung_tu_ban_dich_vu` | ❌ | — | ❌ thiếu |
+| Hóa đơn điều chỉnh | `sal_dieu_chinh_hoa_don_ban_hang` | ⚠ `dieu_chinh_gia_hang_ban` (17 file) | ❌ | ❌ A17 không trả |
+| Điều chỉnh giá (cho công thức §4.2) | `sal_chung_tu_dieu_chinh_gia_hang_ban` | ⚠ `dieu_chinh_gia_hang_ban` | ❌ | ❌ thiếu 2 số hạng |
+
+> ⟳ **Vấn đề MỚI sinh ra từ D1.** Bản 2026-08-14 chọn sub-module trong `chung_tu_ban_hang`, nên đọc thẳng `ChiTietChungTuBanHangRepository` là hợp lệ — đó là **lợi ích chính** của quyết định cũ. Repo lại tạo `tra_lai_hang_ban` **đứng cấp 1** ⇒ Modulith cấm import `internal/` của module khác, mà `chung_tu_ban_hang` **không có `api/`** nào.
+
+**Ba phương án — cần dev chốt (§0-Q19):**
+
+| | (1) `chung_tu_ban_hang` mở `api/` | (2) native query trên bảng `sal_*` | (3) mở rộng `DongChungTuPort` |
 |---|---|---|---|
-| Chứng từ bán hàng | `sal_chung_tu_ban_hang` + `..._chi_tiet` | ✅ `chung_tu_ban_hang` | ✅ **có** |
-| Chứng từ bán **dịch vụ** | `sal_chung_tu_ban_dich_vu` + `sal_chi_tiet_chung_tu_ban_dv` (`V1:15841,15686`) | ❌ không có (epic PMKT-E-06195) | ❌ **thiếu** |
-| Hóa đơn điều chỉnh | `sal_dieu_chinh_hoa_don_ban_hang` (`V1:16706`) | ❌ không có | ❌ **A18 rỗng** |
-| Điều chỉnh giá hàng bán (cho công thức §4.2) | `sal_chung_tu_dieu_chinh_gia_hang_ban` (`V1:16257`) | ❌ không có (epic PMKT-E-07664) | ❌ **thiếu 2 số hạng** |
+| Cách làm | thêm `api/package-info.java` `@NamedInterface` + một DTO dòng hàng read-only + một service phơi ra | `TraLaiHangBanRepositoryImpl` viết SQL thẳng vào `sal_chung_tu_ban_hang_chi_tiet` | thêm method vào SPI ở `quan_he_chung_tu/api/` |
+| Sạch ranh giới | ✅ đúng cách của Modulith | ❌ lách ở tầng SQL — Modulith không thấy, nhưng phụ thuộc vẫn có thật và không ai kiểm được | ✅ |
+| Chi phí | cần chủ module `chung_tu_ban_hang` đồng ý; `cell-app/CLAUDE.md:35-36` từng nêu module này **cố ý không có `api/`** | 0 | port hiện chỉ trả **số lượng**; BR5 cần thêm đơn giá, 5 tài khoản, thuế suất, đơn giá vốn ⇒ phải nới hợp đồng dùng chung cho mọi module |
+| Khuyến nghị | **chọn (1)** — đây đúng là ca `api/` sinh ra để phục vụ: một module khác *thật sự* cần gọi vào | không khuyến nghị | chỉ nếu (1) bị từ chối |
 
-Truy vấn A17 đọc **thẳng** `ChiTietChungTuBanHangRepository` + `ChungTuBanHangRepository` — được phép vì cùng module Modulith (§0-D1). Đây chính là lợi ích chính của quyết định D1.
-
-Khi `chung_tu_ban_dich_vu` ra đời: `ChonNguonTraLai` `UNION ALL` thêm một nhánh, hoặc module đó cài `DongChungTuPort` + một port đọc dòng hàng. **Không** phải sửa hợp đồng A17 (DTO đã có `soChungTu`, không phân biệt loại).
-
----
+`tra_lai_hang_mua` giải bài toán này thế nào? Nó đọc `pur_chung_tu_mua_hang` — **cùng tình huống**, nên đọc `TraLaiHangMuaCrudService.timNguon/layNguon` (`:111,116`) trước khi chốt.
 
 ## 6. Luồng xử lý — `ChonNguonTraLai`
 
@@ -284,7 +268,7 @@ sequenceDiagram
 > |---|---|---|
 > | Cách | `WHERE …` cơ bản + phân trang, rồi filter Java | `LEFT JOIN LATERAL (SELECT COALESCE(SUM(so_luong),0) …) AS tl ON true` + `WHERE dong.so_luong − tl.da_tra_lai > 0` |
 > | Kết quả | trang thiếu dòng, `totalItems` sai | đúng, `COUNT` cũng đúng |
-> | Chi phí | 0 | một `LATERAL` subquery — cần index `(tenant_id, chi_tiet_chung_tu_ban_hang_id)` trên bảng chi tiết trả lại ⇒ **thêm vào `V3`** ([11 §4](11-thiet-ke-db.md)) |
+> | Chi phí | 0 | một `LATERAL` subquery — cần index `(tenant_id, chi_tiet_chung_tu_ban_hang_id)` trên bảng chi tiết trả lại ⇒ **thêm vào migration mới** ([11 §4](11-thiet-ke-db.md) #9 — index DUY NHẤT còn thiếu) |
 >
 > **Chọn B**, cài ở `TraLaiHangBanRepositoryCustom`/`…Impl` (native query) — đúng chỗ dự án dành cho query động (`cell-app/CLAUDE.md:27`).
 
@@ -316,7 +300,7 @@ sequenceDiagram
 | | dòng Dịch vụ SL=0, thành tiền = 0 | **bị lọc bỏ** (điều kiện #4) |
 | | trả lại hết | SL bán 10, đã trả lại 10 → dòng **không** xuất hiện |
 | | dòng ghi chú | `loai_dong_hang = false` → **không** xuất hiện |
-| | chứng từ chưa ghi sổ | `status = NHAP` → **không** xuất hiện |
+| | chứng từ chưa ghi sổ | `trangThaiChungTu = CHUA_GHI_SO` → **không** xuất hiện |
 | | `chungTuBanHangId` chỉ định | chỉ trả dòng của đúng chứng từ đó |
 | | không dùng `daTieuThu` trần | verify gọi `ChiTietTraLaiHangBanRepository.daTraLai`, **không** gọi `QuanHeChungTuApi.daTieuThu` (§4.1-C) |
 | `DongNguonBanHangDtoTest` | đủ trường fill BR5 | DTO có đủ 6 TK + `chietKhauPhanTram` + `thueSuatGtgt` + `donGiaVon` + `loaiTienId` + `tyGia` |

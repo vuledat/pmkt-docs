@@ -1,5 +1,11 @@
 # F5 — Xóa Chứng từ điều chỉnh giá (đơn + hàng loạt)
 
+> ### 🔄 CẬP NHẬT 2026-08-21
+>
+> 1. **Thêm một bước bắt buộc trong luồng xoá: THU HỒI SỐ CHỨNG TỪ.** Engine đánh số yêu cầu gọi `SoChungTuApi.thuHoi(chungTu, ngayHachToan)` **sau khi** entity đã xoá mềm, cùng transaction (BR10). Đủ điều kiện (số cuối dãy · Tự động cập nhật bật · kỳ chưa khoá) ⇒ bộ đếm lùi và số trả về pool; không đủ ⇒ số đã đốt, giữ nguyên. Bỏ bước này là mỗi lần xoá đốt vĩnh viễn một số.
+> 2. **`status`** → `trangThaiChungTu`; X2 kiểm `trangThaiChungTu.choPhepSua()`.
+> 3. §7 mục "soChungTu của chứng từ đã xoá dùng lại được" vẫn đúng (unique index có `WHERE da_xoa = false`) — nhưng nay còn phụ thuộc engine có thu hồi số hay không, test phải phủ cả hai nhánh.
+
 | | |
 |---|---|
 | Mã chức năng | **F5** |
@@ -9,7 +15,7 @@
 
 ## 1. Quyết định riêng
 
-- **Xóa mềm** (`da_xoa = true` + `nguoi_xoa` + `ngay_xoa`) theo BR29.1 — không xóa vật lý. Dòng chi tiết **cũng xóa mềm theo cha** (BR29.2), không dựa vào `ON DELETE CASCADE` của FK ([V1:27985](../../cell-app/src/main/resources/db/migration/V1__baseline.sql)): cascade đó chỉ chạy khi xóa vật lý, mà ta không xóa vật lý.
+- **Xóa mềm** (`da_xoa = true` + `nguoi_xoa` + `ngay_xoa`) theo BR29.1 — không xóa vật lý. Dòng chi tiết **cũng xóa mềm theo cha** (BR29.2), không dựa vào `ON DELETE CASCADE` của FK ([V1:27985](../../cell-app/src/main/resources/db/migration/V1__create_database.sql)): cascade đó chỉ chạy khi xóa vật lý, mà ta không xóa vật lý.
 - **Gỡ toàn bộ liên kết nguồn** khi xóa: `QuanHeChungTuApi.goToanBoTheoDich(SAL_DIEU_CHINH_GIA_HANG_BAN, id)`. Không gỡ thì dòng bán hàng gốc vẫn "thấy" một chứng từ điều chỉnh đã bị xoá ở tab Chứng từ liên quan. **Không chọn** để liên kết lại rồi lọc `da_xoa` khi đọc: `ctu_quan_he_chung_tu` là bảng đa hình, lọc soft-delete xuyên loại là truy vấn phải biết mọi bảng đích.
 - **Popup xác nhận (`MSG_300`) là của FE.** BE không có bước xác nhận; gọi DELETE là xoá thật (mềm).
 
@@ -75,11 +81,11 @@ Không có trường nghiệp vụ mới. Cột bị ghi: `da_xoa`, `ngay_xoa`, 
 | X2 | `status.choPhepSua()` (chưa ghi sổ) | `kiemTraNghiepVu` | Chứng từ đã ghi sổ | `_201` | BR12, UC_Xoa luồng phụ |
 | X3 | Sổ cái không còn dòng của chứng từ | `doiSoatVoiSoCai` (base) | — | 409 `SO_CAI_LECH` | — |
 | X4 | `lockToken` khớp `updatedAt` hiện tại | `luuEntity` (`@Version`) | Dữ liệu đã được cập nhật bởi người dùng khác… | 409 `STALE_DATA` | BR12 |
-| X5 | *(không có)* Chứng từ đang được chứng từ khác dùng làm nguồn | — | — | — | Điều chỉnh giá là loại **chỉ-là-đích** ([LoaiChungTu.java:31](../../cell-app/src/main/java/vn/dopai/pmkt/cell/quan_he_chung_tu/api/LoaiChungTu.java)), không chứng từ nào lấy nó làm nguồn ⇒ không cần guard `coLienKet` |
+| X5 | *(không có)* Chứng từ đang được chứng từ khác dùng làm nguồn | — | — | — | Điều chỉnh giá là loại **chỉ-là-đích** ([LoaiChungTu.java:31](../../cell-app/src/main/java/vn/vtt/pmkt/cell/quan_he_chung_tu/api/LoaiChungTu.java)), không chứng từ nào lấy nó làm nguồn ⇒ không cần guard `coLienKet` |
 
 ## 5. Luồng xử lý
 
-`ChungTuTemplate` luồng XOA ([:194](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)):
+`ChungTuTemplate` luồng XOA ([:194](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)):
 
 ```
 doiHoiDinhDanh → khoaChungTu → kiemTraNghiepVu (X2) → doiSoatVoiSoCai (X3)
@@ -103,7 +109,7 @@ doiHoiDinhDanh → khoaChungTu → kiemTraNghiepVu (X2) → doiSoatVoiSoCai (X3)
 ### Tích hợp (cần Docker)
 | Lớp test | Kiểm gì |
 |---|---|
-| `XoaDieuChinhGiaIT` | sau xoá: `GET /{id}` → 404, `POST /search` không trả bản ghi, dòng chi tiết `da_xoa = true`, `ctu_quan_he_chung_tu` không còn dòng đích · xoá chứng từ đã ghi sổ → 400 và **không** đụng dữ liệu · `lockToken` lệch → 409 · **`soChungTu` của chứng từ đã xoá dùng lại được** (unique index có `WHERE da_xoa = false`, [V1:23661](../../cell-app/src/main/resources/db/migration/V1__baseline.sql)) |
+| `XoaDieuChinhGiaIT` | sau xoá: `GET /{id}` → 404, `POST /search` không trả bản ghi, dòng chi tiết `da_xoa = true`, `ctu_quan_he_chung_tu` không còn dòng đích · xoá chứng từ đã ghi sổ → 400 và **không** đụng dữ liệu · `lockToken` lệch → 409 · **`soChungTu` của chứng từ đã xoá dùng lại được** (unique index có `WHERE da_xoa = false`, [V1:23661](../../cell-app/src/main/resources/db/migration/V1__create_database.sql)) |
 | `XoaHangLoatIT` | lô 3 chứng từ (2 chưa ghi sổ, 1 đã ghi sổ) → `thanhCong = 2`, `thatBai = 1`, HTTP 200; chứng từ đã ghi sổ **không** bị đụng |
 
 ## 8. BR đã áp dụng

@@ -94,14 +94,17 @@ li::marker{color:var(--ink-faint)}
 figure{margin:22px 0 8px}
 .plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
   padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
-.plate .mermaid{min-width:min-content; margin:0;
-  /* nhãn trong foreignObject kế thừa font từ <pre>; để mặc định monospace sẽ lệch với
-     font mermaid dùng khi đo bề rộng node và làm cắt chữ */
-  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}
-.plate .mermaid foreignObject div,.plate .mermaid .nodeLabel,.plate .mermaid .edgeLabel,
-.plate .mermaid span,.plate .mermaid p{font-family:inherit !important}
-/* mermaid đo bề rộng node ở 14px; vẽ nhỏ hơn một chút để chữ không chạm mép hộp */
-.plate .mermaid .nodeLabel,.plate .mermaid .edgeLabel{font-size:13.4px}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+/* Mermaid dựng và ĐO nhãn trong một container tạm gắn ở <body>, không phải trong .plate.
+   Vì vậy quy tắc font phải khai ở phạm vi TOÀN TRANG — scope vào .plate sẽ khiến lúc đo
+   một font, lúc vẽ một font khác, hộp hẹp hơn chữ và cắt mất đuôi nhãn. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ, nhãn chỉ tràn nhẹ khỏi khung */
+foreignObject{overflow:visible !important}
 .plate .mermaid svg{max-width:none !important; height:auto; display:block}
 
 figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;

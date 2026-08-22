@@ -1,5 +1,14 @@
 # F1 — Xem danh sách Chứng từ điều chỉnh giá
 
+> ### 🔄 CẬP NHẬT 2026-08-21 — **CHỨC NĂNG NÀY ĐÃ ĐƯỢC CODE**
+>
+> A1 và A2 đang chạy thật; FE đã tắt mock (`DUNG_MOCK = false`). Bốn điểm khác với bản 2026-08-14:
+>
+> 1. **Cột trạng thái:** không còn `status`. Base dùng field `trangThaiChungTu` → cột `trang_thai_chung_tu`, enum chỉ **2 giá trị** `CHUA_GHI_SO` / `DA_GHI_SO`. Mọi chỗ trong file này ghi `status = 'DA_GHI_SO'` hay `"NHAP"` phải đọc là `trangThaiChungTu` / `CHUA_GHI_SO`.
+> 2. **§3.2 ánh xạ trạng thái 5→2 giá trị không còn cần** — enum nay khớp đúng BR12, FE không phải gộp `["NHAP","CHO_DUYET","DA_DUYET"]` nữa.
+> 3. **🐞 LỖI THẬT ĐANG TỒN TẠI (L1 của [00 §2.4](00-ke-hoach-tong.md)):** entity khai `@Searchable(alias = "trangThaiChungTu", path = "status")` trỏ vào property **không còn tồn tại** ⇒ bộ lọc/sắp xếp theo trạng thái của màn danh sách hỏng. **Xoá cả annotation** — base đã đặt tên field đúng rồi. `tra_lai_hang_ban` dính y hệt.
+> 4. **§4.4 dòng tổng và §7 test vẫn đúng**; `tongHop(spec)` đã cài trong `DieuChinhGiaHangBanRepositoryImpl`.
+
 | | |
 |---|---|
 | Mã chức năng | **F1** |
@@ -9,8 +18,8 @@
 
 ## 1. Quyết định riêng
 
-- Theo **D1** (§0 file gốc): cả hai endpoint **kế thừa nguyên** từ `BaseCrudController` ([:121](../../cell-app/src/main/java/vn/dopai/pmkt/cell/core/controller/BaseCrudController.java), [:131](../../cell-app/src/main/java/vn/dopai/pmkt/cell/core/controller/BaseCrudController.java)) — không viết lại handler nào. Việc của module là (a) khai `@Searchable` đúng whitelist, (b) cài `tongHop(...)` cho dòng tổng.
-- Dòng tổng (`summary`) đi theo mẫu `ChungTuBanHangRepositoryImpl.tongHop` ([:49](../../cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_ban_hang/internal/repository/ChungTuBanHangRepositoryImpl.java)) — **không chọn** tính tổng trong Java trên trang hiện tại: BR31 yêu cầu tổng trên toàn tập sau lọc.
+- Theo **D1** (§0 file gốc): cả hai endpoint **kế thừa nguyên** từ `BaseCrudController` ([:121](../../cell-app/src/main/java/vn/vtt/pmkt/cell/core/controller/BaseCrudController.java), [:131](../../cell-app/src/main/java/vn/vtt/pmkt/cell/core/controller/BaseCrudController.java)) — không viết lại handler nào. Việc của module là (a) khai `@Searchable` đúng whitelist, (b) cài `tongHop(...)` cho dòng tổng.
+- Dòng tổng (`summary`) đi theo mẫu `ChungTuBanHangRepositoryImpl.tongHop` ([:49](../../cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_ban_hang/internal/repository/ChungTuBanHangRepositoryImpl.java)) — **không chọn** tính tổng trong Java trên trang hiện tại: BR31 yêu cầu tổng trên toàn tập sau lọc.
 
 ## 2. Hợp đồng API
 
@@ -103,10 +112,10 @@ Trả `List<CotMoTa>` sinh từ `@Searchable(label = …)` của entity — FE d
 | 8 | Trạng thái | `TrangThaiGhiSo` | **`status`** ⚠ (cột `trang_thai_chung_tu` bị DROP — D7) | `trangThaiChungTu` | ✅ `eq/in` | ✅ |
 | 9 | Thao tác | — | — | suy từ `trangThaiChungTu` (§3.3) | — | — |
 
-> ⚠ **Ba cột tên DB lệch tên BA** (#4, #6, #8). **Không** tạo migration đổi tên: `loai_dieu_chinh` đã có CHECK constraint và comment mô tả đúng nghĩa Tăng/Giảm ([V1__baseline.sql:16322](../../cell-app/src/main/resources/db/migration/V1__baseline.sql)); `tong_thanh_toan_chenh_lech` mô tả đúng bản chất "chênh lệch". Ánh xạ ở tầng entity là đủ, và mọi tên DB xuất hiện trong index/policy/comment đã có sẵn.
+> ⚠ **Ba cột tên DB lệch tên BA** (#4, #6, #8). **Không** tạo migration đổi tên: `loai_dieu_chinh` đã có CHECK constraint và comment mô tả đúng nghĩa Tăng/Giảm ([V1__create_database.sql:16388](../../cell-app/src/main/resources/db/migration/V1__create_database.sql)); `tong_thanh_toan_chenh_lech` mô tả đúng bản chất "chênh lệch". Ánh xạ ở tầng entity là đủ, và mọi tên DB xuất hiện trong index/policy/comment đã có sẵn.
 
 **Cột "Số chứng từ" — lưu ý nghiệp vụ (SCR_DanhSach dòng 34):** *"Số chứng từ ở đây được lấy số chứng từ tại tab đầu tiên (VD người dùng chọn thanh toán ngay = Tiền mặt > Phiếu thu/Phiếu chi. Số chứng từ lấy Phiếu thu/Phiếu chi)"*. Nhưng cùng SCR (dòng 34, câu đầu) lại ghi thứ tự tab là **Công nợ > Hóa đơn**, tức tab đầu tiên luôn là Công nợ.
-→ **Cài:** cột `so_chung_tu` (tab Công nợ) là số định danh của chứng từ và là cột hiển thị; số của phiếu thu/chi lưu riêng ở `so_chung_tu_phieu_thu_chi` (cột đã có sẵn, comment tại [V1__baseline.sql:16369](../../cell-app/src/main/resources/db/migration/V1__baseline.sql) nói rõ *"KHÔNG mượn so_chung_tu của chứng từ điều chỉnh"*). Nếu BA muốn lưới hiển thị số phiếu thu/chi khi Thanh toán ngay thì đó là **hiển thị**, FE chọn giữa hai field — không đổi cột định danh. Đưa vào §12-Q5 mở rộng nếu BA phản hồi khác.
+→ **Cài:** cột `so_chung_tu` (tab Công nợ) là số định danh của chứng từ và là cột hiển thị; số của phiếu thu/chi lưu riêng ở `so_chung_tu_phieu_thu_chi` (cột đã có sẵn, comment tại [V1__create_database.sql:16434](../../cell-app/src/main/resources/db/migration/V1__create_database.sql) nói rõ *"KHÔNG mượn so_chung_tu của chứng từ điều chỉnh"*). Nếu BA muốn lưới hiển thị số phiếu thu/chi khi Thanh toán ngay thì đó là **hiển thị**, FE chọn giữa hai field — không đổi cột định danh. Đưa vào §12-Q5 mở rộng nếu BA phản hồi khác.
 
 ### 3.2 Bộ tiêu chí tìm kiếm (SCR_DanhSach dòng 12-19)
 
@@ -118,9 +127,9 @@ Trả `List<CotMoTa>` sinh từ `@Searchable(label = …)` của entity — FE d
 | Khách hàng | select | `khachHangId` | `eq` |
 | Ngày từ / Ngày đến | date | `ngayHachToan` | `between` — SCR ghi rõ lọc theo **Ngày hạch toán** |
 
-Ghép điều kiện: `AND`; `keyword` luôn `AND` với cả nhóm ([SearchRequest.java:30](../../cell-app/src/main/java/vn/dopai/pmkt/cell/core/request/SearchRequest.java)).
+Ghép điều kiện: `AND`; `keyword` luôn `AND` với cả nhóm ([SearchRequest.java:30](../../cell-app/src/main/java/vn/vtt/pmkt/cell/core/request/SearchRequest.java)).
 
-⚠ **Ánh xạ trạng thái 2 giá trị (BA) ↔ 5 giá trị (`TrangThaiChungTu`)**: BA chỉ biết "Chưa ghi sổ"/"Đã ghi sổ" (BR12), enum có 5. Cách trên đặt **ở FE** (FE đã làm — `helpers/trangThai.ts`, `IMPLEMENT.md` dòng 281). BE không dựng alias ảo `trangThaiGhiSo`: một alias suy diễn là một chỗ nữa để lệch, và `status` đã `@Searchable(sortable = true)` sẵn ở base ([BaseChungTuEntity.java:70](../../cell-app/src/main/java/vn/dopai/pmkt/cell/core/entity/BaseChungTuEntity.java)).
+⚠ **Ánh xạ trạng thái 2 giá trị (BA) ↔ 5 giá trị (`TrangThaiChungTu`)**: BA chỉ biết "Chưa ghi sổ"/"Đã ghi sổ" (BR12), enum có 5. Cách trên đặt **ở FE** (FE đã làm — `helpers/trangThai.ts`, `IMPLEMENT.md` dòng 281). BE không dựng alias ảo `trangThaiGhiSo`: một alias suy diễn là một chỗ nữa để lệch, và `status` đã `@Searchable(sortable = true)` sẵn ở base ([BaseChungTuEntity.java:70](../../cell-app/src/main/java/vn/vtt/pmkt/cell/core/entity/BaseChungTuEntity.java)).
 
 ### 3.3 Field phụ trong DTO để FE ẩn/hiện nút (BR13.1, BR42.2)
 
@@ -137,7 +146,7 @@ Ghép điều kiện: `AND`; `keyword` luôn `AND` với cả nhóm ([SearchRequ
 ## 4. Lọc · sắp xếp · phân trang · dòng tổng
 
 ### 4.1 Bộ lọc mặc định
-BE **không bơm** bộ lọc mặc định nào ngoài `da_xoa = false` (do `SoftDeletableEntity`) và RLS tenant/đơn vị (policy DB, [V1__baseline.sql:29662](../../cell-app/src/main/resources/db/migration/V1__baseline.sql)). Phễu ngày mặc định "đầu tháng → hiện tại" là **của FE** (BR8) — FE gửi tường minh. Lối thoát lấy toàn bộ: gửi `filters: []`.
+BE **không bơm** bộ lọc mặc định nào ngoài `da_xoa = false` (do `SoftDeletableEntity`) và RLS tenant/đơn vị (policy DB, [V1__create_database.sql:29662](../../cell-app/src/main/resources/db/migration/V1__create_database.sql)). Phễu ngày mặc định "đầu tháng → hiện tại" là **của FE** (BR8) — FE gửi tường minh. Lối thoát lấy toàn bộ: gửi `filters: []`.
 
 ### 4.2 Sắp xếp mặc định
 `SCR_DanhSach` dòng 37: *"sắp xếp theo Ngày chứng từ (Mới nhất → Cũ nhất), Nếu cùng ngày chứng từ thì sắp xếp theo Số chứng từ giảm dần"*. UC_XemDanhSach lại ghi *"Sắp xếp theo: Ngày chứng từ (mới nhất lên đầu)"*, còn bộ lọc ngày thì theo **Ngày hạch toán** (dòng 18-19), và BR2 chung quy định ưu tiên **Ngày hạch toán giảm dần**.
@@ -152,7 +161,7 @@ Cài: `sort` do FE gửi; khi FE không gửi, `SortResolver` lấy mặc địn
 ### 4.4 Dòng tổng cộng
 - Cột: **`tongTienThanhToanQuyDoi`** — Figma chỉ vẽ một ô tổng dưới cột "Tổng tiền thanh toán (VNĐ)" (`model.ts` dòng 250-255).
 - Phạm vi: **toàn bộ bản ghi sau lọc** (BR31), không phải trang hiện tại.
-- Cài: `DieuChinhGiaHangBanRepositoryCustom.tongHop(Specification)` dùng Criteria `cb.sum(...)`, đúng mẫu [ChungTuBanHangRepositoryImpl.java:49](../../cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_ban_hang/internal/repository/ChungTuBanHangRepositoryImpl.java).
+- Cài: `DieuChinhGiaHangBanRepositoryCustom.tongHop(Specification)` dùng Criteria `cb.sum(...)`, đúng mẫu [ChungTuBanHangRepositoryImpl.java:49](../../cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_ban_hang/internal/repository/ChungTuBanHangRepositoryImpl.java).
 - Tập rỗng: `SUM` trả `NULL` ⇒ map về `BigDecimal.ZERO`, **không** trả `null` (FE sẽ hiện ô trống thay vì 0).
 
 ## 5. Luồng xử lý
@@ -167,7 +176,7 @@ Cài: `sort` do FE gửi; khi FE không gửi, `SortResolver` lấy mặc địn
 Không có bước nào viết mới ở tầng controller/service ngoài (5).
 
 ## 6. Tương tranh & transaction
-`@Transactional(readOnly = true)` — bắt buộc dù chỉ đọc: `TenantRlsAspect` bind GUC `app.tenant_id` theo transaction, thiếu nó RLS trả tập rỗng (javadoc [AbstractChungTuCrudService.java:82](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/AbstractChungTuCrudService.java)).
+`@Transactional(readOnly = true)` — bắt buộc dù chỉ đọc: `TenantRlsAspect` bind GUC `app.tenant_id` theo transaction, thiếu nó RLS trả tập rỗng (javadoc [AbstractChungTuCrudService.java:82](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/service/AbstractChungTuCrudService.java)).
 
 ## 7. Kiểm thử
 

@@ -5,24 +5,25 @@
 | Mã chức năng | **F3** |
 | UC nguồn | `PMKT-U-06471` — `4.usecases/PMKT-U-06471_ThemMoi/UC_ThemMoiTraLaiHangBan.md` + `AD_ThemMoi.puml` |
 | Màn hình | `5.screens/SCR_ThemMoiTraLaiHangBan.md` (773 dòng — màn anchor) + `Matrix/…/SCR_ThemMoiTraLaiHangBan_MaTranAnHien.md` |
-| Endpoint phụ trách | **A7** `POST /` (Lưu · Lưu và ghi sổ) · **A16** `POST /lookup` |
+| Endpoint phụ trách | **A7** `POST /them-moi` (Lưu · Lưu và ghi sổ) · **A16** `POST /lookup` |
+| **Trạng thái** | ☐ chưa code — controller đang chặn 400 `CHUA_HO_TRO` (`TraLaiHangBanController.java:97-117`) |
 | Quyền | `TraLaiHangBan.Create` (A7) · `TraLaiHangBan.View` (A16) |
 
 ## 1. Quyết định riêng
 
 | # | Quyết định | Trỏ về |
 |---|---|---|
-| 1.1 | **`POST /`** (không phải `/them-moi` của base) — override `create` bằng `@PostMapping` như `ChungTuBanHangController.java:127-136` | §0-D7; FE `api/traLaiHangBanApi.ts:8-11` |
+| 1.1 ⟳ | **`POST /them-moi`** — đúng đường của `BaseCrudController` **và** của sibling `TraLaiHangMuaController.java:86`. ⚠ **FE đang gọi `POST /`** ⇒ **Q17 phải chốt trước khi code** | §0-C11 |
 | 1.2 | **"Lưu" và "Lưu và ghi sổ" là MỘT request, MỘT transaction** — phân biệt bằng cờ `ghiSo` trong body | `ChungTuTemplate.java:99-101`; FE `api/traLaiHangBanApi.ts:113-116` |
 | 1.3 | Ba cờ sinh chứng từ con (`kiemPhieuNhapKho` · `thanhToanNgay` · `lapKemHoaDonDieuChinh`) **vẫn lưu**, nhưng bật cờ ⇒ **400 `NOT_SUPPORTED_YET`** đợt 1 | §0-D6; xem [10 §5](10-hach-toan-va-chung-tu-kem.md) |
-| 1.4 | Số chứng từ: người dùng nhập tay thì dùng, để trống thì `sinhSoChungTu(ngayChungTu)` cấp từ quyển số | BR20 · `ChungTuTemplate.java:316-324` |
+| 1.4 ⟳ | Số chứng từ do **engine đánh số** cấp — module chỉ cắm 2 hook `chungTuDangLuu(ctx)` + `soChungTuNguoiDungGo(ctx)`; **hook `sinhSoChungTu(LocalDate)` đã bị GỠ** | BR20 · `ChungTuTemplate.java:335-357` · §0-D4 |
 | 1.5 | Toàn bộ tính toán tiền **tính lại ở BE**, không tin số FE gửi | §6 bước 3 |
 
 ---
 
 ## 2. Hợp đồng API
 
-### A7 — `POST /api/ban-hang/tra-lai-hang-ban`
+### A7 — `POST /api/ban-hang/tra-lai-hang-ban/them-moi`
 
 Quyền: `TraLaiHangBan.Create`. Trả **201**.
 
@@ -131,7 +132,7 @@ Quyền: `TraLaiHangBan.Create`. Trả **201**.
 | `ngayHachToan` | `LocalDate` | **Y** | thuộc kỳ kế toán **đang mở**; `≥` `Tenant.NgayBatDauDuLieu` | `_203` · BR17.1 · BR17.2 |
 | `chiNhanhId` | UUID | **Y** | service gán tường minh, **không** lấy từ context (`BaseChungTuEntity.java:92-98`) | BR46.4 |
 | `nguonChungTu` | enum chuỗi VN | N | `Chứng từ bán hàng hóa, dịch vụ` \| `Hóa đơn điều chỉnh`; mặc định giá trị đầu | `SCR:44-47` · `constants.ts:51-54` |
-| `chungTuBanHangId` | UUID | N | phải tồn tại, `status = DA_GHI_SO`, cùng tenant | `SCR:83` · `UC:79-81` |
+| `chungTuBanHangId` | UUID | N | phải tồn tại, `trangThaiChungTu = DA_GHI_SO`, cùng tenant | `SCR:83` · `UC:79-81` |
 | `phuongThucLapHoaDon` | enum chuỗi VN | **Y** | 3 giá trị; mặc định `Người bán xuất hóa đơn điều chỉnh` | `SCR:262` · `constants.ts:27-31` |
 | `thanhToanNgay` | boolean | N | mặc định `false`; **`true` ⇒ 400 `NOT_SUPPORTED_YET`** (1.3) | `SCR:263` |
 | `phuongThucThanhToan` | enum chuỗi VN | Y* | bắt buộc **khi** `thanhToanNgay = true`; 4 giá trị | `SCR:264` · `constants.ts:43-48` |
@@ -214,11 +215,13 @@ Khi `ghiSo = true`, `message`/`messageId` đổi thành `"Ghi sổ chứng từ 
 
 Quyền `.View`. Trả bộ giá trị enum hợp lệ **từ BE** để FE không hardcode chuỗi CHECK constraint (mẫu + lý do: `ChungTuBanHangController.java:158-177`).
 
+⟳ **Trả TÊN HẰNG, không phải chuỗi tiếng Việt** (§0-D10) — sinh bằng `MaDb.danhSachMa(<Enum>.class)`:
+
 ```jsonc
 {
   "data": {
-    "nguonChungTu":            ["Chứng từ bán hàng hóa, dịch vụ", "Hóa đơn điều chỉnh"],
-    "phuongThucLapHoaDon":     ["Người mua xuất hóa đơn", "Người bán xuất hóa đơn điều chỉnh", "Không có hóa đơn"],
+    "nguonChungTu":            ["CHUNG_TU_BAN_HANG", "HOA_DON_DIEU_CHINH"],
+    "phuongThucLapHoaDon":     ["NGUOI_MUA_XUAT", "NGUOI_BAN_XUAT_HD_DIEU_CHINH", "KHONG_CO_HOA_DON"],
     "phuongThucThanhToan":     ["Chi tiền mặt", "Ủy nhiệm chi", "Séc chuyển khoản", "Séc tiền mặt"],
     "loaiChietKhau":           ["Không chiết khấu", "Theo mặt hàng", "Theo % hóa đơn", "Theo số tiền trên tổng hóa đơn"],
     "loaiDieuChinh":           ["Trả lại hàng bán", "Sai sót", "Khác"],
@@ -228,7 +231,7 @@ Quyền `.View`. Trả bộ giá trị enum hợp lệ **từ BE** để FE khô
 }
 ```
 
-Sinh bằng `GiaTriDb.danhSach(<Enum>.class)` (`GiaTriDb.java:42-44`). **Đây là chốt chặn của R3**: 7 danh sách này phải khớp `constants/constants.ts:27-90` từng ký tự.
+Sinh bằng `MaDb.danhSachMa(<Enum>.class)` (`tra_lai_hang_ban/internal/model/MaDb.java`). **Đây là chốt chặn của R3** — và hiện đang **LỆCH**: `constants/constants.ts:27-90` của FE khai chuỗi tiếng Việt. Xem §0-Q17.
 
 ---
 
@@ -240,7 +243,7 @@ Bảng đầy đủ ở [11 §7](11-thiet-ke-db.md). Sáu chỗ lệch tên đã
 |---|---|---|---|
 | `soChungTu` | `so_chung_tu` | client **hoặc** server (1.4) | rỗng ⇒ `sinhSoChungTu` |
 | `ghiSo` | — | **không lưu** | chỉ là ý định của request này (`ChungTuTemplate.java:335-340`) |
-| — | `status` | **server** | `NHAP` khi Lưu, `DA_GHI_SO` khi Lưu và ghi sổ |
+| — | `trang_thai_chung_tu` | **server** | `CHUA_GHI_SO` khi Lưu, `DA_GHI_SO` khi Lưu và ghi sổ |
 | — | `nguoi_ghi_so`, `thoi_gian_ghi_so` | **server** | `BaseChungTuEntity.ghiSo()` + `@PreUpdate/@PrePersist` (`:110-141`) |
 | — | `tong_tien_hang_hoa`, `tong_tien_chiet_khau`, `tong_tien_thue_gtgt`, `tong_tien_sau_thue`, `tong_tien_thanh_toan` + 5 cột `*_quy_doi` | **server tính** | `TinhToanTraLai` — client gửi lên thì **bỏ qua** (§6 bước 3) |
 | — | `chi_tiet.thanh_tien`, `gia_von`, `tien_thue_gtgt` + các `*_quy_doi` | **server tính** | công thức [02 §3](02-xem-chi-tiet.md) |
@@ -317,7 +320,8 @@ flowchart TD
 | 2 `kiemTraQuyen` | **base** (`:294-296`) | không override — quyền suy từ `hanhDong().hanhDongQuyen()` = `Create` |
 | 3 `chuanBiChungTu` | **override** | `TraLaiMapper.toEntity(request)` → `TinhToanTraLai.apDung(ct)`. **Tính ở đây**, không ở `truocKhiLuu`: V20 nói về giá trị CUỐI ("Tiền CK không vượt Thành tiền") nên phải có thành tiền trước khi kiểm (lý do nguyên văn `TaoChungTuBanHang.java:28-33`). Bản ghi chưa tồn tại ⇒ **không** gọi `ghiNhanChungTu` ở đây |
 | 4 `kiemTraNghiepVu` | **override** | `KiemTraTraLai.kiemTraLuu(ct)` — V4…V29 |
-| 5 `truocKhiLuu` | **override** | `if (soChungTu trống) ct.setSoChungTu(sinhSoChungTu(ct.getNgayChungTu()))`; `TrangThaiTraLai.capNhatTrangThai(ct)`; `if (coGhiSoNgay) ct.ghiSo()`; đánh lại `thu_tu` liên tục (BR21.2) |
+| 5 `truocKhiLuu` | **override** | ⟳ **KHÔNG tự cấp số chứng từ nữa** — template gọi `sinhSoChungTu(ctx)` ngay sau `truocKhiLuu` (`ChungTuTemplate.java:343-357`), miễn là module override `chungTuDangLuu(ctx)` trả entity đang lưu. Việc còn lại ở đây: `TrangThaiTraLai.capNhatTrangThai(ct)`; `if (coGhiSoNgay) ct.ghiSo()`; đánh lại `thu_tu` liên tục (BR21.2). **Mapper KHÔNG được set `soChungTu`** |
+| 5b `chungTuDangLuu` ⟳ **MỚI** | **override** | `return ctx.get(CHUNG_TU);` — thiếu hook này thì engine không chạy và số chứng từ thành **nhập liệu bắt buộc** (`doiHoiSoChungTu`, `ChungTuTemplate.java:362-370`) |
 | 6 `luuEntity` | **override** | `repository.saveAndFlush(ct)` → `ctx.put(CHUNG_TU, daLuu)` → **`ctx.ghiNhanChungTu(daLuu)`** (bắt buộc, `:428-435` ném `IllegalStateException` nếu quên) |
 | 7 `sauKhiLuu` | **override** | (a) `QuanHeChungTuApi.lienKet(lenhLienKet(ct))` — dòng nào có `chiTietChungTuBanHangId` thì tạo `LenhLienKet(SAL_CHUNG_TU_BAN_HANG, chungTuBanHangId, chiTietChungTuBanHangId, SAL_CHUNG_TU_TRA_LAI_HANG_BAN, ct.getId(), dong.getId())`; (b) **chỉ khi `ghiSo = true`**: `DinhKhoanTraLai.sangDinhKhoan(ct, dung(ct)).forEach(ctx::themDinhKhoan)`. Định khoản dựng ở đây vì mỗi dòng bút toán cần `chiTietChungTuId`, mà id đó chỉ có sau INSERT (`:326-331`) |
 | 8 `coGhiSoNgay` | **override** | `return ctx.lenh().request().laLuuVaGhiSo()` — đọc từ **LỆNH**, không từ entity (`:335-340`) |
@@ -429,7 +433,7 @@ Làm tròn theo **BR7.2**: lưu giá trị đầy đủ vào DB, làm tròn ở 
 |---|---|
 | BR3 popup | Popup Thêm/Sửa/Xem dùng chung một request shape ⇒ `C` và `U` cùng là `LuuTraLaiHangBanRequest` (mẫu `ChungTuBanHangCrudService.java:36-39`) |
 | BR7 precision & làm tròn | §6 |
-| BR12 trạng thái | §5 bước 5 — `NHAP` hoặc `DA_GHI_SO` |
+| BR12 trạng thái | §5 bước 5 — `CHUA_GHI_SO` hoặc `DA_GHI_SO` |
 | BR14.2 nút thao tác | "Lưu" ⇄ "Lưu và ghi sổ" = cờ `ghiSo` (1.2) |
 | BR14.4 giới hạn độ dài | `@Size` theo `MAX_LEN` của FE (`constants.ts:250-280`) |
 | BR15 validation | §4 toàn bộ |

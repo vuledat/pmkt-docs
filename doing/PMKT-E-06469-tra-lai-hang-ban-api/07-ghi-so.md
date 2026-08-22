@@ -8,6 +8,7 @@
 | Endpoint phụ trách | **A12** `POST /{id}/ghi-so` · **A13** `POST /ghi-so-hang-loat` |
 | Quyền | `TraLaiHangBan.Post` |
 | Bút toán | chi tiết ở [10-hach-toan-va-chung-tu-kem.md](10-hach-toan-va-chung-tu-kem.md) |
+| **Trạng thái** | ☐ chưa code |
 
 ## 1. Quyết định riêng
 
@@ -42,7 +43,7 @@ Request: **không có body** (base không khai `@RequestBody`). FE hiện gửi 
 |---|---|---|---|
 | `FORBIDDEN` | 403 | `_007` | thiếu `TraLaiHangBan.Post` |
 | `NOT_FOUND` | 404 | `_008` | `id` không có / `da_xoa` |
-| **`ALREADY_POSTED`** | **409** | — | `status = DA_GHI_SO` — BR12 §"Ghi sổ duy nhất": *"Chứng từ đã được ghi sổ"* (epic **không** cấp mã, xem §9) |
+| **`ALREADY_POSTED`** | **409** | — | `trangThaiChungTu = DA_GHI_SO` — BR12 §"Ghi sổ duy nhất": *"Chứng từ đã được ghi sổ"* (epic **không** cấp mã, xem §9) |
 | `PERIOD_LOCKED` | 409 | **`_203`** | `ngayHachToan` không thuộc kỳ đang mở |
 | `PERIOD_LOCKED` | 409 | **`_204`** | kỳ kế toán đã đóng |
 | `MISSING_ACCOUNT` | 400 | `_110` / `_111` / `_112` | thiếu TK công nợ / TK trả lại / TK kho ở dòng nào |
@@ -150,7 +151,7 @@ Cài đặt từng hook — mẫu 1:1 `GhiSoChungTuBanHang.java`:
 | `maLoaiChungTu()` | `TraLaiSupport.MA_LOAI_CHUNG_TU` (§0-D4, §12-Q2) | **bắt buộc** — khoá chốt chặn kỳ khoá ở cả Java lẫn trigger DB |
 | `chuanBiChungTu` | `nap(id)` → **`ctx.ghiNhanChungTu(ct)` ngay** → `TinhToanTraLai.apDung(ct)` → `ctx.put(...)` | Công bố sớm để template khoá được chứng từ **trước** khi đọc trạng thái (1.2 + `GhiSoChungTuBanHang.java:58-65`) |
 | `kiemTraNghiepVu` | V51 → `kiemTraLuu(ct, null)` → `kiemTraTruocGhiSo(ct)` → V55 | |
-| `truocKhiLuu` | `TrangThaiTraLai.capNhatTrangThai(ct)`; `ct.ghiSo()` | `ghiSo()` đặt `status = DA_GHI_SO` + `nguoiGhiSo`; mốc `thoi_gian_ghi_so` đóng ở `@PreUpdate` (`BaseChungTuEntity.java:118-141`) |
+| `truocKhiLuu` | `TrangThaiTraLai.capNhatTrangThai(ct)`; `ct.ghiSo()` | `ghiSo()` đặt `trangThaiChungTu = DA_GHI_SO` + `nguoiGhiSo`; mốc `thoi_gian_ghi_so` đóng ở `@PreUpdate` (`BaseChungTuEntity.java:118-141`) |
 | `luuEntity` | `ct.touch()` → `saveAndFlush` → `ctx.put` + `ctx.ghiNhanChungTu(daLuu)` | `touch()` để `phien_ban` tăng dù chỉ đổi cờ (`BaseChungTuEntity.java:22-23`) |
 | `sauKhiLuu` | dựng định khoản | ở đây vì mỗi dòng bút toán cần `chiTietChungTuId`, id đó chỉ có sau INSERT (`ChungTuTemplate.java:326-331`) |
 | `dienGiaiChung` | `ct.getMoTa()` | diễn giải mặc định cho dòng bút toán không có riêng |
@@ -217,10 +218,10 @@ Ba hậu điều kiện khác của `UC:412-417` cũng chưa đạt: **Sổ thu�
 
 | Lớp test | Case | Input → kỳ vọng |
 |---|---|---|
-| `GhiSoTraLaiHangBanTest` | V51 | `status = DA_GHI_SO` → 409 `ALREADY_POSTED`, `GhiSoApi` **never** |
+| `GhiSoTraLaiHangBanTest` | V51 | `trangThaiChungTu = DA_GHI_SO` → 409 `ALREADY_POSTED`, `GhiSoApi` **never** |
 | | thứ tự `chuanBiChungTu` | `ghiNhanChungTu` gọi **trước** `tinhToan.apDung` (`InOrder`) |
 | | tính lại tiền | cột `tong_tien_thanh_toan` trong DB sai → sau ghi sổ là giá trị **tính lại**, không phải giá trị cũ (1.2) |
-| | `truocKhiLuu` | `ct.ghiSo()` được gọi ⇒ `status = DA_GHI_SO`, `nguoiGhiSo ≠ null` |
+| | `truocKhiLuu` | `ct.ghiSo()` được gọi ⇒ `trangThaiChungTu = DA_GHI_SO`, `nguoiGhiSo ≠ null` |
 | | `touch()` | được gọi trước `saveAndFlush` |
 | | định khoản dựng ở `sauKhiLuu` | mọi `DinhKhoan.chiTietChungTuId ≠ null` |
 | | không kiểm kỳ ở tầng service | `kyKeToan.kiemTraKyMo` **never** (kernel lo — V54) |
@@ -242,7 +243,7 @@ Ba hậu điều kiện khác của `UC:412-417` cũng chưa đạt: **Sổ thu�
 | | bút toán bước 1a: Nợ `5212` / Có `131`, số tiền = `tongTienHang − tongChietKhau` |
 | | bút toán bước 1b: Nợ `33311` / Có `131`, = `tongTienThueGtgt` |
 | | `kiemPhieuNhapKho = true` → thêm bút toán bước 3 Nợ `156` / Có `632` = `Σ (SL × ĐG vốn)` từng dòng, **không gộp** giữa các dòng (BR36) |
-| | kỳ đã khoá → `PeriodLockedException` 409 `_203`, chứng từ vẫn `NHAP`, `acc_so_cai` rỗng (**rollback sạch**) |
+| | kỳ đã khoá → `PeriodLockedException` 409 `_203`, chứng từ vẫn `CHUA_GHI_SO`, `acc_so_cai` rỗng (**rollback sạch**) |
 | | gọi A12 hai lần → lần hai 409 `ALREADY_POSTED`, số dòng sổ cái **không đổi** |
 | | idempotency kernel: ghi sổ, xoá cờ tay, ghi lại cùng nội dung → không sinh dòng thứ hai |
 | | chứng từ ngoại tệ (`tyGia = 24000`) → dòng sổ cái có `so_tien` VND + phần nguyên tệ (`DinhKhoan.voiNgoaiTe`) |

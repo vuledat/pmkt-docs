@@ -6,7 +6,8 @@
 | UC nguồn | `PMKT-U-06474` — `4.usecases/PMKT-U-06474_NhanBan/UC_NhanBanTraLaiHangBan.md` + `AD_NhanBan.puml` |
 | Màn hình | mở popup `SCR_SuaTraLaiHangBan` với dữ liệu đã fill (`UC:297`) |
 | Endpoint phụ trách | **A11** `GET /{id}/nhan-ban` (+ **A7** `POST /` để lưu thật) |
-| Quyền | `TraLaiHangBan.Clone` — đã seed (`db/seed/iam_quyen_full_639_ba.sql:657`) |
+| Quyền | ⟳ **`TraLaiHangBan.Create`** — theo sibling `TraLaiHangMuaController.java:110`. Mã `.Clone` **có seed nhưng không ai dùng** — §0-Q20 |
+| **Trạng thái** | ☐ chưa code |
 
 ## 1. Quyết định riêng
 
@@ -14,7 +15,7 @@
 |---|---|---|
 | 1.1 | **`GET`, không `POST`** — thao tác này KHÔNG ghi gì vào DB | `BaseChungTuController.java:112-125` |
 | 1.2 | Không đi qua `ChungTuTemplate` — template cưỡng chế trình tự **ghi** chứng từ, nhân bản không ghi | `NhanBanChungTuBanHang.java:12-16` |
-| 1.3 | Quyền là **`.Clone`** (không phải `.Create`) — base đã chốt | `BaseChungTuController.java:121`; `QuyenChecker.java:43` |
+| 1.3 ⟳ | Quyền là **`.Create`** (không phải `.Clone`) | ⚠ **Đổi so với bản 2026-08-14.** `BaseChungTuController` mặc định dùng `QuyenChecker.CLONE`, nhưng sibling **override** handler và require `.Create` (`TraLaiHangMuaController.java:108-111`). Lý do hợp lý: nhân bản là bước đầu của *thêm mới*, ai tạo được thì nhân bản được. **Chốt ở §0-Q20** — nếu theo base thì bỏ override |
 | 1.4 | Bản ghi nạp về **phải TÁCH khỏi persistence context** trước khi sửa | §5 — lỗi này xoá mất số chứng từ của bản gốc |
 | 1.5 | UC nói *"Hệ thống tạo bản sao … sinh số chứng từ mới"* (`UC:295-296`) nhưng BE **để trống** số chứng từ; số cấp thật lúc bấm Lưu | §4 |
 
@@ -34,7 +35,7 @@ Quyền: `TraLaiHangBan.Clone`.
     "soChungTu": null,                 // ← cấp lúc Lưu (1.5)
     "ngayChungTu": "2026-08-14",       // ← ngày hiện tại (UC:296)
     "ngayHachToan": "2026-08-14",
-    "trangThaiChungTu": "NHAP",        // ← luôn "Chưa ghi sổ" kể cả bản gốc đã ghi sổ
+    "trangThaiChungTu": "CHUA_GHI_SO",        // ← luôn "Chưa ghi sổ" kể cả bản gốc đã ghi sổ
 
     /* ── SAO CHÉP (UC:276) ─────────────────────────────── */
     "phuongThucLapHoaDon": "Người bán xuất hóa đơn điều chỉnh",
@@ -74,7 +75,7 @@ Quyền: `TraLaiHangBan.Clone`.
 
 | code | HTTP | messageId | Khi nào |
 |---|---|---|---|
-| `FORBIDDEN` | 403 | `_007` | thiếu `TraLaiHangBan.Clone` |
+| `FORBIDDEN` | 403 | `_007` | thiếu `TraLaiHangBan.Create` |
 | `NOT_FOUND` | 404 | `_008` | `id` không có / `da_xoa = true` |
 
 **Không có lỗi nghiệp vụ nào khác** — nhân bản được từ chứng từ **ở mọi trạng thái**, kể cả `DA_GHI_SO` (`AbstractChungTuCrudService.java:57-61`; `UC:288` chỉ đòi quyền "Thêm mới").
@@ -90,7 +91,7 @@ Nguồn: `UC_NhanBanTraLaiHangBan.md:276-279`.
 | **Sao chép** | *"Toàn bộ thông tin chứng từ (Phương thức lập hóa đơn, Hình thức thanh toán, Loại tiền, Tỷ giá, Chi tiết hàng hóa, Hạch toán, Tham chiếu)"* | tất cả field nghiệp vụ | copy nguyên |
 | **KHÔNG sao chép** | *"Số chứng từ (sẽ tự động sinh mới), các thông tin liên quan đến hóa đơn (Mẫu số, Ký hiệu, Số hóa đơn, Ngày hóa đơn)"* | `soChungTu` · `mauSoHoaDon` · `kyHieuHoaDon` · `soHoaDon` · `ngayHoaDon` | về `null` |
 | **Ngày chứng từ** | *"đặt ngày chứng từ là ngày hiện tại"* (`UC:296`) | `ngayChungTu` · `ngayHachToan` | `LocalDate.now(clock)` |
-| **Trạng thái** | *"Trạng thái chứng từ mới: 'Chưa ghi sổ'"* (`UC:279`) | `status` | `NHAP`; `nguoiGhiSo`/`thoiGianGhiSo` về `null` |
+| **Trạng thái** | *"Trạng thái chứng từ mới: 'Chưa ghi sổ'"* (`UC:279`) | `trang_thai_chung_tu` | `CHUA_GHI_SO`; `nguoiGhiSo`/`thoiGianGhiSo` về `null` |
 | **Định danh + audit** | (base) | `id` · `phienBan` · 7 trường audit · `id` của từng dòng | `null` |
 | **Chứng từ con** | suy từ "không sao chép thông tin hóa đơn" + D6 | `phieuNhapKhoId` · `phieuChiId` · `dieuChinhHoaDonBanHangId` · `hoaDonCanDieuChinhId` · `hoaDonBanHangId` | `null` — bản sao **chưa** có bộ chứng từ nào |
 
@@ -171,13 +172,13 @@ Việc tách nằm ở **repository** (`TraLaiHangBanRepository.napTachRoi` → 
 | | tách khỏi context | verify gọi `napTachRoi`, **không** gọi `nap` (bản gốc không bị dirty-check) |
 | | reset định danh | `id`, `phienBan`, 7 trường audit, `id` từng dòng == `null` |
 | | reset số/ngày | `soChungTu == null`; `ngayChungTu == ngayHachToan == LocalDate.now(clock)` |
-| | reset trạng thái | bản gốc `DA_GHI_SO` → bản sao `NHAP`, `nguoiGhiSo`/`thoiGianGhiSo` `null` |
+| | reset trạng thái | bản gốc `DA_GHI_SO` → bản sao `CHUA_GHI_SO`, `nguoiGhiSo`/`thoiGianGhiSo` `null` |
 | | reset hóa đơn | 4 field hóa đơn + `hoaDonCanDieuChinhId` + `hoaDonBanHangId` == `null` |
 | | reset chứng từ con | `phieuNhapKhoId`, `phieuChiId`, `dieuChinhHoaDonBanHangId` == `null` |
 | | giữ trường nghiệp vụ | `khachHangId`, `loaiTienId`, `tyGia`, `loaiChietKhau`, số dòng chi tiết, `soLuong`, `donGia` **giữ nguyên** |
 | | giữ liên kết gốc | `chiTietChungTuBanHangId` **giữ** (§3 cảnh báo) |
 | | 404 | `da_xoa = true` → 404 `_008`, **cùng mã** với `nap` |
-| `TraLaiHangBanControllerTest` | quyền | thiếu `.Clone` → 403 (**không** phải `.Create`) |
+| `TraLaiHangBanControllerTest` | quyền | ⟳ thiếu `.Create` → 403 (**không** phải `.Clone`) |
 | | messageId | `NHAN_BAN` → mã chung của base, **không** phải mã `MSG_PMKT-E-06469_*` |
 | `ClockConfigTest` (đã có) | `LocalDate.now(clock)` | dùng `Clock` bean, **không** `LocalDate.now()` trần — lint P0-D13 cấm đọc đồng hồ tường trong mã nghiệp vụ (`BaseChungTuEntity.java:121-122`) |
 
@@ -197,11 +198,11 @@ Việc tách nằm ở **repository** (`TraLaiHangBanRepository.napTachRoi` → 
 
 | BR | Áp ở bước nào |
 |---|---|
-| BR12 trạng thái | §3 — bản sao luôn `NHAP` |
+| BR12 trạng thái | §3 — bản sao luôn `CHUA_GHI_SO` |
 | BR13.1 nút thao tác | nút Nhân bản hiện ở **mọi** trạng thái (`SCR_XemChiTiet:19-21` cho cả Chưa và Đã ghi sổ) |
 | BR14.1 chế độ form | FE mở popup ở chế độ `clone` (`IMPLEMENT.md:199`); BE chỉ cấp dữ liệu |
 | BR20 số chứng từ | §4 — cấp lúc Lưu, không cấp ở A11 |
-| BR25 phân quyền | quyền `.Clone` (1.3) |
+| BR25 phân quyền | quyền `.Create` (1.3) |
 | BR28 multi-tenant | §6 — `@Transactional(readOnly)` để RLS hoạt động |
 | BR29.1 xóa mềm | 404 với bản ghi `da_xoa` |
 | BR46 trường hệ thống | §3 — reset về `null`, để base gán lại lúc Lưu |

@@ -7,6 +7,7 @@
 | Màn hình | `5.screens/SCR_DanhSachTraLaiHangBan.md` §Chức năng · **BR16** (xóa hàng loạt) |
 | Endpoint phụ trách | **A9** `DELETE /{id}` · **A10** `POST /xoa-hang-loat` |
 | Quyền | `TraLaiHangBan.Delete` (cả hai) |
+| **Trạng thái** | ☐ chưa code — `delete` đang chặn 400 `CHUA_HO_TRO` |
 
 ## 1. Quyết định riêng
 
@@ -44,7 +45,7 @@ Quyền: `TraLaiHangBan.Delete`. Body **tuỳ chọn**:
 |---|---|---|---|
 | `FORBIDDEN` | 403 | `_007` | thiếu `.Delete` |
 | `NOT_FOUND` | 404 | `_008` | `id` không có / đã `da_xoa` |
-| **`ALREADY_POSTED`** | **409** | **`_202`** | `status = DA_GHI_SO` — *"Chứng từ đã ghi sổ, không được xóa"* |
+| **`ALREADY_POSTED`** | **409** | **`_202`** | `trangThaiChungTu = DA_GHI_SO` — *"Chứng từ đã ghi sổ, không được xóa"* |
 | `STALE_DATA` | 409 | — | `updatedAt` lệch |
 | `SO_CAI_LECH` | 409 | `MSG_CORE_CT_SO_CAI_LECH` | cờ nói chưa ghi sổ mà `acc_so_cai` còn dòng (`ChungTuTemplate.java:397-406`) |
 | **`IN_USE`** | **409** | — | chứng từ con (PNK/PC/HĐĐC) đã ghi sổ — **đợt 1 luôn false** vì không sinh chứng từ con (§0-D6); logic vẫn cài, xem §4-V42 |
@@ -198,7 +199,7 @@ Ba điểm **không được viết lại** (`HangLoatChungTuService.java:16-28`
 
 | Lớp test | Case | Input → kỳ vọng |
 |---|---|---|
-| `XoaTraLaiHangBanTest` | V41 | `status = DA_GHI_SO` → 409 `ALREADY_POSTED` + `_202` |
+| `XoaTraLaiHangBanTest` | V41 | `trangThaiChungTu = DA_GHI_SO` → 409 `ALREADY_POSTED` + `_202` |
 | | V42 | `phieu_nhap_kho_id ≠ null` → 409 `IN_USE`; cả 3 id `null` và `coLienKet = false` → đi tiếp |
 | | V43 | `updatedAt` lệch → 409 `STALE_DATA` |
 | | xoá lan dòng con | 3 dòng chi tiết → cả 3 `da_xoa = true` **trước** khi `saveAndFlush` |

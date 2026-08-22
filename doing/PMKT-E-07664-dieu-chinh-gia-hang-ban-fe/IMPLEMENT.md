@@ -5,6 +5,125 @@ Figma section “Điều chỉnh giá hàng bán” (`ymMyg329ejsgCWg28CNmGl`, n
 
 ---
 
+## 0. Nhật ký cập nhật — soát lại 2026-08-20
+
+Bản gốc của tài liệu này viết ngày **2026-08-12**. Soát lại hôm nay: **cả tài liệu BA lẫn code đều đã
+đổi**, và ba kết luận của bản gốc **không còn đúng**. Mục này là delta; các mục bên dưới đã được sửa
+theo trạng thái mới, chỗ nào lệch bản gốc đều ghi rõ.
+
+### 0.1 Tài liệu BA đã đổi — `pmkt-docs` đã pull (HEAD `8e559f800`, 2026-08-20)
+
+Ba commit chạm epic sau ngày code:
+
+| Commit | Ngày | Nội dung |
+|---|---|---|
+| `b15f479bc` | 2026-08-15 | refactor(ba): **chuẩn hóa kiểu Control và Max length toàn bộ tài liệu** |
+| `715907142` | 2026-08-16 | cập nhật entity |
+| `d23d1e20d` | 2026-08-17 | đồng bộ tên entity LDM ↔ SCR field |
+
+Diff `0705d142d..HEAD` trên thư mục epic: **9 file, 155 dòng đổi**. Phân loại:
+
+**(a) Đổi tên ENTITY — không ảnh hưởng FE.**
+`ENT_ChiTietDieuChinhGiaHangBan` → `ENT_sal_chung_tu_dieu_chinh_gia_hang_ban_chi_tiet`,
+`ENT_HoaDonBanHang` → `ENT_sal_hoa_don_ban_hang`, `ENT_HeThongTaiKhoan` → `ENT_mst_he_thong_tai_khoan`
+(6 file UC + `3.crud-matrix.puml`). FE không tham chiếu tên entity ở đâu ngoài comment → **không phải
+sửa code**, chỉ là tên bảng cho BE.
+
+**(b) Chuẩn hóa từ vựng CONTROL — ⚠ ảnh hưởng THẬT, hiện code đang lệch.**
+
+| Tài liệu cũ (lúc code) | Tài liệu MỚI | Code hiện dùng |
+|---|---|---|
+| `combogrid search` · `Combogrid search + button` | **`CombogridSearchFlatGrid`** | `CommonSelectBox` ❌ |
+| `textbox` · `text` | `TextField` | `CommonTextBox` ✅ |
+| `number` | `InputNumber` | `CommonNumberInput` (qua `editor: 'number'`) ✅ |
+| `select` · `Dropdown` | `Select` | `CommonSelectBox` ✅ |
+| `readonly` | `TextField` (Cho phép sửa vẫn = N) | `displayOnly` ✅ |
+
+`CombogridSearchFlatGrid` **là tên có thật trong design system** — nó nằm ở
+`src/base/components/picker/comboGrid.css`, tức component `CommonComboGrid` của `@base`. Nghĩa là
+tài liệu **đã chốt** thứ mà bản gốc §8 còn ghi là *“cần chốt với BA/Design có bắt buộc dạng combogrid
+không”*. Câu trả lời: **có**. Xem nợ **5.3(a)**.
+
+Danh sách ô phải chuyển sang combogrid (13 ô): Mã KH (4 tab) · Nhân viên bán hàng (4 tab) ·
+Tài khoản tiền · Tài khoản nhận tiền · Tài khoản chi tiền · Tài khoản NH (tab HĐ) · **Mẫu số HĐ** ·
+và 5 cột lưới chi tiết (Mã hàng · TK công nợ · TK doanh thu · TK giảm giá · Tài khoản CK · TK thuế GTGT).
+
+**(c) Sửa Max length — ⚠ 6 hằng số trong `constants.ts` đang sai.**
+
+| Ô | `MAX_LEN` trong code | Tài liệu MỚI | Việc phải làm |
+|---|---|---|---|
+| `nguoiNop` · `nguoiNhan` · `nguoiLinhTien` · `nguoiMuaHang` | `100` | **255** | nới lên 255 |
+| `chungTuGoc` | `500` | **255** | **siết xuống 255** — đang cho nhập quá giới hạn |
+| `mauSoHoaDon` | `1` (ô text) | `-` (đổi thành combogrid) | bỏ `maxLength`, ô thành combogrid |
+| `maKhachHang` · `nhanVienBanHang` · `taiKhoan*` · `maHang` | `50` | `-` | bỏ `maxLength` (ô chọn id, không phải ô gõ) |
+| `taiKhoanNganHang` (tab HĐ) | `50`→doc cũ `30` | `-` | bỏ |
+| Thành tiền (CL) quy đổi | `TIEN_QUY_DOI_PRECISION = 6` (từ `21,6`) | `-` | **giữ nguyên** — bỏ precision là mất chữ số thập phân của tiền quy đổi; đây là chỗ tài liệu mới KÉM chính xác hơn bản cũ, cần BA xác nhận |
+
+`SCR_DanhSachDieuChinhGia.md` **xóa hẳn cột “Max length”**, và đổi Control của `Ngày từ`/`Ngày đến`
+từ `date` → `Text`. Cái sau là **artifact của đợt chuẩn hóa** (ô lọc ngày mà là text thì mất
+date-picker) — code giữ `CommonDatePicker`, **cố ý không làm theo**.
+
+### 0.2 Code đã đổi — phiên song song viết lại màn danh sách trên ENGINE
+
+Bản gốc §3 ghi *“cố ý KHÔNG dùng `@domain-kit/chungTu`”*. **Quyết định đó đã bị đảo** (2026-08-14, bởi
+phiên làm việc song song trong cùng domain). Trạng thái hiện tại:
+
+| Thứ | Trước (bản gốc) | Nay |
+|---|---|---|
+| Khung danh sách | `DieuChinhGiaTab` tự dựng bằng `useListFilter` + `createSearchQueries` | `api/chungTuModule.tsx` — `defineChungTu` + `createChungTuModule`; `DieuChinhGiaTab` rút còn ~90 dòng, chỉ giữ mục ⋮ “Nhân bản” + popup |
+| `components/DieuChinhGiaListTable.tsx` | lưới danh sách | ~~MỒ CÔI~~ → **đã xóa 2026-08-20** (299 dòng) |
+| `components/DieuChinhGiaQuickDetail.tsx` | panel Xem nhanh | ~~MỒ CÔI~~ → **đã xóa 2026-08-20** (162 dòng) |
+| Tab “Hạch toán” của panel Xem nhanh | có | **đã gỡ** 2026-08-14, cùng lý do với `chungTuBanHang` (panel xem NHANH dòng chứng từ; bút toán có chỗ riêng) — lệch Figma **có chủ ý** |
+| Câu xác nhận Bỏ ghi sổ | câu ĐẶC THÙ của epic (“…Hóa đơn điều chỉnh được sinh ra cũng bị xóa”) | ~~tạm mất~~ → **đã trả lại 2026-08-20** qua `descriptor.confirmMessageKeys` |
+
+File mới xuất hiện trong module (3): `api/chungTuModule.tsx` · `components/TabChuaDung.tsx` ·
+`test/i18n.test.ts` (7 ca — kiểm khóa i18n dựng động resolve được, và `vi`/`en` khớp 1-1).
+
+Module: **51 file · 9.868 dòng** (bản gốc: 48 file · 9.969 dòng).
+
+⚠ **`api/chungTuModule.tsx` là `.tsx` nằm trong `api/`** — lệch cây quyết định `client/CLAUDE.md`
+§5 (*có JSX → `components/`*). Nó có JSX thật (`render: () => <TabChuaDung />`). Xem nợ **5.3(b)**.
+
+### 0.3 Cả 4 tab nhóm Bán hàng nay đều là module thật
+
+`traLaiHangBan` và `hoaDonBanHang` đã hoàn thiện (có `pages/` + `index.ts` + test) và **đã được đăng
+ký trong `routes.tsx`**. Thanh 4 tab của màn này giờ điều hướng được **cả bốn**, không còn tab nào rơi
+vào “đang phát triển”. `_shared/constants/banHangTabs.ts` đã khai đủ 4 path.
+
+### 0.4 Việc còn phải làm sau đợt soát này — **ĐÃ LÀM 2026-08-20**
+
+| # | Việc | Trạng thái |
+|---|---|---|
+| 1 | Chuyển ô chọn danh mục sang `CommonComboGrid` theo Control mới | ✅ **xong** — 14 ô (8 form + 6 cột lưới), cộng ô ngày Bước 1 sang `DateRangePicker` |
+| 2 | Sửa `MAX_LEN` (đặc biệt `chungTuGoc` 500 → 255) | ✅ **xong** — viết lại cả bảng theo tài liệu mới |
+| 3 | Xóa 2 file mồ côi (461 dòng) | ✅ **xong** — cộng dọn CSS chết theo |
+| 4 | Chuyển `api/chungTuModule.tsx` → `components/` | ❌ **KHÔNG làm — tiền đề sai**, xem §0.5 |
+| 5 | Trả lại câu cảnh báo Bỏ ghi sổ đặc thù | ✅ **xong** — thêm điểm mở rộng `confirmMessageKeys` cho engine |
+| 6 | Hỏi BA: bỏ precision `21,6` của tiền quy đổi | ⏳ vẫn là câu hỏi cho BA (§6 mục 7) |
+
+### 0.5 Vì sao KHÔNG chuyển `api/chungTuModule.tsx` sang `components/`
+
+Bản soát ban đầu ghi đây là "lệch cây quyết định §5 (có JSX → `components/`)". Kiểm lại thì **tiền đề
+đó sai về mặt quy ước nhà**:
+
+| Module | Vị trí descriptor | Đuôi |
+|---|---|---|
+| `chungTuBanHang` (**module tham chiếu DUY NHẤT đạt §5**) | `api/chungTuModule.tsx` | `.tsx` — cùng lý do: `chiTietTabs` có `render: () => <TabChuaDung />` |
+| `traLaiHangBan` | `api/chungTuModule.ts` | `.ts` — không khai `chiTietTabs` nên không có JSX |
+| `hoaDonBanHang` | `api/chungTuModule.ts` | `.ts` — cùng lý do |
+| `dieuChinhGiaHangBan` | `api/chungTuModule.tsx` | `.tsx` |
+
+Cả **bốn** module đặt descriptor ở `api/`, và module tham chiếu cũng là `.tsx` vì đúng một lý do với
+module này. Chuyển riêng module này sang `components/` sẽ biến nó thành ngoại lệ duy nhất của domain —
+mất nhiều hơn được. Hai cách "sửa" khác cũng không giải quyết gì thật:
+
+* bỏ JSX bằng `createElement` chỉ đổi CÚ PHÁP; `api/` vẫn import một component từ `components/`;
+* tách `chiTietTabs` ra file khác thì phụ thuộc vẫn nguyên, chỉ dời chỗ.
+
+→ Ghi lại thành **câu hỏi quy ước cho cả repo** (descriptor engine thuộc lớp nào), không phải lỗi của
+module này. Muốn đổi thì đổi đồng loạt cả 4 module trong một lần.
+
+
 ## 1. Ngày · phạm vi đã code
 
 **2026-08-12.** Chạy `/gen-fe` **không có plan FE** — user chọn “code thẳng từ PYC” (§0.2 của skill),
@@ -15,13 +134,13 @@ Phạm vi user chốt: **toàn bộ 4 màn của PYC**.
 
 | Màn (SCR) | Trạng thái |
 |---|---|
-| `SCR_DanhSachDieuChinhGia` | ✅ đủ — lưới 8 cột, phễu ngày + lọc nâng cao + tìm nhanh, dòng tổng, phân trang/sắp xếp server, panel Xem nhanh 5 tab, nút thao tác theo trạng thái, xóa · ghi sổ · bỏ ghi sổ (đơn + hàng loạt) |
+| `SCR_DanhSachDieuChinhGia` | ✅ đủ — lưới 8 cột, phễu ngày + lọc nâng cao + tìm nhanh, dòng tổng, phân trang/sắp xếp server, panel Xem nhanh, nút thao tác theo trạng thái, xóa · ghi sổ · bỏ ghi sổ. **Từ 2026-08-14 khung này do engine `@domain-kit/chungTu` dựng** (§0.2); panel Xem nhanh còn **4 tab** (tab Hạch toán đã gỡ) |
 | `SCR_ThemMoiDieuChinhGia` (Bước 1 — chọn nguồn) | ⚠ đủ khung, **chưa có dữ liệu** — endpoint nguồn chưa tồn tại (mục 5) |
 | `SCR_ThemMoiDieuChinhGia` (Bước 2 — form) | ✅ đủ — hàng tùy chọn, 2-3 tab động theo ma trận, lưới chi tiết 22 cột, tab Thuế/Hạch toán tính thật, khối tổng |
 | `SCR_SuaDieuChinhGia` | ✅ đủ — cùng component, khóa “Số chứng từ” |
 | `SCR_XemChiTietDieuChinhGia` | ✅ đủ — cùng component, khóa mọi ô, bộ nút theo trạng thái |
 
-48 file · 9.969 dòng trong `client/src/features/banHang/dieuChinhGiaHangBan/`.
+Bản gốc sinh 48 file · 9.969 dòng. **Hiện tại: 51 file · 9.868 dòng** — xem §0.2.
 
 ---
 
@@ -71,6 +190,17 @@ Phạm vi user chốt: **toàn bộ 4 màn của PYC**.
 | `pages/DieuChinhGiaHangBanPage.tsx` + `dieuChinhGiaHangBan.css` | entry lazy + stylesheet của màn |
 | `test/*` (5 file, 90 ca) | số học · ma trận · wire · bút toán/validate · render |
 
+### Bổ sung / đổi trạng thái sau 2026-08-14 (phiên song song — xem §0.2)
+
+| File | Trạng thái |
+|---|---|
+| `api/chungTuModule.tsx` | **MỚI** — descriptor `defineChungTu` + `createChungTuModule`. ⚠ `.tsx` đặt trong `api/`, lệch cây quyết định §5 |
+| `components/TabChuaDung.tsx` | **MỚI** — thân tab panel Xem nhanh chưa dựng (`render` của engine chỉ nhận `{ locale }`, không có `t`) |
+| `test/i18n.test.ts` | **MỚI** — 7 ca: khóa i18n dựng động resolve được, `vi`/`en` khớp 1-1 |
+| `components/DieuChinhGiaTab.tsx` | **VIẾT LẠI** — còn ~90 dòng, chỉ giữ mục ⋮ “Nhân bản” + popup |
+| `components/DieuChinhGiaListTable.tsx` | **MỒ CÔI** (299 dòng) — engine thay thế |
+| `components/DieuChinhGiaQuickDetail.tsx` | **MỒ CÔI** (162 dòng) — engine thay thế |
+
 ### Sửa file có sẵn (2 file, đều là sửa CỘNG THÊM, không đổi hành vi cũ)
 
 | File | Sửa gì |
@@ -104,11 +234,23 @@ Phạm vi user chốt: **toàn bộ 4 màn của PYC**.
 `components/` đều mang logic nghiệp vụ riêng của màn (ma trận ẩn/hiện, BR5, BR6, BR8), không phải
 component trình bày dùng lại được — nên chúng đúng chỗ ở feature.
 
+### Bổ sung 2026-08-20 — reuse thêm khi chuyển sang Control mới
+
+| Thứ | Dùng ở |
+|---|---|
+| `CommonComboGrid` (`@base`) | 14 ô chọn danh mục, qua wrapper `components/DanhMucComboGrid.tsx` |
+| `CommonDatePicker.RangePicker` (`@base`) | ô "Ngày hạch toán" của popup Bước 1 (`DateRangePicker` theo doc mới) |
+| `ChungTuDescriptor.confirmMessageKeys` (`@domain-kit/chungTu`) | **prop MỚI tôi thêm vào engine** — xem §5.3(d) |
+
+`DanhMucComboGrid` là component tự viết DUY NHẤT của đợt này, có ghi lý do ngay đầu file: `@base`
+không biết `LookupSource` (base không fetch, không có khái niệm "danh mục") và `@domain-kit` không cấp
+ô nhập nào; 14 lần lặp cùng một bộ 9 prop là 14 chỗ để một sửa đổi bị bỏ sót.
+
 ### Cố ý KHÔNG dùng
 
 | Thứ | Lý do |
 |---|---|
-| `@domain-kit/chungTu` (engine chứng từ) | **module tham chiếu `chungTuBanHang` cũng không dùng** — nó tự dựng list bằng `useListFilter` + `createSearchQueries`. Engine đòi một `ChungTuDescriptor` với `basePath`/`maChucNang`/`endpoints` trỏ vào BE **chưa tồn tại**; đi theo mẫu tham chiếu duy nhất của repo là đường ít rủi ro hơn. Chuyển sang engine là việc nên làm CÙNG LÚC với `chungTuBanHang`, không phải riêng màn này |
+| ~~`@domain-kit/chungTu` (engine chứng từ)~~ | ⚠ **QUYẾT ĐỊNH NÀY ĐÃ BỊ ĐẢO ngày 2026-08-14** — xem §0.2. Lý do ban đầu: mẫu tham chiếu `chungTuBanHang` cũng không dùng, và engine đòi descriptor trỏ vào BE chưa tồn tại. Cách gỡ mà phiên song song chọn: khai đủ `endpoints` thật rồi **override Nhóm A/B bằng `api/mock.ts`**, gỡ nợ là đặt `DUNG_MOCK = false` và xoá hai khối override. Hướng đó đúng hơn hướng ban đầu |
 | `@domain-kit/chungTuNguon` | engine đó phục vụ ô “Chọn chứng từ” trên **thanh tiêu đề** (`HeaderControls` + `defineSource`), còn Bước 1 của epic này là một **popup toàn màn** có tham số lọc riêng, ô tick từng dòng và ba cột nhập BR3 — khác hình dạng, không phải khác cấu hình |
 | `@test/renderWithProviders` | luật tầng bịt `features/` khỏi `src/test`; harness dựng tay như `chungTuBanHang.render.test.tsx` |
 | `features/muaHang/chungTuMuaHang/dieuChinhGia/` | tên gần giống nhưng là **điều chỉnh giá hàng MUA**, và module đó theo shape phẳng cũ đã đóng băng (`client/CLAUDE.md` §4.2) |
@@ -191,7 +333,17 @@ POST   /api/ban-hang/dieu-chinh-gia-hang-ban/nguon/chung-tu/{id}/dong
 7 mã quyền `DieuChinhGiaHangBan.{View, View.Detail, Create, Edit, Delete, Post, Unpost}` cũng chưa
 được seed trong `iam_quyen` → hiện mọi `has(...)` trả false với người dùng không phải chủ sở hữu.
 
-### 5.3 Phần chưa dựng (ngoài phạm vi hoặc chờ module khác)
+### 5.3 Nợ phát sinh sau đợt soát 2026-08-20 — **(a)–(e) đã xử lý cùng ngày**
+
+| | Nợ | Chi tiết |
+|---|---|---|
+| (a) ✅ | ~~13 ô chưa phải combogrid~~ | Tài liệu (bản 2026-08-15) chốt Control `CombogridSearchFlatGrid` cho Mã KH · NV bán hàng · 4 ô tài khoản · Mẫu số HĐ · 5 cột tài khoản của lưới. Code đang dùng `CommonSelectBox`. Component có sẵn: `CommonComboGrid` (`@base`). `traLaiHangBan` đã bắt đầu chuyển (1 file) |
+| (b) ❌ | ~~`api/chungTuModule.tsx` sai lớp~~ | **Tiền đề sai** — cả 4 module banHang đặt descriptor ở `api/`, và module tham chiếu `chungTuBanHang` cũng là `.tsx` vì đúng lý do này. Xem §0.5 |
+| (c) ✅ | ~~2 file mồ côi, 461 dòng~~ | `DieuChinhGiaListTable.tsx` · `DieuChinhGiaQuickDetail.tsx` — không file nào import sau khi chuyển sang engine. Xoá hoặc nối lại, không để lơ lửng |
+| (d) ✅ | ~~Mất câu cảnh báo Bỏ ghi sổ đặc thù~~ | Engine hỏi bằng câu chuẩn; câu của epic (“…Hóa đơn điều chỉnh được sinh ra cũng bị xóa” — UC_BoGhiSo bước 5) chưa có chỗ cắm. Chuỗi i18n **vẫn còn** ở `confirm.boGhiSo.message`, chỉ là chưa ai đọc nó |
+| (e) ✅ | ~~6 hằng số `MAX_LEN` lệch tài liệu mới~~ | Bảng chi tiết ở §0.1(c). Nặng nhất: `chungTuGoc` đang cho nhập 500 trong khi tài liệu chốt 255 |
+
+### 5.4 Phần chưa dựng (ngoài phạm vi hoặc chờ module khác)
 
 | Phần | Lý do |
 |---|---|
@@ -218,6 +370,15 @@ kèm chỗ phải sửa nếu BA quyết khác.
 | 5 | Loại tiền là input hay readonly | autofill từ nguồn, **không** cho sửa tay (BR5 dòng 184) | `components/DieuChinhGiaThemMoiModal.tsx` |
 | 6 | Quy ước `Disable` = xám read-only | hiện xám read-only | — |
 
+**Câu hỏi MỚI sau đợt soát 2026-08-20:**
+
+7. **Bỏ precision của tiền quy đổi có đúng ý không?** Bản cũ khai “Thành tiền (CL) quy đổi” Max length
+   `21,6` (21 chữ số nguyên, 6 thập phân); bản 2026-08-15 đổi thành `-`. Code đang giữ
+   `TIEN_QUY_DOI_PRECISION = 6` — bỏ đi là mất phần thập phân của tiền quy đổi ngoại tệ. Đây là chỗ
+   tài liệu mới **kém chính xác hơn** bản cũ, nên chưa làm theo.
+8. **`Ngày từ` / `Ngày đến` của màn danh sách đổi Control `date` → `Text`** — code giữ
+   `CommonDatePicker`. Nhiều khả năng là artifact của đợt chuẩn hóa, cần BA xác nhận.
+
 **Ba mâu thuẫn NỘI TẠI của tài liệu phát hiện thêm trong lúc code:**
 
 1. **MSG_105/106 vs BR2/BR3 — mâu thuẫn thật.** Bảng Validate bắt “Số lượng phải lớn hơn 0” và “Đơn
@@ -237,36 +398,56 @@ kèm chỗ phải sửa nếu BA quyết khác.
 
 ## 7. Cổng nghiệm thu — output thật
 
-Chạy `2026-08-12` tại `client/`. ⚠ Repo có **việc song song đang diễn ra** trong cùng domain
-(`traLaiHangBan`, `hoaDonBanHang`, `_shared` — file chưa commit của phiên khác), nên số nền dao động
-giữa các lần chạy.
+### 7.1 Đo lại **2026-08-20** — SAU khi làm mục 1·2·3·5
 
 | Lệnh | Kết quả | Của module này |
 |---|---|---|
-| `npm run typecheck` | **192 lỗi** — 129 `features/danhMuc` · 39 `features/muaHang` · 16 `features/tienMat` · 6 `base/domainKit` · 2 `base/components` | **0** |
-| `npm run lint` | **9 lỗi + 2 warning** — toàn bộ ở `base/components/fields/CommonSlider.tsx` và `legacy/**` | **0** |
-| `npm run lint:boundaries` | **76 lỗi** — 74 “rule … was not found” + 2 vi phạm thật (`axios` trần trong `legacy`) | **0**, không sinh vi phạm tầng mới |
-| `npx vitest run src/features/banHang/dieuChinhGiaHangBan` | **5 file · 90/90 PASS** | ✅ |
-| `npm run build` | **ĐỎ** — `tsc -b` dừng ở đúng 192 lỗi trên | **0** |
+| `npm run typecheck` | **184 lỗi** — **y hệt trước khi sửa**, không tăng một lỗi nào | **0** |
+| `npx eslint <module> + <engine đã chạm>` | **sạch** | **0** |
+| `npm run lint:boundaries` | **79** = 76 "rule not found" + **3 vi phạm thật** | **0** |
+| `npx vitest run <module> + <engine>` | **28 file · 490/490 PASS** (module 100 · engine 390) | ✅ |
 
-Đối chiếu baseline `client/CLAUDE.md` §15 (typecheck 194 · lint 10+2 · boundaries 76): **không lệnh
-nào tăng số lỗi.**
+⚠ **`lint:boundaries` 76 → 79 KHÔNG phải do việc này.** Ba lỗi tăng thêm nằm ở file của phiên song
+song; vi phạm tầng THẬT duy nhất mới là `boundaries/dependencies` ở
+`features/danhMucChungTu/taiKhoanNgamDinh/test/DongTaiKhoanTable.test.tsx` (leaf → `test`). Module này
+và `domainKit/chungTu` đóng góp **0** lỗi boundary.
 
-`npm run build` đỏ là **trạng thái nền của repo**, không phải hồi quy của việc này: `build` chạy
-`tsc -b` trên toàn bộ `src/`, mà `features/danhMuc` (nhánh chết) một mình đã 129 lỗi.
+**Kiểm chéo có chủ đích:** 4 ca đỏ ở `chungTuBanHang.render.test.tsx` đã được xác minh bằng cách TẠM
+GỠ thay đổi engine của tôi rồi chạy lại — **vẫn đỏ đúng 4 ca**, tức chúng đến từ việc đang dở của
+phiên song song (cùng chỗ với lỗi typecheck `ThuTienTM.Create` ở `ChungTuBanHangTab.tsx`), không phải
+từ `confirmMessageKeys`.
 
-**Test của các module khác:** `src/app/layouts/test/AppLayout.test.tsx` (2 ca) và
-`src/features/banHang/chungTuBanHang/test/chungTuBanHang.render.test.tsx` (3 ca) đang đỏ. Đã kiểm
-CHỦ ĐỘNG bằng cách gỡ route của module này khỏi `routes.tsx` rồi chạy lại: **vẫn đỏ đúng 2 ca ở
-Router/AppLayout** → không phải do việc này gây ra (chúng đến từ `menuRegistry.tsx` và
-`chungTuBanHang/**` đang được sửa ở phiên song song).
+### 7.2 Đo trước khi làm mục 1·2·3·5 (cùng ngày)
 
-**Cổng cây commit:** chưa commit gì. Khi commit phải `git add` **toàn bộ 48 file mới TRƯỚC**, rồi mới
-commit hai file sửa (`routes.tsx`, `_shared/constants/banHangTabs.ts`) — cả hai đều trỏ tới file mới,
-và đó đúng là kịch bản “xanh ở local, đỏ ở deploy” mà `client/CLAUDE.md` §15.1 mô tả. Sau đó chạy
-`npm run check:committed`.
+| Lệnh | Kết quả | Của module này |
+|---|---|---|
+| `npm run typecheck` | **184 lỗi** — 129 `features/danhMuc` · 21 `chiPhiTraTruoc` · 7 `congCuDungCu` · 6 `soDuBanDau` · 6 `base/domainKit` · 5 `muaHang` · 5 `app/layouts` · 2 `phanQuyen` · 2 `base/components` · 1 `banHang` | **0** |
+| `npx eslint <module> + routes.tsx + _shared` | **sạch** | **0** |
+| `npx vitest run src/features/banHang/dieuChinhGiaHangBan` | **6 file · 97/97 PASS** | ✅ |
 
----
+Lỗi `features/banHang` duy nhất nằm ở `chungTuBanHang/components/ChungTuBanHangTab.tsx` (quyền
+`ThuTienTM.Create`/`ThuTienTG.Create`) — của phiên song song, **không phải module này**.
+
+⚠ Nền repo đã đổi nhiều so với lần đo trước: xuất hiện thêm `chiPhiTraTruoc`, `congCuDungCu`,
+`soDuBanDau`, `phanQuyen`; `tienMat`/`tienGui` đã sạch. Tổng lỗi **giảm** 192 → 184.
+
+### 7.3 Đo lần đầu 2026-08-12 (giữ để đối chiếu)
+
+| Lệnh | Kết quả | Của module này |
+|---|---|---|
+| `npm run typecheck` | 192 lỗi | 0 |
+| `npm run lint` | 9 lỗi + 2 warning (`CommonSlider` + `legacy/**`) | 0 |
+| `npm run lint:boundaries` | 76 lỗi (74 “rule not found” + 2 nợ cũ `axios` trong `legacy`) | 0 |
+| `vitest` module | 5 file · 90/90 PASS | ✅ |
+| `npm run build` | ĐỎ — `tsc -b` dừng ở đúng số lỗi nền | 0 |
+
+`npm run build` đỏ là **trạng thái nền của repo**, không phải hồi quy: `build` chạy `tsc -b` trên toàn
+bộ `src/`, mà `features/danhMuc` (nhánh chết) một mình đã 129 lỗi.
+
+**Cổng cây commit:** module vẫn **chưa commit** (`?? src/features/banHang/dieuChinhGiaHangBan/`). Khi
+commit phải `git add` toàn bộ file mới **TRƯỚC**, rồi mới commit hai file sửa (`routes.tsx`,
+`_shared/constants/banHangTabs.ts`) — cả hai đều trỏ tới file mới, đúng kịch bản “xanh local, đỏ
+deploy” ở `client/CLAUDE.md` §15.1. Sau đó chạy `npm run check:committed`.
 
 ## 8. BR đã áp dụng
 
@@ -288,6 +469,7 @@ và đó đúng là kịch bản “xanh ở local, đỏ ở deploy” mà `cli
 | **BR18** Ngoại tệ | `(đk-LT)` — khối cột + khối tổng quy đổi, `quyDoiTien` |
 | **BR20** Số chứng từ | ô bắt buộc, khóa ở màn Sửa; kiểm trùng ở server (`MSG_109`) |
 | **BR21** Grid chi tiết con | `CommonEditableGrid` — thêm/xóa dòng, dòng tổng, phân trang |
+| **BR5 · BR6 · BR10** Combogrid | ✅ **đạt 2026-08-20** — 14 ô chọn danh mục dùng `CommonComboGrid` (popup bảng nhiều cột, tìm trong ô, phân trang), đúng Control `CombogridSearchFlatGrid` của tài liệu |
 | **BR24** Tooltip / help text | 4 tooltip nguyên văn tài liệu ở tab Hóa đơn |
 | **BR25** Phân quyền | 7 mã `DieuChinhGiaHangBan.*`; nút thiếu quyền **ẩn hẳn**, không để bấm rồi 403 |
 | **BR26** Toast / notification | `useToast` cho cả 6 thông báo kết quả |
@@ -311,7 +493,7 @@ và đó đúng là kịch bản “xanh ở local, đỏ ở deploy” mà `cli
 | **BR38** Group dữ liệu trên lưới | Figma không vẽ; `CommonListTable` chưa bật nhóm cho màn này |
 | **BR39** Xuất Excel | `DanhSachQuyen.md` §B4.6 **không bật** quyền Xuất Excel cho chức năng này |
 | **BR19** Kiểm trùng · **BR17** kỳ kế toán | thuộc server (`MSG_109` · `MSG_301` · `MSG_203`); FE hiển thị nguyên văn lỗi trả về |
-| **BR5 / BR6 / BR10** Combogrid | các ô chọn dùng `CommonSelectBox` (danh mục nạp sẵn), chưa dùng `CommonComboGrid` nhiều cột — tài liệu ghi “combogrid search” cho một số ô; **cần chốt với BA/Design** có bắt buộc dạng combogrid không |
+
 | **BR22 / BR23 / BR40** Danh mục cây | không thuộc phạm vi màn chứng từ |
 | **BR27** Trang hệ thống | thuộc `app/` |
 | **BR28** Multi-tenant | do `@platform` lo (mọi query khóa theo `congTyId`/`kyKeToanId`) |

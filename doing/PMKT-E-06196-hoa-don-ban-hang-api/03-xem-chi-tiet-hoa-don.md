@@ -5,8 +5,26 @@
 | **Mã chức năng** | `F3` |
 | **UC nguồn** | `PMKT-U-06466` — [`UC_HDBanHang_ChiTiet.md`](../../../pmkt-docs/ba/PMKT-E-06196_HoaDonBanHang/4.usecases/PMKT-U-06466_ChiTiet/UC_HDBanHang_ChiTiet.md) |
 | **Màn hình nguồn** | `SCR_HDBanHang_ChiTiet.md` (readonly, tham chiếu trường của `SCR_HDBanHang_ThemMoi.md`) |
-| **Endpoint phụ trách** | **A6** `GET /{id}` |
+| **Endpoint phụ trách** | **A6** `GET /{id}` · **A12** `POST /{id}/dieu-huong` 🆕 |
+| **Trạng thái** | 🟡 **A6 cài một nửa** — trả header, `chiTiet` rỗng · ⬜ A12 chưa cài, chờ [00 §12-Q12](00-ke-hoach-tong.md) |
 | **File gốc** | [`00-ke-hoach-tong.md`](00-ke-hoach-tong.md) |
+
+---
+
+## 0. Đã cài gì rồi (2026-08-21)
+
+`GET /{id}` **đã chạy** — kế thừa `BaseCrudController.java:137`, override ở `HoaDonBanHangCrudService.java:79-83` để ghép cột "Hóa đơn liên quan" (BR07). Nhưng:
+
+| Mục | Trạng thái |
+|---|---|
+| Header 39 field | ✅ `HoaDonBanHangDto.java:24-75` |
+| `hoaDonLienQuan` | ✅ 1 query, không N+1 |
+| `updatedAt` (token optimistic-lock) | ✅ có trong DTO |
+| **`chiTiet[]`** | ❌ **không có field này trong DTO** — entity chưa ánh xạ dòng chi tiết (F2 mới làm) |
+| 7 field cờ (`choPhepSua`, `daLapChungTu`…) | ❌ chưa có (§4) |
+| `daLapChungTuTuDongNay`, `soLuongDaLapChungTu` | ❌ chưa có (§3) |
+| F3-a `@EntityGraph` nạp kèm chi tiết | ❌ chưa cần vì chưa có chi tiết |
+| F3-b bản ghi xóa mềm → 404 | ✅ `DynamicSpecification` tự lọc `da_xoa=false`; `notFound()` ném `HOA_DON_BAN_HANG_NOT_FOUND` (`HoaDonBanHangCrudService.java:60-63`) ⚠️ **messageId đang `null`**, không phải `MSG_PMKT-E-06196_012` như §2 yêu cầu — cần sửa khi bổ sung `MaLoiHoaDonBanHang` |
 
 ---
 
@@ -32,7 +50,7 @@
 {
   "data": {
     "id": "7f1c…",
-    "loaiNghiepVu": "Bán hàng trong nước",
+    "loaiNghiepVu": "TRONG_NUOC",
 
     // --- Thông tin hóa đơn ---
     "khachHangId": "9a03…", "tenKhachHang": "CÔNG TY TNHH ABC",
@@ -40,23 +58,23 @@
     "maSoDvqhns": "1234567", "cccd": "001199001234", "hoChieu": null,
     "soDienThoai": "0912345678", "diaChi": "Số 1 Trần Duy Hưng, Hà Nội",
     "nguoiLienHe": "Trần Thị B",
-    "hinhThucThanhToan": "Chuyển khoản", "taiKhoanNganHangThuId": "c410…",
+    "hinhThucThanhToan": "CHUYEN_KHOAN", "taiKhoanNganHangThuId": "c410…",
     "mauSoHoaDonId": "b21e…", "kyHieuHoaDon": "K26TAA",
     "ngayHoaDon": "2026-08-12", "soHoaDon": "0000123",
     "nhanVienBanHangId": "77aa…", "moTa": "Bán hàng theo hợp đồng 12/HĐKT",
 
     // --- Loại tiền / chiết khấu ---
     "loaiTienId": "0001…", "tyGia": 1.000000,
-    "loaiChietKhau": "Theo mặt hàng", "giaTriChietKhau": 0,
+    "loaiChietKhau": "THEO_MAT_HANG", "giaTriChietKhau": 0,
 
     // --- Thông tin xuất khẩu (null khi bán trong nước) ---
     "soHopDong": null, "ngayHopDong": null, "diaDiemGiao": null,
     "diaDiemNhan": null, "soVanDon": null, "soContainer": null, "donViVanChuyen": null,
 
     // --- Trạng thái ---
-    "trangThaiPhatHanh": "Chưa phát hành",
-    "trangThaiLapChungTu": "Đã lập 1 phần",
-    "trangThaiHoaDon": "Hóa đơn gốc",
+    "trangThaiPhatHanhHoaDon": "CHUA_PHAT_HANH",
+    "trangThaiLapChungTu": "DA_LAP_MOT_PHAN",
+    "trangThaiHoaDon": "GOC",
     "chungTuBanId": null,
 
     // --- Tổng hợp tiền tệ ---
@@ -81,7 +99,7 @@
     // --- Audit + lock ---
     "phienBan": 3,
     "ngayTao": "2026-08-12T02:10:00.000Z",
-    "ngayCapNhat": "2026-08-13T04:11:02.451Z",
+    "updatedAt": "2026-08-13T04:11:02.451Z",
 
     "chiTiet": [
       {
@@ -96,7 +114,7 @@
         "tienChietKhauHangQuyDoi": 425000.00,
         "chietKhauHoaDonPhanTram": null, "tienChietKhauHoaDon": null,
         "tienChietKhauHoaDonQuyDoi": null,
-        "thueSuatGtgtMacDinh": "10", "giaTriThueGtgt": null,
+        "thueSuatGtgtMacDinh": "MUC_10", "giaTriThueGtgt": null,
         "tienThueGtgt": 807500.00, "tienThueGtgtQuyDoi": 807500.00,
         "dienGiaiThue": "Thuế GTGT - Xi măng PC40", "khongTongHopToKhaiGtgt": false,
         "giaTriTinhThueXk": null, "giaTriTinhThueXkQuyDoi": null,
@@ -145,8 +163,8 @@ Y hệt [02 §3](02-them-moi-hoa-don.md) — màn Chi tiết "tham chiếu **đ�
 
 | Nút / popup | Điều kiện BA | Field DTO | Công thức |
 |---|---|---|---|
-| Nút **Cập nhật** trên popup Chi tiết | "chỉ hiển thị khi Chưa phát hành" (`SCR_HDBanHang_ChiTiet.md:25`, `UC:41`) | `choPhepSua` | `trangThaiPhatHanh == CHUA_PHAT_HANH` |
-| Nút **Xóa** | "Chưa phát hành" (BR01 danh sách) | `choPhepXoa` | `trangThaiPhatHanh == CHUA_PHAT_HANH` |
+| Nút **Cập nhật** trên popup Chi tiết | "chỉ hiển thị khi Chưa phát hành" (`SCR_HDBanHang_ChiTiet.md:25`, `UC:41`) | `choPhepSua` | `trangThaiPhatHanhHoaDon == CHUA_PHAT_HANH` |
+| Nút **Xóa** | "Chưa phát hành" (BR01 danh sách) | `choPhepXoa` | `trangThaiPhatHanhHoaDon == CHUA_PHAT_HANH` |
 | Nút **Lập chứng từ bán hàng** | `trangThaiLapChungTu ∈ {Chưa lập, Đã lập 1 phần}` (BR04) | `choPhepLapChungTuBanHang` | `trangThaiLapChungTu != DA_LAP_DU` |
 | Nút **Lập chứng từ bán dịch vụ** | như trên **và** có ≥1 dòng "Dịch vụ" (BR05) | `choPhepLapChungTuBanDichVu`, `coDongDichVu` | ⚠ ngoài phạm vi — [00 §12-Q6](00-ke-hoach-tong.md) |
 | Popup cảnh báo **`_056`** khi mở form Sửa | HĐ có `trangThaiLapChungTu ∈ {Đã lập 1 phần, Đã lập đủ}` (`SCR_HDBanHang_CapNhat.md:40-45`) | `daLapChungTu` | `trangThaiLapChungTu != CHUA_LAP` |
@@ -166,7 +184,7 @@ Chỉ một luật: **id tồn tại, chưa xóa mềm, thuộc tenant hiện t�
 | V01 | `id` là UUID hợp lệ | Spring `@PathVariable UUID` | 400 (base) |
 | V02 | Bản ghi tồn tại, `da_xoa = false`, thuộc tenant (RLS) | `HoaDonBanSupport.nap(id)` | 404 `_012` |
 
-RLS `tenant_isolation` (`V1__baseline.sql:31708`) đã chặn truy cập chéo tenant ở tầng DB — request tenant khác nhận **404**, không phải 403. Đây là hành vi đúng (không tiết lộ sự tồn tại của bản ghi).
+RLS `tenant_isolation` (`V1__create_database.sql:31708`) đã chặn truy cập chéo tenant ở tầng DB — request tenant khác nhận **404**, không phải 403. Đây là hành vi đúng (không tiết lộ sự tồn tại của bản ghi).
 
 ---
 
@@ -236,3 +254,60 @@ Tổng **4 query** cho một lần gọi: header+chi tiết (1), quan hệ theo 
 | BR46 | Trả `phienBan`, `ngayTao`, `ngayCapNhat` cho FE |
 
 **Không áp dụng:** BR1, BR2, BR11, BR31, BR39 (thuộc màn danh sách); BR12/BR17/BR36/BR37 (HĐ không hạch toán).
+
+---
+
+## 9. A12 🆕 — Điều hướng chứng từ trước / sau (BR49 MỚI)
+
+> **BR49 là mục MỚI của `Common/business_rules.md`** (commit `c0caf8fc3`, 2026-08-20). Epic 06196 **không nhắc**, nhưng luật 2 của `CLAUDE.md` nói: *"Epic không nhắc lại BR **không** có nghĩa là được bỏ qua BR."* ⇒ mặc định áp dụng, **chờ BA xác nhận** ([00 §12-Q12](00-ke-hoach-tong.md)).
+
+### 9.1 BA yêu cầu gì
+
+| Quy tắc (BR49) | Hệ quả lên BE |
+|---|---|
+| 49.1 — 2 icon mũi tên ở góc dưới trái màn chi tiết; disable ở bản ghi đầu/cuối | BE phải trả **có/không có** bản ghi liền trước, liền sau |
+| 49.2 — *"Áp dụng **đúng thứ tự sắp xếp** quy định tại BR2… **Không** định nghĩa lại tiêu chí sắp xếp riêng"*; *"thứ tự… **giống hệt** thứ tự đang hiển thị trên màn hình danh sách"* | ⚠️ **Điểm chốt:** "liền trước/liền sau" phải tính theo **bộ lọc + sắp xếp NGƯỜI DÙNG ĐANG ÁP**, không phải theo thứ tự mặc định. Client bắt buộc phải gửi lại `SearchRequest` hiện hành. |
+| 49.3 — *"Chỉ chuyển tới các chứng từ **thuộc phạm vi dữ liệu người dùng được phân quyền**"* | `quyen.require(…, VIEW_DETAIL)` + RLS |
+
+### 9.2 A12 — `POST /api/ban-hang/hoa-don-ban-hang/{id}/dieu-huong`
+
+**Quyền:** `LapHoaDonBan.View.Detail`.
+
+**Vì sao `POST` chứ không `GET`:** phải chở nguyên `SearchRequest` (filters + sort) để xác định "liền kề" theo đúng ngữ cảnh danh sách — bộ lọc phức tạp không nhét vừa query string, cùng lý do đã có ở `SearchRequest.java:12-13`.
+
+```jsonc
+// Request — SearchRequest y hệt cái đang dùng ở A1
+{ "sort": "ngayHoaDon:desc,soHoaDon:asc",
+  "filters": [ { "field": "trangThaiPhatHanhHoaDon", "op": "in", "value": ["CHUA_PHAT_HANH"] } ] }
+```
+
+```jsonc
+// Response 200
+{
+  "data": {
+    "idTruoc": "6e0b…",    // null ⇒ FE disable mũi tên trái
+    "idSau":   "8c2f…",    // null ⇒ FE disable mũi tên phải
+    "viTri":   14,          // 1-based, vị trí của bản ghi hiện tại trong tập đã lọc
+    "tongSo":  137
+  },
+  "message": null, "messageId": null
+}
+```
+
+**Cài thế nào:** một truy vấn `ROW_NUMBER() OVER (ORDER BY <sort đã phân giải>)` trên chính `specCuaRequest(request)`, lấy ba dòng quanh `id` hiện tại. **Không** tải cả danh sách rồi tìm trong bộ nhớ — tập lọc có thể vài chục nghìn dòng.
+
+| Lỗi | HTTP | `code` |
+|---|---|---|
+| Thiếu quyền | 403 | `FORBIDDEN` |
+| `id` không nằm trong tập đã lọc (bị lọc mất sau khi người dùng đổi bộ lọc) | 200 | trả `idTruoc = idSau = null`, `viTri = null` — **không** ném lỗi; FE disable cả hai mũi tên |
+| HĐ không tồn tại / đã xóa | 404 | `NOT_FOUND` |
+
+### 9.3 Chưa cài — và có nên cài không
+
+**Đề xuất: chưa cài lần này.** Ba lý do:
+
+1. BR49 vừa thêm vào Common, epic 06196 chưa có UC/SCR nào mô tả nút này — làm trước là đoán ý BA.
+2. Nó là chức năng **dùng chung cho mọi màn chứng từ**; cài riêng cho hóa đơn sẽ đẻ ra 10 bản sao ở 10 module. Chỗ đúng là **`BaseCrudController` + `AbstractCrudService`** của `core`, một lần cho tất cả.
+3. Thay đổi `core` ảnh hưởng toàn hệ thống ⇒ phải là ticket riêng, có người chủ trì.
+
+⇒ Ghi nhận ở đây để BA và Dev BE thấy, **không đưa vào phạm vi F3**.

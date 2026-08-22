@@ -7,6 +7,7 @@
 | Màn hình | `SCR_ThemMoiTraLaiHangBan.md:539-564` (bút toán 3 bước) · `README.md` §**BR19** (vòng đời bộ chứng từ) |
 | Endpoint phụ trách | **không có endpoint riêng** — là thành phần của A7/A8/A12 (`sauKhiLuu`) và của `dinhKhoan[]` trong A4 |
 | Nhóm chức năng BA | `1.function-breakdown.md` §Nhóm Hạch toán · §Nhóm Nhập kho · §Nhóm Hóa đơn |
+| **Trạng thái** | ☐ chưa code |
 
 ## 1. Quyết định riêng
 

@@ -1,5 +1,14 @@
 # F2 — Xem chi tiết · dòng chi tiết · bút toán · nhân bản
 
+> ### 🔄 CẬP NHẬT 2026-08-21 — A3 đã có (mức header), A9/A10/A11 chưa
+>
+> 1. **A3 đang chạy** nhưng trả `chiTiet = null` — entity `ChiTietDieuChinhGiaHangBan` chưa dựng. DTO hiện tại (44 trường) **phẳng**, chưa có hai object con `chungTuThanhToan` / `hoaDon` như §2 mô tả.
+> 2. **A9/A10/A11 chưa tồn tại** — controller còn `extends BaseCrudController`, chưa lên `BaseChungTuController`. Xem [00 §8](00-ke-hoach-tong.md) bước 6.
+> 3. **`trangThaiChungTu` nay 2 giá trị** `CHUA_GHI_SO`/`DA_GHI_SO` — mọi chỗ ghi `"NHAP"` trong file này đọc là `CHUA_GHI_SO`.
+> 4. **🐞 A10 thiếu một vế lọc (L2):** BR48.3 (BR mới) bắt buộc lọc `SoCai` theo **`ChungTuId` VÀ `LoaiChungTuId`** vì hai chứng từ khác loại có thể trùng `ChungTuId`. `SoCaiApi.theoChungTu(id)` hiện chỉ lọc theo `chungTuId` ⇒ có thể trộn bút toán của chứng từ khác. Không tự sửa `accounting_core` — mở ticket cho chủ kernel.
+> 5. **§3.3 tab Hóa đơn:** LDM mới (`ldm-DieuChinhGiaHangBan.puml`) xác nhận đủ các trường này; tên cột chốt lại ở [09 §9.2.3](09-thiet-ke-db.md).
+> 6. **A11 Nhân bản:** quyền `.Clone` **vẫn chưa seed** — seed ở migration mới ([09 §10-D](09-thiet-ke-db.md)).
+
 | | |
 |---|---|
 | Mã chức năng | **F2** |
@@ -9,8 +18,8 @@
 
 ## 1. Quyết định riêng
 
-- **A3 trả kèm `chiTiet`** (nạp bằng `join fetch`), nên **A9 là dư thừa với màn Xem chi tiết** — nó tồn tại vì kế thừa `BaseChungTuController` ([:147](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/controller/BaseChungTuController.java)) và hữu ích cho lưới phân trang riêng phần chi tiết. Không ẩn đi: base để `public` mới map được (javadoc lớp base nói rõ). FE hiện dùng A3.
-- **A11 (`/nhan-ban`) là `GET` và KHÔNG ghi gì** — hợp đồng của base ([AbstractChungTuCrudService.java:60-70](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/AbstractChungTuCrudService.java)). Bản nhân bản chỉ là dữ liệu điền sẵn cho màn Thêm mới; chứng từ chỉ ra đời khi người dùng bấm Lưu. **Không chọn** tạo bản ghi ngay: mỗi lần người dùng đổi ý là một chứng từ rác đã chiếm một số chứng từ.
+- **A3 trả kèm `chiTiet`** (nạp bằng `join fetch`), nên **A9 là dư thừa với màn Xem chi tiết** — nó tồn tại vì kế thừa `BaseChungTuController` ([:147](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/controller/BaseChungTuController.java)) và hữu ích cho lưới phân trang riêng phần chi tiết. Không ẩn đi: base để `public` mới map được (javadoc lớp base nói rõ). FE hiện dùng A3.
+- **A11 (`/nhan-ban`) là `GET` và KHÔNG ghi gì** — hợp đồng của base ([AbstractChungTuCrudService.java:60-70](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/service/AbstractChungTuCrudService.java)). Bản nhân bản chỉ là dữ liệu điền sẵn cho màn Thêm mới; chứng từ chỉ ra đời khi người dùng bấm Lưu. **Không chọn** tạo bản ghi ngay: mỗi lần người dùng đổi ý là một chứng từ rác đã chiếm một số chứng từ.
 - **A10 trả sổ cái THẬT** (`acc_so_cai` qua `SoCaiApi.theoChungTu`), không phải bút toán dự kiến. Chứng từ chưa ghi sổ ⇒ list rỗng, **không phải lỗi**. Tab "Hạch toán dự kiến" của màn Thêm mới nằm ngoài phạm vi (§1.2 file gốc).
 
 ## 2. Hợp đồng API
@@ -110,7 +119,7 @@
 
 ### A10 — `GET /{id}/thong-tin-hach-toan` · quyền `.View.Detail`
 
-Trả `List<DongSoCaiDto>` — các dòng `acc_so_cai` **đã ghi** của chứng từ. Base kiểm tồn tại trước khi đọc sổ cái ([BaseChungTuController.java:139-145](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/controller/BaseChungTuController.java)) nên id bịa ra trả 404 chứ không phải 200 rỗng.
+Trả `List<DongSoCaiDto>` — các dòng `acc_so_cai` **đã ghi** của chứng từ. Base kiểm tồn tại trước khi đọc sổ cái ([BaseChungTuController.java:139-145](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/controller/BaseChungTuController.java)) nên id bịa ra trả 404 chứ không phải 200 rỗng.
 
 Chứng từ chưa ghi sổ ⇒ `data: []`, HTTP 200. Đáp ứng UC_XemChiTiet bước 6 (*"Nếu đã ghi sổ, hiển thị bút toán hạch toán"*).
 
@@ -129,7 +138,7 @@ Trả DTO **giống A3** nhưng:
 | `chiTiet[].id` | `null` | dòng mới |
 | `chiTiet[].chungTuNguonId`, `.chiTietNguonId` | **giữ nguyên** | ⚠ xem cảnh báo dưới |
 
-> ⚠ **Cảnh báo nghiệp vụ cần BA xác nhận (bổ sung cho §12 file gốc):** nhân bản mà giữ liên kết nguồn nghĩa là dòng bán hàng gốc bị điều chỉnh giá **hai lần**. Điều đó *hợp lệ về kỹ thuật* (`LoaiChungTu.laTieuThu()` của điều chỉnh giá là `false`, [LoaiChungTu.java:65](../../cell-app/src/main/java/vn/dopai/pmkt/cell/quan_he_chung_tu/api/LoaiChungTu.java) — cùng một dòng được điều chỉnh nhiều lần là có chủ ý), nhưng có thể **không phải ý** của người bấm "Nhân bản". Cách cài: giữ nguyên liên kết (người dùng thấy đủ dữ liệu, tự xoá dòng nếu không muốn). Nếu BA muốn ngược lại thì bỏ `chungTuNguonId`/`chiTietNguonId` trong `NhanBanDieuChinhGia` — một chỗ sửa.
+> ⚠ **Cảnh báo nghiệp vụ cần BA xác nhận (bổ sung cho §12 file gốc):** nhân bản mà giữ liên kết nguồn nghĩa là dòng bán hàng gốc bị điều chỉnh giá **hai lần**. Điều đó *hợp lệ về kỹ thuật* (`LoaiChungTu.laTieuThu()` của điều chỉnh giá là `false`, [LoaiChungTu.java:65](../../cell-app/src/main/java/vn/vtt/pmkt/cell/quan_he_chung_tu/api/LoaiChungTu.java) — cùng một dòng được điều chỉnh nhiều lần là có chủ ý), nhưng có thể **không phải ý** của người bấm "Nhân bản". Cách cài: giữ nguyên liên kết (người dùng thấy đủ dữ liệu, tự xoá dòng nếu không muốn). Nếu BA muốn ngược lại thì bỏ `chungTuNguonId`/`chiTietNguonId` trong `NhanBanDieuChinhGia` — một chỗ sửa.
 
 ## 3. Ánh xạ cột BA ↔ DB ↔ DTO (phần khác với [01](01-xem-danh-sach.md))
 
@@ -199,7 +208,7 @@ sequenceDiagram
   SC-->>FE: List<DongSoCaiDto>  (rỗng nếu chưa ghi sổ)
 ```
 
-`join fetch` một collection **bắt buộc có `distinct`** — thiếu nó thì chứng từ 5 dòng trả về 5 lần (đúng bài học đã ghi ở [ChungTuBanHangRepositoryImpl.java:40](../../cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_ban_hang/internal/repository/ChungTuBanHangRepositoryImpl.java)).
+`join fetch` một collection **bắt buộc có `distinct`** — thiếu nó thì chứng từ 5 dòng trả về 5 lần (đúng bài học đã ghi ở [ChungTuBanHangRepositoryImpl.java:40](../../cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_ban_hang/internal/repository/ChungTuBanHangRepositoryImpl.java)).
 
 ## 5. Tương tranh & transaction
 Cả 4 endpoint `@Transactional(readOnly = true)`. Không khoá gì. `updatedAt` trả về là token khoá lạc quan cho PUT/DELETE/ghi sổ ở các file sau.

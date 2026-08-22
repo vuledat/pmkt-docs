@@ -1,5 +1,15 @@
 # F3 — Thêm mới Chứng từ điều chỉnh giá
 
+> ### 🔄 CẬP NHẬT 2026-08-21 — 5 thay đổi làm sai bản cũ
+>
+> 1. **Số chứng từ KHÔNG do người dùng tự quản nữa (huỷ D12).** Engine đánh số PMKT-U-16693 đã lên: template gọi `SoChungTuApi.sinhSo(chungTu, soNguoiDungGo)` — ô để trống ⇒ cấp số kế tiếp; có chữ ⇒ đi 7 bước BR04. Trùng số ném **409 `SO_CHUNG_TU_DA_TON_TAI`**, không phải 400 `MSG_109` như §2.4 ghi (xem [00 §12-Q16](00-ke-hoach-tong.md)). Luật V3 trong ma trận §5 **chuyển sang engine**, module không tự kiểm.
+> 2. **🐞 Quy tắc đánh số cho `DCGB` mới seed nhánh "Giảm giá"** — chứng từ **Tăng giá** sẽ ném `QUY_TAC_KHONG_TON_TAI` ngay ở nút Lưu. Phải seed bổ sung trước khi code ([00 §12-Q13](00-ke-hoach-tong.md)).
+> 3. **Dòng chi tiết dùng cột PHẲNG (huỷ D6).** §3 "ghi vào khối `*_tang`/`*_giam`, khối kia NULL" **không còn đúng** — ghi thẳng `so_luong`/`don_gia`/`thanh_tien`/`chiet_khau_phan_tram`/`chiet_khau`. Nguồn: `ldm-DieuChinhGiaHangBan.puml` dòng 96-104.
+> 4. **Đường dẫn:** sinh đôi `dieu_chinh_gia_hang_mua` dùng `POST /them-moi` (chuẩn base), FE khai `POST /` — chốt ở [00 §12-Q15](00-ke-hoach-tong.md), đề xuất `/them-moi`.
+> 5. **Chiết khấu mức header (D15):** thêm `loaiChietKhau` + `tyLeChietKhau` vào request (LDM dòng 39-40) — bảng field §2.1 chưa có.
+> 6. **Có mẫu 1:1 để bám:** `dieu_chinh_gia_hang_mua/internal/service/business/{LuuDieuChinhGiaMuaTemplate,TaoDieuChinhGiaMua}.java` — đọc trước khi viết.
+> 7. `trangThaiChungTu` nay 2 giá trị; `"NHAP"` đọc là `CHUA_GHI_SO`. TK công nợ/doanh thu/giảm giá nên lấy qua `TaiKhoanNgamDinhApi` (module mới) thay vì tự tra danh mục.
+
 | | |
 |---|---|
 | Mã chức năng | **F3** |
@@ -10,8 +20,8 @@
 
 ## 1. Quyết định riêng
 
-- **Một endpoint cho cả "Lưu" và "Lưu và ghi sổ"**, phân biệt bằng cờ `ghiSo` trong body — đúng mẫu `LuuChungTuBanHangRequest.ghiSo` ([:95](../../cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_ban_hang/internal/dto/LuuChungTuBanHangRequest.java)) và đúng hook `coGhiSoNgay` của template ([ChungTuTemplate.java:341](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)). **Không chọn** hai endpoint riêng: "Lưu và ghi sổ" phải là **một** transaction, hai request rời sẽ để lại chứng từ đã lưu mà chưa ghi sổ khi request thứ hai hỏng.
-- **Path là `POST /` (rỗng)**, không phải `/them-moi` của base — override như `ChungTuBanHangController.create` ([:126](../../cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_ban_hang/internal/controller/ChungTuBanHangController.java)), và khớp đúng đường dẫn FE đã khai (`IMPLEMENT.md` dòng 181).
+- **Một endpoint cho cả "Lưu" và "Lưu và ghi sổ"**, phân biệt bằng cờ `ghiSo` trong body — đúng mẫu `LuuChungTuBanHangRequest.ghiSo` ([:95](../../cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_ban_hang/internal/dto/LuuChungTuBanHangRequest.java)) và đúng hook `coGhiSoNgay` của template ([ChungTuTemplate.java:341](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)). **Không chọn** hai endpoint riêng: "Lưu và ghi sổ" phải là **một** transaction, hai request rời sẽ để lại chứng từ đã lưu mà chưa ghi sổ khi request thứ hai hỏng.
+- **Path là `POST /` (rỗng)**, không phải `/them-moi` của base — override như `ChungTuBanHangController.create` ([:126](../../cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_ban_hang/internal/controller/ChungTuBanHangController.java)), và khớp đúng đường dẫn FE đã khai (`IMPLEMENT.md` dòng 181).
 - **BE tính lại toàn bộ số tiền**, không tin số FE gửi. FE vẫn gửi (để hiển thị tức thì và để đối chiếu), BE ghi đè bằng kết quả `TinhToanDieuChinhGia`. Lý do: số tiền là đầu vào của bút toán — một sai lệch làm bảng cân đối sai, và client không phải nơi giữ bất biến kế toán.
 - **Không sinh số chứng từ** (D12): người dùng nhập. Chống trùng: kiểm sớm ở service (trả `MSG_109` đọc được) + unique index `uq_sal_dcg_so_ct` làm chốt chặn cuối.
 
@@ -106,7 +116,7 @@
 
 | Field | Kiểu | Bắt buộc | Ràng buộc | Nguồn BA |
 |---|---|---|---|---|
-| `huongDieuChinhGia` | enum | **Y** | `TangGia` \| `GiamGia` — khớp CHECK `loai_dieu_chinh` ([V1:16322](../../cell-app/src/main/resources/db/migration/V1__baseline.sql)) | SCR dòng 264 |
+| `huongDieuChinhGia` | enum | **Y** | `TangGia` \| `GiamGia` — khớp CHECK `loai_dieu_chinh` ([V1:16322](../../cell-app/src/main/resources/db/migration/V1__create_database.sql)) | SCR dòng 264 |
 | `thanhToanNgay` | bool | N | mặc định `false` | SCR dòng 265 |
 | `hinhThucThanhToan` | enum | **Y khi** `thanhToanNgay` | `thanhToanNgay=false` ⇒ server ghi `DieuChinhCongNo`. `TangGia` ⇒ `ThuTienMat`\|`GiayBaoCo`; `GiamGia` ⇒ `ChiTienMat`\|`UyNhiemChi`\|`SecChuyenKhoan`\|`SecTienMat` | SCR BR6 dòng 269-274 |
 | `lapKemHoaDonDieuChinh` | bool | N | mặc định `true` khi nguồn là CTBH; **`false` và khóa** khi nguồn là HĐ điều chỉnh (SCR dòng 217) | SCR dòng 267 |
@@ -196,7 +206,7 @@ Xem đầy đủ ở [02 §3](02-xem-chi-tiet.md) (header + hai object con) và 
 | `huongDieuChinhGia` | `loai_dieu_chinh` | tên lệch — §12-Q9 file gốc |
 | `dienGiai` | `mo_ta` | tên lệch |
 | `hoaDon.mauSoHoaDon` (chuỗi mã) | `mau_so_hoa_don_id` (uuid FK) | **mapper phải tra ngược** `mst_mau_so_hoa_don` theo mã; mã không tồn tại ⇒ 400 chứ không lưu `null` im lặng |
-| `chiTiet[].soLuong/donGia/thanhTien` | cặp `*_tang` / `*_giam` | ghi vào khối theo `huongDieuChinhGia`; **khối còn lại để `NULL`**, không ghi 0 — `COALESCE(so_luong_tang, so_luong_giam)` của [DongChungTuPort.java:54](../../cell-app/src/main/java/vn/dopai/pmkt/cell/quan_he_chung_tu/api/DongChungTuPort.java) sẽ đọc nhầm khối 0 |
+| `chiTiet[].soLuong/donGia/thanhTien` | cặp `*_tang` / `*_giam` | ghi vào khối theo `huongDieuChinhGia`; **khối còn lại để `NULL`**, không ghi 0 — `COALESCE(so_luong_tang, so_luong_giam)` của [DongChungTuPort.java:54](../../cell-app/src/main/java/vn/vtt/pmkt/cell/quan_he_chung_tu/api/DongChungTuPort.java) sẽ đọc nhầm khối 0 |
 
 ## 4. Công thức tính (server là nguồn sự thật)
 
@@ -236,7 +246,7 @@ tong*QuyDoi             = tong* × tyGia                        → 4 cột mớ
 | V3 | `soChungTu` chưa tồn tại trong tenant (trừ chính nó khi sửa) | `kiemTraNghiepVu` | Số chứng từ đã tồn tại, vui lòng nhập số khác | `_109` | BR19.1 |
 | V4 | `ngayChungTu ≤` hôm nay | `kiemTraNghiepVu` | Ngày chứng từ không hợp lệ | `_103` | SCR dòng 574 |
 | V5 | `ngayHachToan ≥ ngayChungTu` | `kiemTraNghiepVu` | Ngày hạch toán không được nhỏ hơn ngày chứng từ | `_205` | BR15.3, BR37 |
-| V6 | `ngayHachToan` thuộc kỳ mở | **kernel** — `GhiSoApi.ghiSo` khi ghi sổ; `kiemTraKyMo` khi lưu nháp ([ChungTuTemplate.java:512](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)) | Ngày hạch toán không thuộc kỳ kế toán đang mở | `_203` | BR17.1 |
+| V6 | `ngayHachToan` thuộc kỳ mở | **kernel** — `GhiSoApi.ghiSo` khi ghi sổ; `kiemTraKyMo` khi lưu nháp ([ChungTuTemplate.java:512](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)) | Ngày hạch toán không thuộc kỳ kế toán đang mở | `_203` | BR17.1 |
 | V7 | `chiTiet` ≥ 1 dòng | `kiemTraNghiepVu` | Vui lòng nhập ít nhất một dòng chi tiết điều chỉnh | `_104` | SCR dòng 600 |
 | V8 | `soLuong > 0` **trừ** dòng dịch vụ (`soLuong == 0 && donGia == 0 && thanhTien != 0`) | `kiemTraNghiepVu` | Số lượng phải lớn hơn 0 | `_105` | SCR dòng 582 **vs** BR2/BR3 — §12-Q4 |
 | V9 | `donGia > 0`, cùng miễn trừ V8 | `kiemTraNghiepVu` | Đơn giá phải lớn hơn 0 | `_106` | SCR dòng 583 |
@@ -263,7 +273,7 @@ POST /  →  DieuChinhGiaHangBanController.create
         →  TaoDieuChinhGia (extends LuuDieuChinhGiaTemplate extends ChungTuTemplate).thucThi
 ```
 
-Bên trong `ChungTuTemplate.thucThi` — luồng TAO ([:149](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)), **thứ tự do base cưỡng chế, module chỉ cài hook**:
+Bên trong `ChungTuTemplate.thucThi` — luồng TAO ([:149](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)), **thứ tự do base cưỡng chế, module chỉ cài hook**:
 
 | Bước base | Module cài gì |
 |---|---|
@@ -280,16 +290,16 @@ Bên trong `ChungTuTemplate.thucThi` — luồng TAO ([:149](../../cell-app/src/
 | `bangGoc()` | `"sal_chung_tu_dieu_chinh_gia_hang_ban"` |
 | `maLoaiChungTu()` | `"CTDG"` (D11 — §12-Q1) |
 | `coSinhButToan()` | `true` |
-| `coAnhHuongTonKho()` | **`false`** — comment của bảng ghi rõ *"CÓ hạch toán, KHÔNG di chuyển tồn kho"* ([V1:16334](../../cell-app/src/main/resources/db/migration/V1__baseline.sql)) |
+| `coAnhHuongTonKho()` | **`false`** — comment của bảng ghi rõ *"CÓ hạch toán, KHÔNG di chuyển tồn kho"* ([V1:16334](../../cell-app/src/main/resources/db/migration/V1__create_database.sql)) |
 
 Bút toán khi `ghiSo = true`: xem [06-ghi-so.md §4](06-ghi-so.md) — **cùng một lớp `DinhKhoanDieuChinhGia`**, không viết hai bản.
 
 ## 7. Tương tranh & transaction
 
-- Toàn bộ là **một** `@Transactional` do `ChungTuTemplate.thucThi` mở ([:102](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)) — thoả "Ràng buộc nguyên tử" của UC_GhiSo trong phạm vi đã chốt ở D3.
+- Toàn bộ là **một** `@Transactional` do `ChungTuTemplate.thucThi` mở ([:102](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)) — thoả "Ràng buộc nguyên tử" của UC_GhiSo trong phạm vi đã chốt ở D3.
 - Luồng TAO **không khoá chứng từ**: bản ghi chưa tồn tại, kernel tự khoá theo id mới lúc ghi sổ.
 - Dòng nguồn **được khoá** qua `DongChungTuPort.khoaVaLaySoLuong` bên trong `QuanHeChungTuApi.lienKet` (`ORDER BY id FOR UPDATE`) — chống hai người cùng lập chứng từ trên cùng dòng nguồn.
-- **Idempotency:** trùng số chứng từ bị chặn bởi unique `uq_sal_dcg_so_ct`; bấm Lưu hai lần nhanh ⇒ lần sau 400 `_109` chứ không sinh hai chứng từ. Ghi sổ idempotent theo nội dung ở kernel ([GhiSoApi.java:31](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/hach_toan/api/GhiSoApi.java)).
+- **Idempotency:** trùng số chứng từ bị chặn bởi unique `uq_sal_dcg_so_ct`; bấm Lưu hai lần nhanh ⇒ lần sau 400 `_109` chứ không sinh hai chứng từ. Ghi sổ idempotent theo nội dung ở kernel ([GhiSoApi.java:31](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/hach_toan/api/GhiSoApi.java)).
 
 ## 8. Kiểm thử
 

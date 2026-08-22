@@ -1,5 +1,14 @@
 # F8 — Chọn chứng từ nguồn (Bước 1 của màn Thêm mới)
 
+> ### 🔄 CẬP NHẬT 2026-08-21 — đổi cách cài, đơn giản hơn một bậc
+>
+> 1. **Bỏ `UNION ALL` hai bảng.** `sal_chung_tu_ban_dich_vu` đã **di trú vào `sal_chung_tu_ban_hang`** (V1012, phân biệt bằng `loai_nghiep_vu = 'Bán dịch vụ'`). §3.1 điều kiện #1 nay chỉ là một `WHERE loai_nghiep_vu IN (…)`.
+> 2. **KHÔNG viết SQL native xuyên bảng của module khác nữa (D13).** `chung_tu_mua_hang` đã mở `api/ChungTuMuaHangNguonApi.layNguonDieuChinhGia(id)` cho **đúng bài toán này** ở bên mua. Bản bán hàng làm đối xứng: mở `chung_tu_ban_hang/api/ChungTuBanHangNguonApi`. Lý do bản cũ chọn SQL native ("các bảng đó không có tầng Java") **đã hết hiệu lực** — cả `chung_tu_ban_hang`, `tra_lai_hang_ban`, `hoa_don_ban_hang` đều đã có module.
+> 3. **`status = 'DA_GHI_SO'`** ở điều kiện #2 → `trang_thai_chung_tu = 'DA_GHI_SO'`.
+> 4. **N1 vẫn là rủi ro lớn nhất:** `tra_lai_hang_ban` mới có 14 file, **chưa có luồng ghi và chưa có `api/`** ⇒ "SL đã trả lại" vẫn chưa có nguồn đáng tin. Giữ nguyên đề xuất `GREATEST(cột FK trực tiếp, `QuanHeChungTuApi.daTieuThu`)` và **ghi rõ sai số cho BA**.
+> 5. **Q7 (ĐVT quy đổi) có lời giải từ LDM:** `ldm-DieuChinhGiaHangBan.puml` dòng 88-89 khai `DonViTinhChinhId` + `HeSoQuyDoi` **trên dòng chi tiết** — tức hệ số phải được **lưu lại lúc lập**, đúng nguyên tắc "không tra lại danh mục". Nếu BA duyệt thì N2 được giải quyết.
+> 6. `mst_don_vi_quy_doi_vat_tu` nay ở [V1:11207](../../cell-app/src/main/resources/db/migration/V1__create_database.sql).
+
 | | |
 |---|---|
 | Mã chức năng | **F8** |
@@ -163,20 +172,20 @@ SL_da_tra_lai(dòng CTBH d) = Σ  quyDoi( tl.so_luong , tl.don_vi_tinh_id → d.
                                  mà tl liên kết tới d
 ```
 
-**Quy đổi ĐVT** (SCR dòng 98-100), đọc `mst_don_vi_quy_doi_vat_tu` ([V1__baseline.sql:11137](../../cell-app/src/main/resources/db/migration/V1__baseline.sql) — cột `ty_le_quy_doi numeric(18,6)`, `phep_tinh varchar(10)`):
+**Quy đổi ĐVT** (SCR dòng 98-100), đọc `mst_don_vi_quy_doi_vat_tu` ([V1__create_database.sql:11207](../../cell-app/src/main/resources/db/migration/V1__create_database.sql) — cột `ty_le_quy_doi numeric(18,6)`, `phep_tinh varchar(10)`):
 
 | `phep_tinh` trên DM VTHH | Công thức |
 |---|---|
 | `Nhân` | `SL_trả_lại_theo_ĐVT_CTBH = SL_theo_ĐVT_chính / ty_le_quy_doi` |
 | `Chia` | `SL_trả_lại_theo_ĐVT_CTBH = SL_theo_ĐVT_chính × ty_le_quy_doi` |
 
-⚠ Hệ số phải đọc **từ dòng chứng từ trả lại** nếu dòng đó có lưu hệ số, chứ không tra lại danh mục — số lịch sử sẽ trôi khi danh mục đổi (nguyên tắc đã ghi ở [DongChungTuPort.java:56](../../cell-app/src/main/java/vn/dopai/pmkt/cell/quan_he_chung_tu/api/DongChungTuPort.java)). Nhưng `sal_chung_tu_tra_lai_hang_ban_chi_tiet` **không có cột hệ số quy đổi** (đã kiểm DDL) ⇒ **buộc phải tra danh mục**. Ghi nhận là nợ kỹ thuật, nêu ở §7.
+⚠ Hệ số phải đọc **từ dòng chứng từ trả lại** nếu dòng đó có lưu hệ số, chứ không tra lại danh mục — số lịch sử sẽ trôi khi danh mục đổi (nguyên tắc đã ghi ở [DongChungTuPort.java:56](../../cell-app/src/main/java/vn/vtt/pmkt/cell/quan_he_chung_tu/api/DongChungTuPort.java)). Nhưng `sal_chung_tu_tra_lai_hang_ban_chi_tiet` **không có cột hệ số quy đổi** (đã kiểm DDL) ⇒ **buộc phải tra danh mục**. Ghi nhận là nợ kỹ thuật, nêu ở §7.
 
 **Liên kết `tl ↔ d`** — hai đường, phải hợp cả hai (SCR dòng 105: *"Lập CTBH → Lập Hóa đơn → Lập HĐ điều chỉnh → Lập CT trả lại thì cũng cần tạo liên kết giữa các chứng từ"*):
 1. Cột trực tiếp: `tl.chung_tu_ban_id = d.chung_tu_ban_hang_id` (thô, mức chứng từ) hoặc `tl.chi_tiet_hd_ban_hang_id = <dòng HĐ sinh từ d>`.
 2. **Đồ thị quan hệ**: `ctu_quan_he_chung_tu` mức dòng, đi ngược từ dòng trả lại về dòng CTBH qua tối đa 2 chặng (CTBH → HĐBH → HĐ điều chỉnh → trả lại).
 
-→ **Chọn đường (2) làm chính** qua `QuanHeChungTuApi.daTieuThu(dongNguonIds)` ([QuanHeChungTuApi.java:53](../../cell-app/src/main/java/vn/dopai/pmkt/cell/quan_he_chung_tu/api/QuanHeChungTuApi.java)) — hàm này **đã cộng sẵn** số đã tiêu thụ, chỉ tính các loại đích có `laTieuThu() = true` (trả lại hàng bán có, điều chỉnh giá **không**), và đã quy về ĐVT của dòng nguồn. **Không chọn** tự cộng bằng SQL trên cột FK: cột FK chỉ nối được một chặng, đúng cái mà SCR dòng 105 cảnh báo là không đủ.
+→ **Chọn đường (2) làm chính** qua `QuanHeChungTuApi.daTieuThu(dongNguonIds)` ([QuanHeChungTuApi.java:53](../../cell-app/src/main/java/vn/vtt/pmkt/cell/quan_he_chung_tu/api/QuanHeChungTuApi.java)) — hàm này **đã cộng sẵn** số đã tiêu thụ, chỉ tính các loại đích có `laTieuThu() = true` (trả lại hàng bán có, điều chỉnh giá **không**), và đã quy về ĐVT của dòng nguồn. **Không chọn** tự cộng bằng SQL trên cột FK: cột FK chỉ nối được một chặng, đúng cái mà SCR dòng 105 cảnh báo là không đủ.
 ⚠ Điều kiện đủ: mọi chứng từ trả lại hàng bán phải **đã** đăng ký liên kết vào `ctu_quan_he_chung_tu`. Module trả lại hàng bán chưa có tầng Java ⇒ **dữ liệu liên kết có thể trống** cho chứng từ tạo trước đó → xem §7-N1.
 
 ### 4.2 Số lượng · Đơn giá · Thành tiền hiển thị

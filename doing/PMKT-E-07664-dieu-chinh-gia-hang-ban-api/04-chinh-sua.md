@@ -1,5 +1,12 @@
 # F4 — Chỉnh sửa Chứng từ điều chỉnh giá
 
+> ### 🔄 CẬP NHẬT 2026-08-21
+>
+> 1. **`soChungTu` không cho sửa** — nay đi qua engine: template vẫn gọi `SoChungTuApi.sinhSo(chungTu, soNguoiDungGo)`, và "sửa chứng từ mà số không đổi ⇒ không làm gì" là hành vi sẵn có của engine. §1 (bỏ qua giá trị client gửi) vẫn đúng về kết quả.
+> 2. **Cột phẳng (huỷ D6)** — §3 và §4 đọc theo [09 §9.2.1](09-thiet-ke-db.md).
+> 3. **`status.choPhepSua()`** nay là `trangThaiChungTu.choPhepSua()`, chỉ đúng khi `CHUA_GHI_SO`.
+> 4. Mẫu code: `dieu_chinh_gia_hang_mua/internal/service/business/SuaDieuChinhGiaMua.java`.
+
 | | |
 |---|---|
 | Mã chức năng | **F4** |
@@ -55,11 +62,11 @@ Khác biệt duy nhất trong ma trận:
 |---|---|---|
 | V3 | trùng `soChungTu` | loại trừ chính bản ghi đang sửa (`id <> :id`) — nếu không, mọi lần sửa đều báo trùng với chính nó |
 | V20 | khoá lạc quan | **chỉ có ở luồng này và luồng Xoá**; cột `phien_ban` (`@Version`) là thứ chặn lost-update thật, `updatedAt` là token FE cầm |
-| **V21** | Chứng từ phải **chưa ghi sổ** | luật riêng của luồng sửa — `status.choPhepSua()` ([TrangThaiChungTu.java](../../cell-app/src/main/java/vn/dopai/pmkt/cell/core/entity/TrangThaiChungTu.java)); vi phạm ⇒ 400 `_201` |
+| **V21** | Chứng từ phải **chưa ghi sổ** | luật riêng của luồng sửa — `status.choPhepSua()` ([TrangThaiChungTu.java](../../cell-app/src/main/java/vn/vtt/pmkt/cell/core/entity/TrangThaiChungTu.java)); vi phạm ⇒ 400 `_201` |
 
 ## 4. Luồng xử lý
 
-`ChungTuTemplate` luồng SUA ([:171](../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)) — **có hai bước mà luồng TAO không có**:
+`ChungTuTemplate` luồng SUA ([:171](../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java)) — **có hai bước mà luồng TAO không có**:
 
 | Bước base | Ý nghĩa ở màn này |
 |---|---|

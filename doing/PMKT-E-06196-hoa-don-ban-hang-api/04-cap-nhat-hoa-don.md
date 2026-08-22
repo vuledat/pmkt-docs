@@ -7,6 +7,7 @@
 | **Màn hình nguồn** | `SCR_HDBanHang_CapNhat.md` |
 | **Endpoint phụ trách** | **A7** `PUT /{id}` (nạp dữ liệu dùng **A6**, xem [03](03-xem-chi-tiet-hoa-don.md)) |
 | **File gốc** | [`00-ke-hoach-tong.md`](00-ke-hoach-tong.md) |
+| **Trạng thái** | ⬜ **CHƯA CÀI** — `PUT /{id}` hiện trả 400 `HOA_DON_BAN_HANG_CHUA_HO_TRO` (`HoaDonBanHangController.java:77-80`) |
 
 > Toàn bộ hợp đồng request, tính toán (§4) và validate (§5) **dùng lại nguyên** [`02-them-moi-hoa-don.md`](02-them-moi-hoa-don.md) — `SCR_HDBanHang_CapNhat.md:16-17,35` yêu cầu "áp dụng **tất cả** các quy tắc validate tại SCR_HDBanHang_ThemMoi". File này chỉ mô tả **phần khác biệt**.
 
@@ -19,7 +20,7 @@
 | F4-a | Dùng chung `LuuHoaDonBanHangRequest` với F2. | D4, F2-a |
 | F4-b | **Chặn cứng ở BE**: `PUT` trên HĐ `Đã phát hành` → **409**, không phải chỉ ẩn nút ở FE. Người dùng gọi thẳng API vẫn phải bị chặn. | `UC_HDBanHang_CapNhat.md:26,43` |
 | F4-c | Sửa dòng chi tiết = **thay toàn bộ tập dòng** (replace-all), không patch từng dòng. Dòng client không gửi lại → `orphanRemoval` xóa. | D3; `SCR_HDBanHang_CapNhat.md:22` "Cho phép thêm/sửa/xóa dòng" |
-| F4-d | **Hệ quả BR02** (gỡ liên kết khi sửa mã KH / mã hàng, tính lại `TrangThaiLapChungTu`) chạy **ở BE trong cùng transaction lưu**, không phải job nền. | `SCR_HDBanHang_CapNhat.md:47-50` |
+| F4-d | **Hệ quả BR02** (gỡ liên kết khi sửa mã KH / mã hàng, tính lại `TrangThaiLapChungTu`) chạy **ở BE trong cùng transaction lưu**, không phải job nền. | `SCR_HDBanHang_CapNhat.md:47-50` (không đổi trong đợt sửa BA 2026-08-20) |
 | F4-e | Popup cảnh báo `_056` là **việc của FE**; BE chỉ cấp cờ `daLapChungTu` ở A6 và **không** đòi client gửi kèm "đã xác nhận". | `SCR_HDBanHang_CapNhat.md:42-45` — cảnh báo hiện **lúc mở form**, tức trước khi có request `PUT` nào |
 | F4-f | `chungTuBanId` và `loaiNghiepVu` của HĐ **lập kèm** (`chungTuBanId ≠ null`) **không cho sửa**. | `SCR_HDBanHang_ThemMoi.md:21`; chờ [00 §12-Q9](00-ke-hoach-tong.md) |
 
@@ -49,7 +50,7 @@
 
 ```jsonc
 {
-  "data": { "id": "7f1c…", "phienBan": 4, "trangThaiLapChungTu": "Đã lập 1 phần", "…": "…" },
+  "data": { "id": "7f1c…", "phienBan": 4, "trangThaiLapChungTu": "DA_LAP_MOT_PHAN", "…": "…" },
   "message": "Cập nhật Hóa đơn thành công",
   "messageId": "MSG_PMKT-E-06196_002"
 }
@@ -61,7 +62,7 @@
 |---|---|---|---|---|
 | HĐ không tồn tại / đã xóa mềm | 404 | `NOT_FOUND` | `MSG_PMKT-E-06196_012` | `UC:42` |
 | HĐ **đã phát hành** | 409 | `ALREADY_ISSUED` | ⚠️ **chưa có mã** — dùng `MSG_PMKT-E-06196_010` ("Hóa đơn đã phát hành, không được xóa")? Xem §9-Q | `UC:26,43` |
-| Token `ngayCapNhat` lệch | 409 | `STALE_DATA` | — | mẫu `BanHangSupport.java:127-128` |
+| Token `ngayCapNhat` lệch | 409 | `STALE_DATA` | — | mẫu `chung_tu_ban_hang/…/business/BanHangSupport.java` |
 | Sửa `loaiNghiepVu`/`chungTuBanId` của HĐ lập kèm | 409 | `IMMUTABLE_FIELD` | — (`details[]`) | F4-f, chờ Q9 |
 | Sửa `soLuong` xuống dưới số đã lập chứng từ | 409 | `EXCEEDS_REMAINING_QUANTITY` | `MSG_PMKT-E-06196_019` | §4.3 |
 | (còn lại: `_006`, `_007`, `_009`, `_015`…`_018`, `_020`, `_011`, `_013`) | | | | như A5 |
@@ -110,7 +111,7 @@ Client gửi lên các field này → **bỏ qua im lặng** (không ném 400), 
 
 ### 4.2 Hệ quả BR02 — sửa HĐ đã lập chứng từ (F4-d)
 
-Nguyên văn `SCR_HDBanHang_CapNhat.md:47-50`:
+Nguyên văn `SCR_HDBanHang_CapNhat.md:47-50` (không đổi trong đợt sửa BA 2026-08-20):
 
 | Thao tác của người dùng | BA nói | BE làm gì |
 |---|---|---|
@@ -172,11 +173,11 @@ Toàn bộ V01…V17 của [02 §5](02-them-moi-hoa-don.md), **cộng thêm**:
 | # | Luật | Thời điểm | messageId | Nguồn BA |
 |---|---|---|---|---|
 | V18 | Bản ghi tồn tại, chưa xóa mềm, thuộc tenant | bước 3.1 | 404 `_012` | `UC:42` |
-| V19 | `trangThaiPhatHanh == "Chưa phát hành"` | bước 3.3 | 409 — mã chờ §9-Q | `UC:26,43`; `SCR_…ThemMoi.md:97` |
-| V20 | Token `ngayCapNhat` khớp `ngay_cap_nhat` hiện tại (so bằng **epoch-milli**, không `equals` — JSON round-trip cắt nano) | bước 3.2 | 409 `STALE_DATA` | mẫu `BanHangSupport.java:117-129` |
+| V19 | `trangThaiPhatHanhHoaDon == CHUA_PHAT_HANH` | bước 3.3 | 409 — mã chờ §9-Q | `UC:26,43`; `SCR_…ThemMoi.md:97` |
+| V20 | Token `ngayCapNhat` khớp `ngay_cap_nhat` hiện tại (so bằng **epoch-milli**, không `equals` — JSON round-trip cắt nano) | bước 3.2 | 409 `STALE_DATA` | mẫu `chung_tu_ban_hang/…/business/BanHangSupport.java` (`kiemTraLock`) |
 | V21 | HĐ lập kèm (`chungTuBanId ≠ null`) không đổi `loaiNghiepVu`, `chungTuBanId` | bước 3.4 | 409 `IMMUTABLE_FIELD` | F4-f, Q9 |
 | V22 | `chiTiet[].id` client gửi phải **thuộc chính HĐ này** (chống ghép nhầm dòng của HĐ khác) | bước 3.9 | 400 `INVALID_VALUE` | bảo mật, không có trong BA |
-| V23 | `soLuong` mới của một dòng **≥** số lượng đã lập chứng từ từ dòng đó | bước 3.10 | 409 `_019` | suy từ BR23 §9 (`SCR_CTBH_ThemMoi.md:1418`) — "`SoLuong_moi ≥ MAX(...)`" |
+| V23 | `soLuong` mới của một dòng **≥** số lượng đã lập chứng từ từ dòng đó | bước 3.10 | 409 `_019` | suy từ BR23 §9 (`SCR_CTBH_ThemMoi.md:1549`) — "`SoLuong_moi ≥ MAX(...)`" |
 | **V04′** | Check trùng **loại trừ chính nó**: `AND id <> :id` | bước 3.8 | 409 `_006` | ★ ở §4 |
 
 **V23 là suy luận từ BR của CTBH**, không có trong tài liệu HĐ. Nếu không có luật này, người dùng sửa `soLuong` từ 100 → 10 trong khi đã lập chứng từ cho 60 đơn vị, hệ thống rơi vào trạng thái "đã lập 60/10" — vô nghĩa. Nêu ở §9-Q.
@@ -258,5 +259,5 @@ Toàn bộ V01…V17 của [02 §5](02-them-moi-hoa-don.md), **cộng thêm**:
 | # | Vấn đề | Bằng chứng | Xử lý tạm |
 |---|---|---|---|
 | **Q-F4-1** | Sửa HĐ **đã phát hành** dùng **mã message nào**? `6.messages.md` chỉ có `_010` = "Hóa đơn đã phát hành, **không được xóa**" — nói về xóa, không nói về sửa. | `6.messages.md:29` vs `UC_HDBanHang_CapNhat.md:26,43` | Trả 409 `ALREADY_ISSUED` với `messageId = _010` và message tiếng Việt "Hóa đơn đã phát hành, không được sửa". **Cần BA cấp mã riêng** — không bịa `_0xx` mới. |
-| **Q-F4-2** | Có được sửa `soLuong` xuống dưới số đã lập chứng từ không (V23)? Tài liệu HĐ **không nói**; luật này suy từ BR23 §9 của **CTBH**. | `SCR_CTBH_ThemMoi.md:1418` | Chặn (409 `_019`). Nếu BA muốn cho phép → phải định nghĩa lại `TrangThaiLapChungTu` khi `đã lập > tổng`. |
+| **Q-F4-2** | Có được sửa `soLuong` xuống dưới số đã lập chứng từ không (V23)? Tài liệu HĐ **không nói**; luật này suy từ BR23 §9 của **CTBH**. | `SCR_CTBH_ThemMoi.md:1549` | Chặn (409 `_019`). Nếu BA muốn cho phép → phải định nghĩa lại `TrangThaiLapChungTu` khi `đã lập > tổng`. |
 | **Q-F4-3** | Sửa HĐ làm mất liên kết → trạng thái CTBH bên kia có được cập nhật ngay không? | `SCR_HDBanHang_CapNhat.md:48` yêu cầu "chuyển về trạng thái chưa lập hóa đơn"; ranh giới Modulith không cho HĐ ghi vào `chung_tu_ban_hang` | Lần này **không** cập nhật (§4.2). Cần ticket riêng cho `chung_tu_ban_hang`. |

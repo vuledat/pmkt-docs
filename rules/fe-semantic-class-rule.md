@@ -31,7 +31,7 @@ Ví dụ:
 <div class="ban-hang">
   <div class="chung-tu-ban-hang">
     <div class="create">
-      <input class="soChungTu">
+      <input class="so-chung-tu">
     </div>
   </div>
 </div>
@@ -403,73 +403,7 @@ so-chung-tu     → semantic class
 
 ---
 
-## 11. Kết hợp với data-testid
-
-`class` semantic và `data-testid` là hai cơ chế độc lập.
-
-`data-testid` dùng để định danh semantic tĩnh cho automation test.
-
-Ví dụ:
-
-```html
-<div
-  class="ban-hang"
-  data-testid="ban-hang.chung-tu-ban-hang"
->
-  <div
-    class="chung-tu-ban-hang"
-  >
-    <div
-      class="create"
-      data-testid="ban-hang.chung-tu-ban-hang.editor.action.create"
-    >
-      <input
-        class="so-chung-tu"
-        data-testid="ban-hang.chung-tu-ban-hang.editor.field.so-chung-tu"
-      >
-    </div>
-  </div>
-</div>
-```
-
-Không được hiểu rằng:
-
-```text
-data-testid → tự động generate class
-```
-
-hoặc:
-
-```text
-class → tự động generate data-testid
-```
-
-FE phải sinh cả hai theo quy tắc tương ứng nếu feature yêu cầu.
-
----
-
-## 12. Quan hệ giữa class và data-testid
-
-Có thể xem mapping semantic như sau:
-
-```text
-Business semantic
-       │
-       ├── DOM class hierarchy
-       │     ├── ban-hang
-       │     ├── chung-tu-ban-hang
-       │     ├── create
-       │     └── so-chung-tu
-       │
-       └── data-testid
-             └── ban-hang.chung-tu-ban-hang.editor.field.so-chung-tu
-```
-
-Hai cơ chế phải cùng xuất phát từ một semantic nghiệp vụ, nhưng **không bắt buộc có cùng format tên**.
-
----
-
-## 13. Quy tắc cho component dùng chung
+## 11. Quy tắc cho component dùng chung
 
 Shared component không được tự ý quyết định business semantic.
 
@@ -512,7 +446,7 @@ component-xyz
 
 ---
 
-## 14. Độ ổn định
+## 12. Độ ổn định
 
 Semantic class MUST giữ nguyên khi chỉ thay đổi:
 
@@ -551,7 +485,7 @@ Semantic class không thay đổi.
 
 ---
 
-## 15. Không dùng các yếu tố sau để đặt semantic class
+## 13. Không dùng các yếu tố sau để đặt semantic class
 
 Không được đặt class dựa trên:
 
@@ -581,7 +515,7 @@ css-abc123
 
 ---
 
-## 16. Quy tắc mẫu chuẩn
+## 14. Quy tắc mẫu chuẩn
 
 ### Màn hình tạo chứng từ
 
@@ -641,7 +575,7 @@ ban-hang
 
 ---
 
-## 17. Acceptance Criteria
+## 15. Acceptance Criteria
 
 FE implementation được coi là đạt khi:
 
@@ -653,12 +587,11 @@ FE implementation được coi là đạt khi:
 6. Không sử dụng generated CSS class làm semantic locator.
 7. Semantic class không thay đổi khi thay đổi layout hoặc UI library nếu business semantic không đổi.
 8. Shared component không tự quyết định business semantic.
-9. `data-testid` và semantic class được quản lý độc lập.
-10. DOM thực tế phản ánh được hierarchy semantic của màn hình.
+9. DOM thực tế phản ánh được hierarchy semantic của màn hình.
 
 ---
 
-## 18. Ví dụ cuối cùng
+## 16. Ví dụ cuối cùng
 
 Input source:
 
@@ -681,33 +614,11 @@ FE phải sinh được DOM tương ứng:
 </div>
 ```
 
-Nếu có `data-testid`:
-
-```html
-<div class="ban-hang">
-  <div
-    class="chung-tu-ban-hang"
-    data-testid="ban-hang.chung-tu-ban-hang"
-  >
-    <div
-      class="create"
-      data-testid="ban-hang.chung-tu-ban-hang.editor.action.create"
-    >
-      <input
-        class="so-chung-tu"
-        data-testid="ban-hang.chung-tu-ban-hang.editor.field.so-chung-tu"
-      >
-    </div>
-  </div>
-</div>
-```
-
 **Nguyên tắc cốt lõi:**
 
 ```text
 DOM hierarchy = business semantic hierarchy
 
 class = semantic của node hiện tại
-
-data-testid = semantic locator độc lập cho automation
 ```
+</content>

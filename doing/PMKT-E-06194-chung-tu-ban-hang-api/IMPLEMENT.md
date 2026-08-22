@@ -131,3 +131,48 @@ Ba dòng của §5 phải đọc lại theo đó:
 Phát sinh mới chưa có trong §5: **G8** (lọc tài khoản còn ràng `TrangThai = ACTIVE`, trái BR16 bản
 08-17 → chặn lưu oan), **G11** (`V1003` đã bị chiếm, dùng `V1011`), **G12** (`client/…/model.ts` chưa
 commit).
+
+---
+
+## 8. Đợt code 2026-08-20 — nhóm "không chạm core"
+
+Chi tiết + lý do từng mục: **[plan §17.2b](00-ke-hoach-tong.md#172b-đã-code--2026-08-20)**.
+
+| File | Thay đổi |
+|---|---|
+| `DinhKhoanBanHang.java` | `STT_BUT_TOAN` cố định theo bảng BR20 mục 1; nạp `khoanMucChiPhiId`; `sttDongChiTiet` = `ThuTu` của dòng, có đường lùi khi `thuTu` trùng |
+| `ChungTuBanHangMapper.java` | `thuTu` client gửi lên phải phân biệt được từng dòng, trùng thì server đánh lại |
+| `TraCuuDanhMucRepository.java` | Bỏ `trang_thai` khỏi truy vấn tài khoản cấp cuối **và** khách hàng (BR16 mục 4 · BR01 mục 1, bản 08-17) |
+| `KiemTraBanHang.java` | Javadoc theo BR16 mục 4 mới — không còn kiểm "đang hoạt động" |
+| `GhiSoChungTuBanHang.java` | Viết lại `TODO-C7` (bản cũ mô tả sai nghĩa vụ) |
+| `QuyTacMoiBanHang2026Test.java` | +3 test: STT theo BR20, `STTDongChiTiet` + khoản mục chi phí, đường lùi khi `thuTu` trùng |
+
+**Cổng:** `cd cell-app && ./gradlew unitTest` → **BUILD SUCCESSFUL** (2m21s). Testcontainers không chạy (cấm Docker).
+
+### Không đụng core — đúng yêu cầu
+
+Không sửa file nào dưới `accounting_core/` hay `core/`. Ba chỗ từng nghĩ phải sửa kernel thì hoá ra
+kernel đã có sẵn hàm — `DinhKhoan.voiThuTu(...)` và `voiKhoanMucChiPhi(...)` — chỉ là module bán hàng
+chưa gọi.
+
+### Còn nợ — nguyên nhân nằm ngoài module
+
+| # | Việc | Vướng ở đâu |
+|---|---|---|
+| **G1 + G6** | Sinh `inv_phieu_xuat_kho` / `cash_phieu_thu` / `sal_hoa_don_ban_hang` khi Lưu, rồi thôi ghi hộ bút toán giá vốn + thu tiền | `kho/` có entity nhưng `create`/`ghiSo` đều `throw chuaHoTro`; `kho/` và `hoa_don_ban_hang/` chưa có `api/`; chưa có module `cash_phieu_thu` |
+| **G4** | 4 trường phân tích còn lại lên sổ cái | `DinhKhoan` thiếu tham số (core) **và** bảng chi tiết thiếu `doi_tuong_tap_hop_chi_phi_id` · `don_dat_hang_id` |
+| **G7 · G10** | Cột back-link của `inv_phieu_xuat_kho_chi_tiet`; ~10 cột `acc_so_cai` mà BR20 khai | Bảng của module khác |
+| **G9** | Hai cột nguyên tệ/quy đổi khi `TyGia = 1` | Câu hỏi cho BA |
+| **C4 / BR16** | Định khoản ngầm định | **Vừa mở khoá** — xem [plan §17.2d](00-ke-hoach-tong.md#172d-việc-vừa-được-mở-khoá--chưa-làm) |
+
+### Thay đổi trong cây làm việc KHÔNG phải của đợt này
+
+Phát hiện lúc sửa, ghi lại để khỏi lẫn vào diff của epic:
+
+- `ChungTuBanHangController.java` — gỡ ba override CRUD (kèm `thongBaoLuu` / `messageIdLuu`). Hệ quả:
+  thông báo lưu/sửa/xoá về mã chung `MSG_CORE_*`, mất mã riêng của epic và mất cả câu
+  "Ghi sổ chứng từ bán hàng thành công" khi bấm *Lưu và ghi sổ*. **Cần xác nhận là có chủ ý.**
+- `core/config/FlywayConfig.java` — bỏ comment dòng `ALTER ROLE pmkt_app WITH PASSWORD`.
+- `db/migration/V1032__tknd_va_cau_hinh_danh_so.sql` — sửa một migration **đã commit**. Vô hại lúc này
+  vì DB dev mới ở `V1031` (chưa chạy V1032), nhưng trái luật "không sửa migration đã merge" — nếu có
+  máy nào đã chạy rồi thì sẽ lệch checksum.

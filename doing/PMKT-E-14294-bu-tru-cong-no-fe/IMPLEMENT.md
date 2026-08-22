@@ -226,3 +226,69 @@ Kịch bản thử luồng đầy đủ:
 4. Nhập Số chứng từ → **Lưu** hoặc **Lưu và ghi sổ**.
 5. Đổi **Loại tiền** sang `USD` rồi lặp lại → xuất hiện cột Tỷ giá + 3 cột quy đổi mỗi bảng, tab Hạch toán có **dòng 2 "Xử lý chênh lệch tỷ giá"**, tab Chứng từ công nợ có cột **Chênh lệch tỷ giá**.
 6. Bỏ tick một dòng để thử ca chặn `MSG_..._007` (tổng hai bảng không bằng nhau).
+
+---
+
+## VÒNG 2 — 2026-08-21 · soát thay đổi & nối vào màn danh sách
+
+### Đã kiểm gì trước khi sửa
+
+| Nguồn | Kết luận |
+|---|---|
+| Tài liệu BA epic 14294 + `business_rules.md` | ✅ **KHÔNG đổi** (`git fetch` + `git diff HEAD origin/main` — 4 commit mới chỉ chạm `ldm-TaiSanCoDinh*.puml`) |
+| 7 file plan | ✅ Không ai sửa từ 2026-08-11 |
+| Code module | Đã commit (`f23dcff3`); sau đó chỉ có `66ce49f4` thêm `// @vitest-environment node` vào 5 file test thuần — **giữ nguyên**, chạy nhanh hơn hẳn |
+| Cổng nghiệm thu đầu vòng | typecheck **0 lỗi** ở module · test **56/56 PASS** |
+
+### Ba thay đổi xung quanh buộc phải cập nhật plan
+
+1. **`features/tongHop/phieuKeToanTongHop/` đã được dựng** (commit `32b8a6ca`) — màn danh sách Phiếu
+   KTTH mà plan ghi là "chưa tồn tại". Dựng trên engine `@domain-kit/chungTu`, quyền `PhieuKeToan.*`,
+   **đã biết `loaiPhieu = 'BU_TRU_CONG_NO'`**. ⇒ **gỡ chặn R1/Q1**.
+2. Leaf `tong-hop` trên sidebar **đã mở** (trỏ Khoá sổ) ⇒ R6 sai một nửa.
+3. BA đã xác nhận bỏ tab "Bỏ khoá sổ kỳ kế toán" (2026-08-13) — bằng chứng câu hỏi cho BA có được trả lời.
+
+Plan đã cập nhật: [00 §−1](00-ke-hoach-tong.md) (D11 · D12 · D13, đánh dấu D3/R1/R6/Q1 đã cũ) ·
+[01](01-danh-sach-chung-tu-bu-tru.md) (§8 đổi thành phương án đã chốt) · [04](04-popup-chung-tu-bu-tru-xem-chi-tiet.md) (thêm route + đường vào).
+
+### Code vòng 2
+
+| File | Việc |
+|---|---|
+| **`features/tongHop/_shared/constants/paths.ts`** ⭐ mới | Hằng đường dẫn cấp domain + `duongDanXemBuTruCongNo(id)`. Lý do tồn tại: hai leaf cần **cùng một** slug mà luật tầng niêm phong chúng với nhau |
+| **`features/tongHop/_shared/constants/loaiPhieu.ts`** ⭐ mới | Chuỗi wire `BU_TRU_CONG_NO` — hợp đồng BE mà cả hai leaf cùng dùng |
+| `buTruCongNo/constants/paths.ts` | Lấy slug từ `_shared`; thêm `xemChiTiet` (`:id`) và `danhSach` (đích quay về) |
+| `buTruCongNo/constants/constants.ts` | `LOAI_NGHIEP_VU_BU_TRU` nay **tái xuất** từ `_shared`, bỏ bản sao chuỗi |
+| `buTruCongNo/pages/BuTruCongNoPage.tsx` | Phục vụ **hai** route: không `:id` ⇒ popup thiết lập; có `:id` ⇒ popup chứng từ `mode='view'`. **Sửa lỗi thật**: `navigate(-1)` → về danh sách Phiếu KTTH (D13) |
+| `features/tongHop/routes.tsx` | Thêm route `/tong-hop/bu-tru-cong-no/:id`, gác bằng `PhieuKeToan.View.Detail` (khác route tạo mới) |
+| `phieuKeToanTongHop/hooks/usePhieuKttHPage.ts` | **Diff đúng một hàm**: `moForm(row)` → dòng `BU_TRU_CONG_NO` điều hướng sang route xem chi tiết; loại khác giữ nguyên toast |
+| `buTruCongNo/test/dinhTuyen.test.ts` ⭐ mới | 5 test ghim **hằng dùng chung** — chỗ trượt im lặng nguy hiểm nhất |
+| `buTruCongNo/test/buTruCongNoPage.route.test.tsx` ⭐ mới | 2 test render: `:id` quyết định mở popup nào |
+
+### Vì sao nối bằng URL chứ không import
+
+SSOT luật tầng ghi rõ *"sibling leaves stay sealed"* (`eslint.boundaries.js:89-100`): `leaf` chỉ với
+được tầng dưới, `_shared` của **chính domain mình**, và `_shared` của chính mình. Nên
+`phieuKeToanTongHop` **không được** import popup của `buTruCongNo`.
+
+Cân nhắc và loại phương án "chuyển popup xuống `_shared/`": nó sẽ moi rỗng cả leaf. Chỉ đẩy xuống
+`_shared` **hai hằng** — slug và chuỗi wire — rồi nối bằng điều hướng URL. `_shared/` vẫn mỏng đúng
+tinh thần, và hợp lệ vì domain đã có **3 module thật**.
+
+### Cổng nghiệm thu vòng 2
+
+| Lệnh | Kết quả | Của tôi |
+|---|---|---|
+| `typecheck` | **184 lỗi** nền (giảm từ 193 nhờ việc khác) | **0** |
+| `lint` | 29 lỗi + 14 warning nền (tăng do việc đang dở của module khác) | **0** |
+| `lint:boundaries` | 79; **3 vi phạm thật**: 2 `axios` trong `legacy` (nợ nền) + 1 `leaf → test` ở `danhMucChungTu` (module người khác) | **0** — `leaf → _shared` đúng luật |
+| test `src/features/tongHop` | **20 file · 221 test PASS** (module: 56 → **63**) | ✅ |
+| `vite build` | ✅ sinh `dist/assets/buTruCongNo-*.js` (54,75 kB) + `.css` | ✅ |
+
+### Còn treo sau vòng 2
+
+- **Q2 — luồng TẠO MỚI vẫn chỉ deep-link.** Xem chi tiết nay bấm được từ danh sách, nhưng BA bắt tạo
+  mới đi từ **Bán hàng / Mua hàng → Bù trừ công nợ**; sidebar vẫn 2 cấp, và `SCR_BTCN_DanhSach.md:24`
+  **cấm** tạo chứng từ bù trừ từ nút "Thêm mới" của danh sách.
+- **Q11** — "Lưu và ghi sổ" nguyên tử hay 2 pha; chặn khi nối BE thật.
+- **BE vẫn trắng** — `api/mock.ts` còn nguyên là nợ.
