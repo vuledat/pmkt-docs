@@ -10,7 +10,7 @@
 | Use case | PMKT-U-14688 (danh sách) · U-14690 (thêm mới) · U-14691 (xem chi tiết) · U-14692 (xóa) · U-14693 (ghi sổ / bỏ ghi) |
 | Màn hình | `SCR_BTCN_DanhSach` · `SCR_BTCN_BuTru` · `SCR_BTCN_ChungTu_ThemMoi` · `SCR_BTCN_ChungTu_XemChiTiet` · `SCR_BTCN_PopupXacNhanXoa` |
 | Tài liệu nguồn | `pmkt-docs/ba/PMKT-E-14294_BuTruCongNo/` + `pmkt-docs/ba/Common/business_rules.md` + `pmkt-docs/ba/Common/TaiLieuMappingSoCai.md` + `pmkt-docs/ba/Common/ldm/ldm-KTTH.puml` |
-| Module BE | `cell-app/src/main/java/vn/dopai/pmkt/cell/ke_toan_tong_hop/` — **module cấp 1 MỚI**, tiền tố bảng `ktth_` (xem D1) |
+| Module BE | `cell-app/src/main/java/vn/vtt/pmkt/cell/ke_toan_tong_hop/` — **module cấp 1 MỚI**, tiền tố bảng `ktth_` (xem D1) |
 | Bảng DB | `ktth_phieu_ke_toan_tong_hop`, `ktth_chi_tiet_phieu_ktth_hach_toan`, `ktth_chung_tu_lien_quan` — **đã có sẵn từ V202, đang rỗng, phải vá schema**; `ktth_bu_tru_cong_no`, `ktth_chi_tiet_bu_tru_cong_no_chung_tu` — **tạo mới** |
 | Mã chức năng | `BuTruCongNo` (`common/constant/MaChucNang.java:366`) · `PhieuKeToan` (`MaChucNang.java:354`) — **quyền đã seed đủ**, xem §10 |
 | Base path | `/api/ke-toan-tong-hop/bu-tru-cong-no` và `/api/ke-toan-tong-hop/phieu-ke-toan` |
@@ -82,7 +82,7 @@
 cd cell-app && grep -rln "BuTru\|buTru" src/main/java | grep -v master_data
 ```
 ```
-src/main/java/vn/dopai/pmkt/cell/common/constant/MaChucNang.java
+src/main/java/vn/vtt/pmkt/cell/common/constant/MaChucNang.java
 ```
 
 ```bash
@@ -152,7 +152,7 @@ V348__chung_tu_chuan_cot_cb_cst_cptt_ktth.sql   V351__…   V357__…
 | **Dòng tổng toàn cục** cho màn danh sách (BR31) | `PageResponse.summary` — đã có sẵn slot, **không phải sửa `core`** | `core/response/PageResponse.java:20,31-36` |
 | Guard "còn liên kết không" cho luồng xoá | `QuanHeChungTuApi.coLienKet` | `quan_he_chung_tu/api/QuanHeChungTuApi.java:69` |
 | Token optimistic-lock cho `DELETE /{id}` | `DeleteRequest(Instant updatedAt)` — so với `ngayCapNhat`, lệch → 409 `STALE_DATA` | `core/request/DeleteRequest.java:17`, `core/controller/BaseCrudController.java:159-166` |
-| **Bắt lỗi map entity ⇄ cột mà không cần DB** | `JpaMetamodelArchTest` — dựng metamodel Hibernate + `validate()`, chạy trong làn `unitTest` | `src/test/java/vn/dopai/pmkt/cell/arch/JpaMetamodelArchTest.java:25-48` |
+| **Bắt lỗi map entity ⇄ cột mà không cần DB** | `JpaMetamodelArchTest` — dựng metamodel Hibernate + `validate()`, chạy trong làn `unitTest` | `src/test/java/vn/vtt/pmkt/cell/arch/JpaMetamodelArchTest.java:25-48` |
 
 **Kết luận: không viết lại bất kỳ thứ nào ở bảng trên.** Phần phải viết mới là: entity/repository của 5 bảng `ktth_*`, thuật toán phân bổ BR02, bộ dựng định khoản bù trừ + chênh lệch tỷ giá, SPI `ChungTuCongNoPort`, và guard `BuTruCongNoApi`.
 
@@ -168,7 +168,7 @@ V348__chung_tu_chuan_cot_cb_cst_cptt_ktth.sql   V351__…   V357__…
 | **Đ4** | "`soHoaDon` — cột chưa xác định trên `sal_chung_tu_ban_hang`" | **Cả hai bảng chứng từ đều KHÔNG có cột `so_hoa_don`.** Nó là giá trị **dẫn xuất** từ chứng từ hoá đơn: mua hàng đã có `@Formula` gom từ `pur_hoa_don_mua` (`chung_tu_mua_hang/internal/model/CongThucSql.java:145-156`); bán hàng phải gom tương tự từ `sal_hoa_don_ban_hang` (`V77:48,130,134`) | 02 §4, 08 §3.3 |
 | **Đ5** | "Cờ *có theo dõi khách hàng/NCC* trên `mst_he_thong_tai_khoan` chưa xác minh" | **Có**: `la_tk_cong_no boolean` và `doi_tuong_lien_quan varchar(20)` (`V1__baseline.sql`, khối `CREATE TABLE public.mst_he_thong_tai_khoan`), cùng `tk_cha_id`, `cap`, `cho_phep_hach_toan`, `trang_thai = 'ACTIVE'` | 02 §2.1, §5 |
 | **Đ6** | "Cờ *vừa là KH vừa là NCC* — cần BA xác nhận cách kiểm" | **Có cột thật**: `mst_doi_tuong.la_khach_hang` + `.la_nha_cung_cap` (`V1__baseline.sql`, khối `CREATE TABLE public.mst_doi_tuong`). Đối tượng còn có **TK công nợ mặc định riêng** `tk_cong_no_phai_thu_id` / `tk_cong_no_phai_tra_id` ⇒ phát sinh **Q16** | 02 §5 V4 |
-| **Đ7** | Trích `SchemaConventionTest` như một test đang chạy | **Không tồn tại file test nào tên đó** (`find src/test -name "*Convention*"` rỗng). Nó chỉ là quy ước nêu trong comment migration (vd `V202:236`). Bộ arch test thật: `HandlerAuthorizationArchTest`, `JpaMetamodelArchTest`, `ProxyArchTest`, `ProxyModularityTest` (`src/test/java/vn/dopai/pmkt/cell/arch/`) | 09 §4, §9 |
+| **Đ7** | Trích `SchemaConventionTest` như một test đang chạy | **Không tồn tại file test nào tên đó** (`find src/test -name "*Convention*"` rỗng). Nó chỉ là quy ước nêu trong comment migration (vd `V202:236`). Bộ arch test thật: `HandlerAuthorizationArchTest`, `JpaMetamodelArchTest`, `ProxyArchTest`, `ProxyModularityTest` (`src/test/java/vn/vtt/pmkt/cell/arch/`) | 09 §4, §9 |
 | **Đ8** | R9 "`ddl-auto=none` ⇒ sai tên cột chỉ vỡ khi mở màn hình" | Vẫn đúng về nguyên tắc, **nhưng đã có lưới an toàn**: `JpaMetamodelArchTest` dựng metamodel + `Metadata.validate()` không cần DB, gắn `@Tag("unit")` (`JpaMetamodelArchTest.java:25-48`). Javadoc kể đúng tiền lệ 48 entity chết lúc boot. ⇒ R9 hạ từ **Trung bình** xuống **Thấp** | 00 §9 R9, 01, 04, 09 |
 
 ---
@@ -421,7 +421,7 @@ Số hiệu lớn nhất hiện tại **V357** ⇒ file mới bắt đầu từ 
 | **R6** | **Số dư chứng từ gốc đổi giữa lúc Lưu và lúc Ghi sổ** (`MSG_..._018`) | Trung bình | Ghi sổ khoá chứng từ bù trừ qua `ChungTuTemplate.khoaChungTu` (`ChungTuTemplate.java:376-378`), rồi `ChungTuCongNoPort.giamSoConNo` phải chạy `SELECT … FOR UPDATE` trên chứng từ gốc **trước** khi trừ — cùng khuôn `QuanHeChungTuApi` mô tả ở `QuanHeChungTuApi.java:25-33`. Chi tiết [06 §7](06-ghi-so-bo-ghi-so.md) |
 | **R7** | **Hai cột trạng thái chồng nhau** trên `ktth_phieu_ke_toan_tong_hop`: `trang_thai` (`'Chưa ghi sổ'`/`'Đã ghi sổ'`, `V202:52-53`) và `status` (`NHAP…DA_GHI_SO`, `V348:75,100-104`) | Trung bình | Chốt ở [09 §2](09-thiet-ke-db.md): giữ `status` (BaseChungTuEntity map nó), backfill từ `trang_thai`, deprecate `trang_thai` ở migration **sau** khi E-09980 cũng chuyển. Không DROP trong cùng migration với việc backfill |
 | **R8** | **`ngay_hach_toan` là `timestamptz`** ở `ktth_phieu_ke_toan_tong_hop` (`V202:47`) trong khi `BaseChungTuEntity.java:65-66` map `LocalDate`. `V348:74` có `ADD COLUMN IF NOT EXISTS ngay_hach_toan date` nhưng cột đã tồn tại ⇒ **no-op** | Trung bình | `ALTER … TYPE date USING ngay_hach_toan::date` ở V358. Bảng đang rỗng (chưa module nào ghi) nên an toàn — kiểm bằng `SELECT count(*)` trước, xem [09 §6](09-thiet-ke-db.md) |
-| **R9** | **`ddl-auto=none`** ⇒ Hibernate không đối chiếu cột lúc khởi động; sai tên cột thì app vẫn boot, test vẫn xanh, chỉ vỡ khi người dùng mở màn hình (đúng ca đã xảy ra, ghi ở `V351:11-16`) | ~~Trung bình~~ → **Thấp** | **Đã có lưới an toàn sẵn** (§2.4-Đ8): `JpaMetamodelArchTest` dựng metamodel Hibernate của **toàn bộ** entity rồi chạy `Metadata.validate()` — không cần DB, gắn `@Tag("unit")` (`src/test/java/vn/dopai/pmkt/cell/arch/JpaMetamodelArchTest.java:25-48`). Nó bắt được lỗi khai trùng cột / lệch kiểu. **Vẫn bổ sung** một integration test đọc/ghi thật mỗi entity mới, vì metamodel không đối chiếu được **tên cột với schema thật** |
+| **R9** | **`ddl-auto=none`** ⇒ Hibernate không đối chiếu cột lúc khởi động; sai tên cột thì app vẫn boot, test vẫn xanh, chỉ vỡ khi người dùng mở màn hình (đúng ca đã xảy ra, ghi ở `V351:11-16`) | ~~Trung bình~~ → **Thấp** | **Đã có lưới an toàn sẵn** (§2.4-Đ8): `JpaMetamodelArchTest` dựng metamodel Hibernate của **toàn bộ** entity rồi chạy `Metadata.validate()` — không cần DB, gắn `@Tag("unit")` (`src/test/java/vn/vtt/pmkt/cell/arch/JpaMetamodelArchTest.java:25-48`). Nó bắt được lỗi khai trùng cột / lệch kiểu. **Vẫn bổ sung** một integration test đọc/ghi thật mỗi entity mới, vì metamodel không đối chiếu được **tên cột với schema thật** |
 | **R10** | **Không có Docker trên máy dev** ⇒ `./gradlew build` đỏ ở ~25 test Testcontainers | Thấp | Dùng `./gradlew unitTest` làm cổng xanh và **nói rõ cho user** đã đổi cổng (`cell-app/CLAUDE.md:162-165`) |
 | **R11** | **Xung đột merge với PMKT-E-09980** ở sub-module `phieu/` | Thấp | Đợt này `phieu/` **chỉ đọc** (không luồng ghi nào) ⇒ E-09980 thêm chứ không sửa. Trao đổi trước với chủ epic đó |
 
@@ -579,4 +579,4 @@ Hằng đặt ở `bu_tru_cong_no/internal/model/MaMessageBuTruCongNo.java` (SCR
 - `pmkt-docs/ba/Common/TaiLieuMappingSoCongNo.md:129-146, 662-686` — nghiệp vụ bù trừ trên sổ công nợ (**Q4**)
 - `pmkt-docs/ba/Common/ldm/ldm-KTTH.puml:9-24, 30-45, 133-142, 147-156, 164-188`
 - `docs/be-khung-kien-truc-chuan.md`, `docs/conventions.md`, `docs/_bieu-mau-plan-api.md`, `CLAUDE.md`, `cell-app/CLAUDE.md`
-- Mẫu code tham khảo: `cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_ban_hang/` (module chứng từ đầy đủ nhất), `…/accounting_core/`, `…/quan_he_chung_tu/`
+- Mẫu code tham khảo: `cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_ban_hang/` (module chứng từ đầy đủ nhất), `…/accounting_core/`, `…/quan_he_chung_tu/`

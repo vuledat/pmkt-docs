@@ -1,0 +1,735 @@
+<title>Luồng Cấu hình giá thành</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-05897 · Phân hệ Tính giá thành</p>
+  <h1>Luồng xử lý Cấu hình giá thành</h1>
+  <p>Toàn bộ luồng của epic Cấu hình giá thành theo yếu tố chi phí — từ danh sách 3 yếu tố cố định, xem chi tiết readonly, thiết lập cấu hình kèm grid tài khoản tập hợp chi phí, đồng bộ tài khoản kết chuyển dùng chung, tới khôi phục cài đặt gốc. Mục cuối chỉ ra bốn trường cấu hình này chi phối những bước nào của chuỗi tính giá thành.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 4 use case · 4 Activity Diagram · 4 màn hình · 2 ma trận ẩn/hiện</span>
+    <span><b>Entity gốc:</b> cost_cau_hinh_gia_thanh</span>
+    <span><b>Quyền:</b> GTTT.AllPermission</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Vòng đời bản ghi</a></li>
+    <li><a href="#s1"><span>01</span>Xem danh sách</a></li>
+    <li><a href="#s2"><span>02</span>Xem chi tiết</a></li>
+    <li><a href="#s3"><span>03</span>Thiết lập: nhập liệu</a></li>
+    <li><a href="#s4"><span>04</span>Grid thêm &amp; xóa dòng</a></li>
+    <li><a href="#s5"><span>05</span>Chuỗi validate khi Lưu</a></li>
+    <li><a href="#s6"><span>06</span>Đồng bộ TK kết chuyển</a></li>
+    <li><a href="#s7"><span>07</span>Đóng &amp; hủy thay đổi</a></li>
+    <li><a href="#s8"><span>08</span>Khôi phục cài đặt gốc</a></li>
+    <li><a href="#s9"><span>09</span>Tài khoản cấp cuối</a></li>
+    <li><a href="#s10"><span>10</span>Ảnh hưởng tới giá thành</a></li>
+    <li><a href="#s11"><span>11</span>Tra cứu &amp; khoảng trống</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Vòng đời một bản ghi cấu hình</h2>
+  <p class="lede">Cấu hình giá thành <strong>không phải chứng từ</strong>: không có trạng thái ghi sổ, không có nút Thêm mới, không có nút Xóa bản ghi. Ma trận CRUD của epic chỉ có <span class="f">R</span> và <span class="f">U</span> — bản ghi được hệ thống sinh sẵn khi onboarding tenant thành công <span class="chip c-br">BR3</span>, người dùng chỉ đọc và cập nhật.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S["<b>CHƯA SINH</b><br/>Tenant chưa onboarding<br/>hoặc chưa khai đủ hệ thống TK"]
+    A["<b>CÓ HIỆU LỰC</b><br/>3 yếu tố chi phí cố định<br/>mỗi yếu tố có n dòng tài khoản"]
+    B["<b>KHÔNG HỢP LỆ</b><br/>TK bị xóa hoặc ngừng<br/>không dùng cho nghiệp vụ sau"]
+    S -- "Onboarding xong · đã khai TK" --> A
+    A -- "Thiết lập lại · Khôi phục gốc" --> A
+    A -- "TK bị xóa hoặc ngừng — BR5" --> B
+    B -- "Khai lại TK cấp cuối còn dùng" --> A
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class B warn;
+</pre>
+    </div>
+    <figcaption><b>Không có nhánh xóa bản ghi.</b> Danh sách 3 yếu tố chi phí là cố định <span class="chip c-br">BR1</span>; thao tác Xóa duy nhất trong epic là xóa <em>dòng tài khoản</em> bên trong grid của một yếu tố, không phải xóa yếu tố. Trạng thái <em>Không hợp lệ</em> là hệ quả dữ liệu (tài khoản tham chiếu chết), không phải một cột trạng thái trên entity.</figcaption>
+  </figure>
+
+  <h3>Bốn trường cấu hình, ba phạm vi ràng buộc khác nhau</h3>
+  <p>Sai lầm hay gặp nhất khi code màn này là gán nhầm phạm vi: người dùng đang mở màn hình của <em>một</em> yếu tố chi phí, nhưng có trường khi lưu lại ghi đè lên <em>cả ba</em> yếu tố.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Field</th><th>Phạm vi giá trị duy nhất</th><th>Nơi khai trên UI</th><th>Căn cứ</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">TaiKhoanKetChuyenId</td><td>Toàn bộ <span class="f">(TenantId, ChiNhanhId, PhuongPhapTinh)</span> — chung cho cả 3 yếu tố</td><td>Thông tin chung</td><td><span class="chip c-br">BR7.1</span></td></tr>
+      <tr><td class="mono">ChiPhiDua1Lan</td><td>Trong phạm vi <span class="f">(PhuongPhapTinh, LoaiYeuTo)</span> — mỗi yếu tố một giá trị</td><td>Thông tin chung, chỉ hiện ở NVL</td><td><span class="chip c-br">BR6</span></td></tr>
+      <tr><td class="mono">TaiKhoanTapHopChiPhiId</td><td>Duy nhất theo <span class="f">(PhuongPhapTinh, TaiKhoanTapHopChiPhiId)</span> — không trùng kể cả khác yếu tố</td><td>Từng dòng Grid</td><td><span class="chip c-br">BR2</span></td></tr>
+      <tr><td class="mono">TieuThucPhanBo</td><td>Riêng từng dòng tài khoản</td><td>Từng dòng Grid</td><td><span class="chip c-br">BR1</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Đọc kỹ</span>
+    <p><strong><span class="f">ChiPhiDua1Lan</span> ẩn trên UI nhưng không ẩn ở entity.</strong> Radio chỉ hiển thị ở yếu tố NVL; Nhân công và SX chung vẫn có trường này với giá trị mặc định <span class="f">false</span>. Đây là ràng buộc UI, không phải ràng buộc logic — công thức tính giá thành đọc giá trị theo từng yếu tố một cách tổng quát, mở rộng sau chỉ cần mở radio, không sửa công thức <span class="chip c-br">BR6</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — UC_CauHinhGiaThanh_XemDanhSach</span>
+  <h2>Danh sách: ba yếu tố cố định, ba lối rẽ</h2>
+  <p class="lede">Màn <span class="f">SCR_CauHinhGiaThanh_DanhSach</span> chỉ là bảng điều phối. Lưới hiển thị cố định 03 yếu tố chi phí kèm mô tả, không cho thêm/xóa yếu tố, và mỗi dòng mở ra đúng ba chức năng.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Menu Tính giá thành → Cấu hình"]) --> B{"Có quyền truy cập?"}
+    B -- Không --> B1["Thông báo không có quyền<br/>MSG 202"]:::err
+    B -- Có --> C["Lưới cố định 3 yếu tố chi phí<br/>STT · Yếu tố · Mô tả yếu tố"]
+    C -.-> C1["Lỗi tải danh sách<br/>MSG 001"]:::err
+    C --> D1["Xem chi tiết<br/>cần quyền xem cấu hình"]
+    C --> D2["Thiết lập cấu hình<br/>cần quyền thiết lập"]
+    C --> D3["Khôi phục cài đặt gốc<br/>cần quyền chỉnh sửa"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Ba nút đều "luôn hiển thị", chỉ khác điều kiện enable.</b> Tài liệu màn hình gác enable bằng ba quyền khác nhau (xem · thiết lập · chỉnh sửa), trong khi use case chỉ nêu một quyền gộp <span class="f">GTTT.AllPermission</span> — xem khoảng trống ở <a href="#s11">mục 11</a>.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Yếu tố chi phí</th><th>Mô tả theo BR1</th><th class="mono">LoaiYeuTo</th></tr></thead>
+    <tbody>
+      <tr><td>Chi phí nguyên vật liệu</td><td>Chi phí của các loại nguyên vật liệu được sử dụng để sản xuất sản phẩm</td><td class="mono">NguyenVatLieu</td></tr>
+      <tr><td>Chi phí nhân công</td><td>Tiền lương, phụ cấp và các khoản trích theo lương của người lao động trực tiếp tham gia sản xuất</td><td class="mono">NhanCong</td></tr>
+      <tr><td>Chi phí sản xuất chung</td><td>Điện nước, khấu hao máy móc, chi phí quản lý phân xưởng, công cụ dụng cụ sản xuất</td><td class="mono">SanXuatChung</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — UC_CauHinhGiaThanh_XemChiTiet</span>
+  <h2>Xem chi tiết: toàn bộ màn hình là readonly</h2>
+  <p class="lede">Màn xem chi tiết lọc dữ liệu theo <span class="f">PhuongPhapTinh</span> và <span class="f">LoaiYeuTo</span> đang xem, rồi hiển thị Thông tin chung và Grid ở chế độ chỉ đọc. Đây là màn duy nhất trong epic có nhánh <em>không tìm thấy dữ liệu</em>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Xem chi tiết trên một yếu tố"]) --> B{"Có quyền truy cập?"}
+    B -- Không --> E1["MSG 202 — không có quyền"]:::err
+    B -- Có --> C["Load cost_cau_hinh_gia_thanh<br/>lọc PhuongPhapTinh + LoaiYeuTo"]
+    C --> D{"Tìm thấy dữ liệu?"}
+    D -- Không --> E2["MSG 003 — không tải được<br/>thông tin cấu hình"]:::err
+    D -- Có --> F["Thông tin chung readonly<br/>Phương pháp tính · Loại yếu tố<br/>TK kết chuyển · Chi phí đưa 1 lần"]
+    F --> G["Grid readonly<br/>TK tập hợp CP · Tiêu thức phân bổ"]
+    G --> H1["Đóng → quay về danh sách"]
+    G --> H2["Sửa → màn Thiết lập cấu hình"]
+    G --> H3["Khôi phục mặc định → popup"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Không có trục trạng thái nào tác động bộ nút.</b> Khác màn xem chi tiết chứng từ, ba nút Đóng / Sửa / Khôi phục mặc định luôn <span class="f">Show</span> — ma trận ẩn hiện của màn này là bảng tĩnh một cột, mọi trường đều <span class="f">Disable</span>.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Khu vực</th><th>Trường</th><th>Trạng thái</th><th>Khác biệt so với màn Thiết lập</th></tr></thead>
+    <tbody>
+      <tr><td>Thông tin chung</td><td>Phương pháp tính</td><td><span class="chip c-perm">Disable</span></td><td>Chỉ xuất hiện ở màn xem chi tiết</td></tr>
+      <tr><td>Thông tin chung</td><td>Loại yếu tố</td><td><span class="chip c-perm">Disable</span></td><td>Hai màn đều readonly</td></tr>
+      <tr><td>Thông tin chung</td><td>Tài khoản kết chuyển</td><td><span class="chip c-perm">Disable</span></td><td>Màn Thiết lập cho sửa</td></tr>
+      <tr><td>Thông tin chung</td><td>Chi phí đưa 1 lần</td><td><span class="chip c-perm">Disable</span></td><td>Luôn hiện dạng text; Nhân công và SX chung hiển thị dấu <span class="f">-</span>, không bị ẩn như màn Thiết lập</td></tr>
+      <tr><td>Grid</td><td>TK tập hợp chi phí · Tiêu thức phân bổ</td><td><span class="chip c-perm">Disable</span></td><td>Không có nút Thêm dòng / Xóa dòng</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — UC_CauHinhGiaThanh_SuaCauHinh</span>
+  <h2>Thiết lập cấu hình: chuỗi nhập liệu</h2>
+  <p class="lede">Màn thiết lập chia đôi: khu <strong>Thông tin chung</strong> áp cho cả yếu tố đang mở, khu <strong>Grid cấu hình</strong> khai từng dòng tài khoản tập hợp chi phí. Mọi thay đổi ở cả hai khu chỉ nằm trên màn hình cho tới khi bấm Lưu.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Thiết lập cấu hình"]) --> B{"Có quyền truy cập?"}
+    B -- Không --> B1["MSG 202 — không có quyền"]:::err
+    B -- Có --> C["Load cấu hình của yếu tố đang mở"]
+    C -.-> C1["Lỗi tải dữ liệu — MSG 001"]:::err
+    C --> D["Khu Thông tin chung"]
+    D --> D1["Loại yếu tố<br/>readonly, cố định theo yếu tố"]
+    D --> D2["TK kết chuyển — bắt buộc<br/>mặc định nhánh 154 cấp cuối"]
+    D --> D3["Chi phí đưa 1 lần — radio<br/>chỉ hiện ở yếu tố NVL"]
+    D1 --> E["Khu Grid cấu hình"]
+    D2 --> E
+    D3 --> E
+    E --> E1["TK tập hợp chi phí — bắt buộc<br/>cấp cuối và không trùng"]
+    E --> E2["Tiêu thức phân bổ — bắt buộc<br/>danh sách lọc theo loại yếu tố"]
+    E1 --> F(["Bấm Lưu hoặc Đóng"])
+    E2 --> F
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Loại yếu tố là trường readonly duy nhất của màn.</b> Nó chỉ để người dùng biết đang cấu hình cho yếu tố nào, và nó quyết định hai thứ khác: danh sách tiêu thức phân bổ chọn được, và việc radio Chi phí đưa 1 lần có hiện hay không.</figcaption>
+  </figure>
+
+  <h3>Phạm vi chọn Tiêu thức phân bổ theo loại yếu tố</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Loại yếu tố</th><th>Tiêu thức phân bổ chọn được</th></tr></thead>
+    <tbody>
+      <tr><td>Chi phí nguyên vật liệu</td><td>Sản lượng nhập kho · Hệ số · Tài khoản</td></tr>
+      <tr><td>Chi phí nhân công</td><td>Chi phí nguyên vật liệu · Sản lượng nhập kho · Hệ số · Tài khoản</td></tr>
+      <tr><td>Chi phí sản xuất chung</td><td>Chi phí nguyên vật liệu · Chi phí nguyên vật liệu và chi phí nhân công · Sản lượng nhập kho · Hệ số · Tài khoản</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ma trận ẩn/hiện theo trục Loại yếu tố</h3>
+  <p>Chỉ đúng <strong>một</strong> ô đổi giá trị giữa ba cột — phần còn lại giống hệt nhau, nên không cần mở thêm trục nào khác.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th>Chi phí NVL</th><th>Chi phí nhân công</th><th>Chi phí SX chung</th></tr></thead>
+    <tbody>
+      <tr><td>Loại yếu tố</td><td><span class="chip c-perm">Disable</span></td><td><span class="chip c-perm">Disable</span></td><td><span class="chip c-perm">Disable</span></td></tr>
+      <tr><td>Tài khoản kết chuyển</td><td><span class="chip c-ok">Show</span></td><td><span class="chip c-ok">Show</span></td><td><span class="chip c-ok">Show</span></td></tr>
+      <tr><td>Chi phí đưa 1 lần</td><td><span class="chip c-ok">Show</span></td><td><span class="chip c-msg">Hide</span></td><td><span class="chip c-msg">Hide</span></td></tr>
+      <tr><td>TK tập hợp chi phí · Tiêu thức phân bổ</td><td><span class="chip c-ok">Show</span></td><td><span class="chip c-ok">Show</span></td><td><span class="chip c-ok">Show</span></td></tr>
+      <tr><td>Thêm dòng · Xóa dòng · Lưu · Đóng</td><td><span class="chip c-ok">Show</span></td><td><span class="chip c-ok">Show</span></td><td><span class="chip c-ok">Show</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — Grid cấu hình</span>
+  <h2>Thêm dòng và xóa dòng trong Grid</h2>
+  <p class="lede">Grid cấu hình là bảng nhập liệu chi tiết con theo <span class="chip c-br">BR21</span>. Điểm khác quy chuẩn chung: epic này <strong>bật</strong> popup xác nhận trước khi xóa dòng, trong khi BR21 mặc định tắt.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Đang ở Grid cấu hình"]) --> B{"Thao tác trên Grid"}
+    B -- "Thêm dòng" --> C["Chèn dòng dưới dòng đang focus<br/>đánh lại STT toàn bảng"]
+    C --> D["Chọn TK tập hợp chi phí"]
+    D --> E{"Trùng TK trong cùng<br/>phương pháp tính?"}
+    E -- Trùng --> E1["MSG 008 — TK đã tồn tại"]:::err
+    E -- Không --> F["Chọn tiêu thức phân bổ"]
+    F -.-> F1["Ghi dòng thất bại — MSG 009"]:::err
+    B -- "Xóa dòng" --> G["Popup xác nhận — MSG 203"]
+    G -- Hủy --> G1["Giữ nguyên dòng"]
+    G -- "Xác nhận" --> H["Bỏ dòng khỏi Grid"]
+    H --> H1["MSG 104 — xóa thành công"]:::ok
+    H -.-> H2["Xóa thất bại — MSG 010"]:::err
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Kiểm trùng chạy ba lần.</b> <span class="chip c-br">BR2</span> yêu cầu check khi thêm dòng mới, khi sửa tài khoản tập hợp chi phí, và một lần nữa khi Lưu. Khóa duy nhất nghiệp vụ là cặp <span class="f">(PhuongPhapTinh, TaiKhoanTapHopChiPhiId)</span> — trùng ở yếu tố <em>khác</em> cũng bị chặn.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Tài liệu chưa thống nhất</span>
+    <p>Activity Diagram vẽ một bước <em>"Người dùng click Lưu dòng"</em> riêng và bộ message có <span class="chip c-msg">MSG 009</span> / <span class="chip c-msg">MSG 010</span> cho việc ghi và xóa từng dòng, gợi ý grid ghi xuống DB ngay theo dòng. Nhưng ngoại lệ 4 của use case và <span class="chip c-br">BR8</span> lại khẳng định bấm Đóng thì <em>hủy toàn bộ thay đổi chưa lưu, cả Thông tin chung lẫn Grid</em> — tức grid chỉ nằm trên client tới khi bấm Lưu. Hai cách hiểu loại trừ nhau; sơ đồ trên vẽ theo cách hiểu thứ hai và giữ MSG 009/010 ở nhánh lỗi kỹ thuật. Cần BA chốt lại.</p>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — BR7.5 · BR2 · BR4 · BR5</span>
+  <h2>Chuỗi validate khi bấm Lưu</h2>
+  <p class="lede">Hệ thống kiểm tra lần lượt các trường bắt buộc; vi phạm trường nào thì dừng ở đó, hiển thị message tương ứng và không cho lưu. Ba mã đầu tiên là các trường bắt buộc, hai kiểm tra cuối là ràng buộc dữ liệu tài khoản.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Bấm Lưu"]) --> V1{"TK tập hợp chi phí có đủ?"}
+    V1 -- Trống --> X1["MSG 004 — bắt buộc chọn<br/>tài khoản tập hợp chi phí"]:::err
+    V1 -- Đủ --> V2{"Tiêu thức phân bổ có đủ?"}
+    V2 -- Trống --> X2["MSG 005 — bắt buộc chọn<br/>tiêu thức phân bổ"]:::err
+    V2 -- Đủ --> V3{"TK kết chuyển có đủ?"}
+    V3 -- Trống --> X3["MSG 006 — bắt buộc chọn<br/>tài khoản kết chuyển"]:::err
+    V3 -- Đủ --> V4{"TK tập hợp CP trùng trong<br/>cùng phương pháp tính?"}
+    V4 -- Trùng --> X4["MSG 008 — theo BR2"]:::err
+    V4 -- Không --> V5{"TK đã chọn là cấp cuối<br/>và còn hoạt động?"}
+    V5 -- Không --> X5["Chặn lưu theo BR4 và BR5<br/>tài liệu chưa gắn mã MSG"]:::warn
+    V5 -- Đạt --> OK(["Sang chuỗi ghi dữ liệu"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hai nhánh cuối chưa có mã thông báo.</b> <span class="chip c-br">BR7.5</span> chỉ liệt kê mã cho ba trường bắt buộc; ràng buộc "phải là tài khoản cấp cuối" <span class="chip c-br">BR4</span> và "tài khoản còn hoạt động" <span class="chip c-br">BR5</span> được nêu ở câu kết nhưng không gắn <span class="f">MSG_*</span> nào trong bộ message của epic.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — BR7 Tài khoản kết chuyển dùng chung</span>
+  <h2>Chuỗi ghi dữ liệu và cú đồng bộ ba yếu tố</h2>
+  <p class="lede">Đây là cơ chế đặc thù nhất của epic. Người dùng chỉ mở màn hình của <em>một</em> yếu tố chi phí, nhưng nếu đổi Tài khoản kết chuyển thì lệnh Lưu ghi đè giá trị đó lên <em>toàn bộ</em> bản ghi cùng <span class="f">(TenantId, ChiNhanhId, PhuongPhapTinh)</span> trong cùng một giao dịch.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Validate đã đạt"]) --> B{"TK kết chuyển khác giá trị<br/>đang lưu trong entity?"}
+    B -- "Không đổi" --> C["Lưu bình thường<br/>không hiển thị popup"]
+    B -- "Có đổi" --> D["Popup xác nhận MSG 205<br/>liệt kê yếu tố bị đổi theo<br/>kèm giá trị cũ và giá trị mới"]
+    D -- "Hủy" --> D1["Đóng popup · không lưu gì<br/>kể cả thay đổi trên Grid"]:::warn
+    D -- "Đồng ý" --> E["Một giao dịch duy nhất<br/>ghi yếu tố đang mở và đồng bộ<br/>TaiKhoanKetChuyenId cho cả 3"]
+    C --> F{"Ghi dữ liệu thành công?"}
+    E --> F
+    F -- Có --> G["MSG 102 — cập nhật thành công"]:::ok
+    F -- Không --> H["MSG 007 — không lưu<br/>bất kỳ thay đổi nào"]:::err
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hủy ở popup là hủy tất cả, không phải hủy riêng việc đổi tài khoản.</b> Ngoại lệ 5 của use case ghi rõ: chọn Hủy trên popup MSG 205 thì không lưu bất kỳ thay đổi nào, kể cả các dòng vừa thêm/xóa trên Grid. Ghi thất bại cũng vậy — hoặc lưu hết, hoặc giữ nguyên dữ liệu cũ.</figcaption>
+  </figure>
+
+  <h3>Ví dụ đồng bộ theo BR7.3</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A["Trước khi lưu<br/>NVL 1541 · NC 1541 · SXC 1541"] --> B["Mở màn yếu tố Nhân công<br/>đổi TK kết chuyển thành 1542"]
+    B --> C["Popup MSG 205 liệt kê<br/>NVL · Nhân công · SX chung"]
+    C -- "Đồng ý" --> D["Sau khi lưu<br/>NVL 1542 · NC 1542 · SXC 1542"]:::ok
+    C -- "Hủy" --> E["Cả 3 yếu tố giữ nguyên 1541"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Lý do nghiệp vụ của ràng buộc này nằm ở khâu nhập kho.</b> Nếu mỗi yếu tố kết chuyển vào một tài khoản dở dang khác nhau, chi phí dở dang nằm rải nhiều đầu tài khoản và mỗi lần nhập kho thành phẩm phải tách thành nhiều dòng đối ứng — sai giá trị và số lượng trên từng dòng <span class="chip c-br">BR7.2</span>.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — BR8</span>
+  <h2>Đóng màn hình và hủy thay đổi chưa lưu</h2>
+  <p class="lede">Nút Đóng không phải nút quay lại vô hại: nó hủy toàn bộ thay đổi đang có trên màn hình. Popup xác nhận chỉ bật khi màn hình đang ở trạng thái <em>dirty</em>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Bấm Đóng"]) --> B{"Đã sửa trường hoặc đã<br/>thêm hay xóa dòng Grid?"}
+    B -- "Chưa thay đổi gì" --> C["Đóng thẳng, không hỏi"]
+    B -- "Đã có thay đổi" --> D["Popup xác nhận MSG 204"]
+    D -- "Xác nhận" --> E["Đóng màn · hủy mọi thay đổi<br/>dữ liệu như trước khi mở"]:::warn
+    D -- "Hủy" --> F["Ở lại màn hình và giữ<br/>các thay đổi đang nhập dở"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hai chữ "Hủy" ngược nghĩa nhau.</b> Trên popup MSG 204, "Hủy" nghĩa là ở lại màn hình và <em>giữ</em> thay đổi; trên popup MSG 205 ở mục 06, "Hủy" nghĩa là <em>vứt bỏ</em> mọi thay đổi. Cùng một nhãn, hai hậu quả trái ngược.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — UC_CauHinhGiaThanh_KhoiPhucCaiDatGoc</span>
+  <h2>Khôi phục cài đặt gốc: một cú bấm, ba yếu tố</h2>
+  <p class="lede">Người dùng có thể mở popup khôi phục từ menu dropdown trên màn danh sách hoặc từ màn xem chi tiết của một yếu tố. Dù mở từ đâu, phạm vi tác động vẫn là cả ba yếu tố chi phí.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Khôi phục cài đặt gốc"]) --> B{"Có quyền chỉnh sửa?"}
+    B -- Không --> B1["MSG 202 — không có quyền"]:::err
+    B -- Có --> C["Popup xác nhận MSG 201<br/>hiển thị giá trị mặc định sẽ áp"]
+    C -- "Hủy hoặc đóng popup" --> C1["Không thực hiện khôi phục"]
+    C -- "Xác nhận" --> D["Xác định TK kết chuyển mặc định<br/>nhánh 154 đệ quy xuống cấp cuối"]
+    D --> E["Duyệt lần lượt 3 yếu tố chi phí<br/>NVL · Nhân công · SX chung"]
+    E --> F["Gán bộ giá trị mặc định<br/>theo LoaiYeuTo của từng yếu tố"]
+    F --> G["Gán cùng một TK kết chuyển<br/>cho cả 3 yếu tố — BR2"]
+    G --> H{"Cập nhật entity thành công?"}
+    H -- Có --> I["MSG 101 — khôi phục thành công"]:::ok
+    H -- Không --> J["MSG 002 — giữ nguyên cấu hình cũ<br/>không khôi phục một phần"]:::err
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Popup không có trường nhập liệu và không tự ghi gì xuống LDM.</b> Nó chỉ hiển thị bộ giá trị mặc định sẽ áp; toàn bộ việc ghi diễn ra sau khi bấm Xác nhận, theo nguyên tắc toàn phần hoặc không gì cả.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Phạm vi dễ hiểu nhầm</span>
+    <p><strong>Khôi phục cài đặt gốc tác động lên cả ba yếu tố chi phí trong cùng một lần thực hiện</strong>, không chỉ yếu tố đang mở trên màn hình <span class="chip c-br">BR1</span>. Người dùng bấm nút từ dòng "Chi phí nhân công" vẫn làm cấu hình của NVL và SX chung bị reset theo.</p>
+  </div>
+
+  <h3>Bộ giá trị mặc định — chế độ kế toán TT200 / TT99</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Yếu tố</th><th class="mono">TK tập hợp</th><th>Tiêu thức phân bổ</th><th class="mono">ChiPhiDua1Lan</th><th class="mono">TK kết chuyển</th></tr></thead>
+    <tbody>
+      <tr><td>Chi phí nguyên vật liệu</td><td class="mono">621</td><td>Sản lượng nhập kho</td><td class="mono">true</td><td class="mono">154</td></tr>
+      <tr><td>Chi phí nhân công</td><td class="mono">622</td><td>Chi phí nguyên vật liệu</td><td class="mono">false</td><td class="mono">154</td></tr>
+      <tr><td>Chi phí sản xuất chung</td><td class="mono">627</td><td>Chi phí nguyên vật liệu</td><td class="mono">false</td><td class="mono">154</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Bốn số hiệu 621 · 622 · 627 · 154 chỉ là <strong>tài khoản gốc gợi ý</strong>. Giá trị thực sự ghi xuống entity luôn là tài khoản cấp cuối của nhánh đó — cách xác định ở mục kế tiếp.</p>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — BR4 · BR5 · BR7.4</span>
+  <h2>Đệ quy xuống tài khoản cấp cuối</h2>
+  <p class="lede">Cả tài khoản tập hợp chi phí lẫn tài khoản kết chuyển đều bắt buộc là tài khoản cấp cuối. Với giá trị mặc định, hệ thống tự đi xuống; với giá trị người dùng chọn tay, đây là điều kiện chặn lưu.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["TK gốc gợi ý 621 · 622 · 627 · 154"]) --> B{"TK này có tài khoản con?"}
+    B -- "Có" --> D["Lấy TK con đầu tiên<br/>sắp xếp tăng theo số hiệu"]
+    D --> B
+    B -- "Không" --> C["Đây là TK cấp cuối<br/>ghi giá trị này xuống entity"]:::ok
+    C --> E{"TK còn hoạt động?"}
+    E -- "Còn" --> F["Cấu hình hợp lệ"]:::ok
+    E -- "Bị xóa hoặc ngừng" --> G["Cấu hình không hợp lệ<br/>không dùng cho nghiệp vụ sau"]:::err
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Ví dụ theo BR7.4:</b> 154 có con 1541 và 1542 thì mặc định là 1541; nếu 1541 lại có con 15411 và 15412 thì mặc định tụt tiếp xuống 15411. Vòng lặp dừng khi gặp tài khoản không còn cấp con.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Vì sao phải cấp cuối</span>
+    <p>Khâu Nhập kho thành phẩm so khớp <strong>chính xác</strong> tài khoản Có trên phiếu với <span class="f">TaiKhoanKetChuyenId</span>, không mở rộng xuống tài khoản con. Cấu hình khai 1541 thì phiếu hạch toán Có 1541 mới được nhặt; Có 154 hay Có 15411 đều bị loại. Vì cả hai phía đều bắt cấp cuối nên hai bên không thể lệch cấp.</p>
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — Ảnh hưởng liên epic</span>
+  <h2>Bốn trường cấu hình chi phối những gì</h2>
+  <p class="lede">Cấu hình giá thành không tự sinh ra số liệu nào. Giá trị của nó là ở chỗ các bước phía sau đọc vào — sai một trường ở đây thì hỏng đúng một mắt xích của chuỗi giá thành, thường là hỏng lặng lẽ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    F1["TaiKhoanTapHopChiPhiId"] --> U1["Lọc chi phí trực tiếp từ Sổ cái<br/>Kỳ giá thành · Hạch toán chi phí"]
+    F2["TieuThucPhanBo"] --> U2["Tiêu thức mặc định khi<br/>phân bổ chi phí chung"]
+    F3["ChiPhiDua1Lan"] --> U3["Số lượng dở dang quy đổi<br/>khi tính giá thành"]
+    F4["TaiKhoanKetChuyenId"] --> U4["Điều kiện nhặt phiếu nhập kho<br/>và tài khoản Nợ khi kết chuyển"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Không trường nào là trang trí.</b> Mỗi trường có đúng một điểm tiêu thụ rõ ràng trong tài liệu BA của các epic phía sau; không có trường nào chỉ để hiển thị.</figcaption>
+  </figure>
+
+  <h3>Thứ tự đọc cấu hình dọc chuỗi một kỳ giá thành</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Cấu hình giá thành<br/>theo phương pháp tính của kỳ"] --> B["Hạch toán chi phí và Kỳ giá thành<br/>lọc Sổ cái theo TK tập hợp chi phí"]
+    B --> C["Phân bổ chi phí chung<br/>tiêu thức mặc định lấy từ cấu hình"]
+    C --> D["Nhập kho thành phẩm<br/>TK Có phải bằng TK kết chuyển"]
+    D --> E["Tính giá thành<br/>ChiPhiDua1Lan quyết định SL dở dang"]
+    E --> F["Kết chuyển chi phí<br/>Nợ TK kết chuyển và Có TK tập hợp"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Bút toán kết chuyển của cả kỳ đều ghi Nợ cùng một tài khoản.</b> Đó chính là hệ quả trực tiếp của ràng buộc dùng chung ở <span class="chip c-br">BR7</span>: các dòng bút toán chỉ khác nhau ở tài khoản Có.</figcaption>
+  </figure>
+
+  <h3>Điểm tiêu thụ cụ thể theo tài liệu BA</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Field</th><th>Bước đọc vào</th><th>Cách dùng</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">TaiKhoanTapHopChiPhiId</td><td>Kỳ tính giá thành · Hạch toán chi phí · Tính giá thành</td><td>Điều kiện <span class="f">SoCai.TKID</span> thuộc danh sách tài khoản đã khai, để nhặt chi phí trực tiếp trong kỳ</td></tr>
+      <tr><td class="mono">TieuThucPhanBo</td><td>Phân bổ chi phí</td><td>Giá trị mặc định của ô Tiêu thức phân bổ theo đúng tài khoản tập hợp chi phí tương ứng; người dùng vẫn chọn lại được</td></tr>
+      <tr><td class="mono">ChiPhiDua1Lan</td><td>Tính giá thành</td><td>Quyết định số lượng dở dang quy đổi: đưa 1 lần thì lấy nguyên số lượng dở dang cuối kỳ, đưa nhiều lần thì nhân tỷ lệ hoàn thành</td></tr>
+      <tr><td class="mono">TaiKhoanKetChuyenId</td><td>Nhập kho thành phẩm · Kết chuyển chi phí</td><td>Điều kiện bắt buộc để phiếu nhập kho thành phẩm được tính vào sản lượng; đồng thời là tài khoản Nợ của mọi bút toán kết chuyển</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Hỏng lặng lẽ</span>
+    <p>Nếu phiếu nhập kho thành phẩm hạch toán tài khoản Có <em>khác</em> tài khoản kết chuyển đã khai, phiếu đó không tham gia tính giá thành: giá thành đơn vị bị chia cho số lượng nhỏ hơn thực tế, và bước kết chuyển lệch giữa sản lượng với giá trị. Sửa được bằng hai đường — sửa hạch toán trên phiếu, hoặc sửa lại tài khoản kết chuyển ở chính màn hình này.</p>
+  </div>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — Tra cứu</span>
+  <h2>Điều kiện chặn, mã thông báo và khoảng trống tài liệu</h2>
+  <p class="lede">Bảng gom mọi nhánh dừng và nhánh xác nhận trong các sơ đồ trên. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-05897_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện</th><th class="mono">Mã</th><th>Loại</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="5">Lưu</td><td>Thiếu tài khoản tập hợp chi phí</td><td class="mono">004</td><td>Lỗi</td></tr>
+      <tr><td>Thiếu tiêu thức phân bổ</td><td class="mono">005</td><td>Lỗi</td></tr>
+      <tr><td>Thiếu tài khoản kết chuyển</td><td class="mono">006</td><td>Lỗi</td></tr>
+      <tr><td>Trùng tài khoản tập hợp chi phí</td><td class="mono">008</td><td>Lỗi</td></tr>
+      <tr><td>Lỗi khi cập nhật cấu hình</td><td class="mono">007</td><td>Lỗi</td></tr>
+      <tr><td>Lưu — đổi TK kết chuyển</td><td>Giá trị khác giá trị đang lưu</td><td class="mono">205</td><td>Xác nhận</td></tr>
+      <tr><td>Lưu thành công</td><td>Ghi dữ liệu xong</td><td class="mono">102</td><td>Thành công</td></tr>
+      <tr><td rowspan="2">Thêm dòng</td><td>Trùng tài khoản tập hợp chi phí</td><td class="mono">008</td><td>Lỗi</td></tr>
+      <tr><td>Ghi dòng cấu hình thất bại</td><td class="mono">009</td><td>Lỗi</td></tr>
+      <tr><td rowspan="3">Xóa dòng</td><td>Trước khi xóa</td><td class="mono">203</td><td>Xác nhận</td></tr>
+      <tr><td>Xóa thành công</td><td class="mono">104</td><td>Thành công</td></tr>
+      <tr><td>Xóa thất bại</td><td class="mono">010</td><td>Lỗi</td></tr>
+      <tr><td>Đóng</td><td>Màn hình đang có thay đổi chưa lưu</td><td class="mono">204</td><td>Xác nhận</td></tr>
+      <tr><td rowspan="3">Khôi phục cài đặt gốc</td><td>Trước khi khôi phục</td><td class="mono">201</td><td>Xác nhận</td></tr>
+      <tr><td>Khôi phục thành công</td><td class="mono">101</td><td>Thành công</td></tr>
+      <tr><td>Khôi phục thất bại</td><td class="mono">002</td><td>Lỗi</td></tr>
+      <tr><td>Xem danh sách</td><td>Không tải được danh sách</td><td class="mono">001</td><td>Lỗi</td></tr>
+      <tr><td>Xem chi tiết</td><td>Không tìm thấy hoặc không tải được</td><td class="mono">003</td><td>Lỗi</td></tr>
+      <tr><td>Mọi màn</td><td>Không có quyền thực hiện chức năng</td><td class="mono">202</td><td>Thông tin</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Quyền theo tài liệu</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Quyền</th><th>Mở khóa</th><th>Nguồn</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">GTTT.AllPermission</td><td>Cả 4 use case: xem danh sách · xem chi tiết · thiết lập · khôi phục</td><td>Acceptance criteria của cả 4 UC</td></tr>
+      <tr><td>Quyền xem cấu hình giá thành</td><td>Nút Xem chi tiết trên danh sách</td><td>SCR_DanhSach — chưa có mã quyền</td></tr>
+      <tr><td>Quyền thiết lập cấu hình giá thành</td><td>Nút Thiết lập cấu hình · nút Sửa ở màn xem chi tiết</td><td>SCR_DanhSach · SCR_XemChiTiet — chưa có mã quyền</td></tr>
+      <tr><td>Quyền chỉnh sửa cấu hình giá thành</td><td>Nút Khôi phục cài đặt gốc · nút Xác nhận trên popup</td><td>SCR_DanhSach · SCR_KhoiPhuc — chưa có mã quyền</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Khoảng trống tài liệu — chưa vẽ vì chưa có quy định</h3>
+  <ul>
+    <li><strong>Ma trận vai trò và phân quyền:</strong> file function-breakdown không có bảng vai trò. Use case nêu một quyền gộp <span class="f">GTTT.AllPermission</span>, còn ba màn hình lại gác enable bằng ba quyền mô tả bằng lời, chưa mã hóa. Báo cáo review đánh dấu đây là lỗi chặn.</li>
+    <li><strong>Ngoại lệ "không có quyền" chưa gắn mã:</strong> cả bốn use case đều viết "Hiển thị thông báo không có quyền" mà không dẫn <span class="chip c-msg">MSG 202</span>; sơ đồ trên gắn mã theo bộ message, không theo use case.</li>
+    <li><strong>Thời điểm ghi dòng Grid:</strong> mâu thuẫn giữa Activity Diagram và BR8 — xem callout ở <a href="#s4">mục 04</a>.</li>
+    <li><strong>Chưa có bản ghi cấu hình:</strong> BR3 chỉ nói cấu hình được sinh khi onboarding tenant thành công và đã khai đủ hệ thống tài khoản. Trường hợp bản ghi chưa tồn tại khi người dùng mở màn hình này không được epic quy định — chỉ epic Nhập kho thành phẩm có xử lý riêng cho tình huống đó.</li>
+    <li><strong>Phạm vi chi nhánh:</strong> entity có <span class="f">ChiNhanhId</span> và bất biến BR7.1 tính theo <span class="f">(TenantId, ChiNhanhId, PhuongPhapTinh)</span>, nhưng không màn hình nào trong epic có trường chọn chi nhánh; cách xác định chi nhánh hiện hành chưa được mô tả.</li>
+    <li><strong>Chuyển đổi giữa 5 phương pháp tính:</strong> BR3 liệt kê 5 phương pháp và nói mỗi phương pháp có 1 cấu hình riêng, lấy theo menu người dùng đang mở — nhưng màn hình không có trường Phương pháp tính ở chế độ sửa, và không có luồng đổi phương pháp.</li>
+    <li><strong>Mã <span class="f">MSG_PMKT-E-05897_103</span></strong> khuyết trong dãy success message; không nhánh nào trong tài liệu tham chiếu tới nó.</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-05897 · Cấu hình giá thành</span>
+  <span>Dựng từ 4 UC · 4 Activity Diagram · 4 màn hình · 2 ma trận ẩn/hiện · BR1–BR8</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

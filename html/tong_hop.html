@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sơ đồ luồng PMKT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ink:#191c22; --ink-soft:#4d5663; --ink-faint:#828c99;
+  --bg:#f4f5f7; --surface:#ffffff; --rule:#dee1e6; --rule-soft:#eaecf0;
+  --accent:#3f5d8a; --accent-soft:#e8edf5;
+  --bronze:#8c5a2b;
+  --shadow:0 1px 2px rgba(25,28,34,.06), 0 10px 28px rgba(25,28,34,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#e2e6ec; --ink-soft:#a6aeba; --ink-faint:#7f8896;
+    --bg:#101318; --surface:#171b21; --rule:#2a2f37; --rule-soft:#20242b;
+    --accent:#8fb0da; --accent-soft:#1a212c;
+    --bronze:#d09a5e;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#e2e6ec; --ink-soft:#a6aeba; --ink-faint:#7f8896;
+  --bg:#101318; --surface:#171b21; --rule:#2a2f37; --rule-soft:#20242b;
+  --accent:#8fb0da; --accent-soft:#1a212c;
+  --bronze:#d09a5e;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px; margin:0 auto; padding:0 24px 88px}
+
+header.mast{padding:56px 0 26px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--bronze); margin:0 0 12px}
+h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.2vw,44px);
+  line-height:1.12; margin:0 0 12px; letter-spacing:-.015em}
+header.mast p{margin:0; max-width:66ch; color:var(--ink-soft); font-size:17px}
+.stats{display:flex; flex-wrap:wrap; gap:8px 24px; margin-top:20px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.stats b{color:var(--ink-soft); font-weight:600}
+
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:22px; margin:44px 0 6px}
+p.sub{margin:0 0 22px; color:var(--ink-soft); max-width:70ch; font-size:15px}
+
+.grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:18px}
+.card{background:var(--surface); border:1px solid var(--rule); border-radius:8px;
+  padding:20px 22px 18px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:10px}
+.card .code{font-family:"IBM Plex Mono",monospace; font-size:11.5px; letter-spacing:.08em;
+  color:var(--bronze); font-weight:600}
+.card h3{font-family:Bitter,Georgia,serif; font-weight:700; font-size:19px; margin:0; line-height:1.25}
+.card h3 a{color:var(--ink); text-decoration:none}
+.card h3 a:hover{color:var(--accent)}
+.card p{margin:0; font-size:14.5px; color:var(--ink-soft); flex:1}
+.meta{display:flex; flex-wrap:wrap; gap:6px; margin-top:2px}
+.tag{font-family:"IBM Plex Mono",monospace; font-size:11px; padding:2px 7px; border-radius:3px;
+  border:1px solid var(--rule); background:var(--rule-soft); color:var(--ink-soft); white-space:nowrap}
+.links{display:flex; flex-wrap:wrap; gap:8px 16px; padding-top:12px; border-top:1px solid var(--rule-soft)}
+.links a{font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--accent); text-decoration:none}
+.links a:hover{text-decoration:underline}
+.links a:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:2px}
+
+.note{border-left:3px solid var(--accent); background:var(--accent-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:26px 0 0; font-size:14.5px}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--accent)}
+.note p{margin:0 0 8px} .note p:last-child{margin:0}
+code{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px}
+footer{margin-top:52px; padding-top:20px; border-top:2px solid var(--ink);
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint);
+  display:flex; flex-wrap:wrap; gap:8px 26px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT · Tài liệu kỹ thuật</p>
+  <h1>Sơ đồ luồng xử lý theo epic</h1>
+  <p>Trang tra cứu tập trung cho các trang sơ đồ luồng sinh bằng <code>/gen-flow-html</code>. Mỗi epic có một bản standalone mở trực tiếp được và một bản Artifact để chia sẻ.</p>
+  <div class="stats">
+    <span><b>Epic:</b> 4</span>
+    <span><b>Sơ đồ:</b> 58</span>
+    <span><b>Nguồn:</b> pmkt-docs/ba/</span>
+    <span><b>Cập nhật:</b> 21/08/2026</span>
+  </div>
+</header>
+
+<h2>Phân hệ Bán hàng</h2>
+<p class="sub">Ba epic dùng chung entity <code>sal_chung_tu_ban</code> và phần lớn business rule — đọc Chứng từ bán hàng trước, hai epic còn lại chỉ mô tả điểm khác biệt.</p>
+
+<div class="grid">
+
+  <article class="card">
+    <span class="code">PMKT-E-06194</span>
+    <h3><a href="PMKT-E-06194_ChungTuBanHang/PMKT-E-06194-chung-tu-ban-hang-flow.html">Chứng từ bán hàng</a></h3>
+    <p>Epic gốc của phân hệ. Thêm mới kèm phiếu xuất kho / hóa đơn / phiếu thu, năm loại chiết khấu, ghi sổ sinh bút toán, bỏ ghi sổ với hai chốt chặn, counter số lượng đã xuất.</p>
+    <div class="meta">
+      <span class="tag">12 mục</span><span class="tag">15 sơ đồ</span>
+      <span class="tag">6 UC · 8 màn</span><span class="tag">BR01–BR24</span>
+    </div>
+    <div class="links">
+      <a href="PMKT-E-06194_ChungTuBanHang/PMKT-E-06194-chung-tu-ban-hang-flow.html">Mở trang →</a>
+      <a href="https://claude.ai/code/artifact/4b87fbd6-9c3f-467c-bdff-af5d191092ce">Artifact ↗</a>
+    </div>
+  </article>
+
+  <article class="card">
+    <span class="code">PMKT-E-06195</span>
+    <h3><a href="PMKT-E-06195_ChungTuBanDichVu/PMKT-E-06195-chung-tu-ban-dich-vu-flow.html">Chứng từ bán dịch vụ</a></h3>
+    <p>Dùng chung màn danh sách với bán hàng, phân biệt bằng <code>LoaiNghiepVu</code>. Không xuất kho nên không có phiếu xuất, giá vốn, thuế XK; nút xóa hàng loạt luôn enable.</p>
+    <div class="meta">
+      <span class="tag">13 mục</span><span class="tag">15 sơ đồ</span>
+      <span class="tag">6 UC · 5 màn</span><span class="tag">3 ma trận</span>
+    </div>
+    <div class="links">
+      <a href="PMKT-E-06195_ChungTuBanDichVu/PMKT-E-06195-chung-tu-ban-dich-vu-flow.html">Mở trang →</a>
+      <a href="https://claude.ai/code/artifact/48da86cf-218c-4c0d-9652-0ca89761dcd4">Artifact ↗</a>
+    </div>
+  </article>
+
+  <article class="card">
+    <span class="code">PMKT-E-07664</span>
+    <h3><a href="PMKT-E-07664_DieuChinhGiaHangBan/PMKT-E-07664-dieu-chinh-gia-hang-ban-flow.html">Điều chỉnh giá hàng bán</a></h3>
+    <p>Wizard hai bước chọn chứng từ nguồn rồi nhập điều chỉnh. Hai chiều tăng / giảm cho hai bộ bút toán khác nhau; ghi sổ là giao dịch nguyên tử sáu thao tác kèm hóa đơn điện tử điều chỉnh.</p>
+    <div class="meta">
+      <span class="tag">14 mục</span><span class="tag">15 sơ đồ</span>
+      <span class="tag">6 UC · 4 màn</span><span class="tag">BR1–BR15</span>
+    </div>
+    <div class="links">
+      <a href="PMKT-E-07664_DieuChinhGiaHangBan/PMKT-E-07664-dieu-chinh-gia-hang-ban-flow.html">Mở trang →</a>
+      <a href="https://claude.ai/code/artifact/3579f278-e08b-4bb7-af60-be79496a6cee">Artifact ↗</a>
+    </div>
+  </article>
+
+</div>
+
+<h2>Phân hệ Tổng hợp</h2>
+<p class="sub">Epic cấu hình, không có vòng đời chứng từ — nhưng chi phối mọi chứng từ của toàn hệ thống.</p>
+
+<div class="grid">
+
+  <article class="card">
+    <span class="code">PMKT-E-07528</span>
+    <h3><a href="PMKT-E-07528_KhoaSo/PMKT-E-07528-khoa-so-flow.html">Khóa sổ kế toán</a></h3>
+    <p>Ba phạm vi khóa, hai chế độ thủ công / tự động theo chu kỳ, vòng lặp xử lý chứng từ chưa ghi sổ trước khi chốt, và nguyên tắc mốc muộn nhất khi nhiều thiết lập chồng nhau.</p>
+    <div class="meta">
+      <span class="tag">12 mục</span><span class="tag">13 sơ đồ</span>
+      <span class="tag">11 UC · 8 màn</span><span class="tag">2 ma trận</span>
+    </div>
+    <div class="links">
+      <a href="PMKT-E-07528_KhoaSo/PMKT-E-07528-khoa-so-flow.html">Mở trang →</a>
+      <a href="https://claude.ai/code/artifact/bbddb2a5-38e0-4689-a55f-8863d461fd9f">Artifact ↗</a>
+    </div>
+  </article>
+
+</div>
+
+<div class="note">
+  <span class="lbl">Cách dùng</span>
+  <p><b>Mở trang</b> trỏ tới bản standalone trong cùng thư mục — mở bằng double-click là đọc được, sơ đồ đã render sẵn, không cần mạng. <b>Artifact</b> là bản online để gửi cho người khác.</p>
+  <p>Mỗi epic còn có file <code>*-flow.src.html</code> đi kèm — đó là bản nguồn để publish lại Artifact, <b>không mở trực tiếp</b> vì thiếu charset nên mất dấu tiếng Việt.</p>
+  <p>Sinh trang mới: <code>/gen-flow-html pmkt-docs/ba/PMKT-E-xxxxx_TenEpic</code> — skill tự thêm thẻ vào trang này.</p>
+</div>
+
+<footer>
+  <span>PMKT · docs/html/</span>
+  <span>Sinh bằng /gen-flow-html</span>
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,1157 @@
+<title>Luồng Tính giá xuất kho</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-03629 · Phân hệ Kho</p>
+  <h1>Luồng xử lý Tính giá xuất kho</h1>
+  <p>Toàn bộ luồng của epic Tính giá xuất kho — từ chọn kỳ và phạm vi, gác điều kiện, gom batch, ba phương pháp tính giá (Bình quân cuối kỳ · Bình quân tức thời · FIFO), tới áp giá lên chứng từ xuất, cập nhật bút toán giá vốn trên Sổ Cái và chạy lại. Mỗi sơ đồ bám đúng Activity Diagram và BR trong bộ tài liệu BA.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 3 use case · 3 Activity Diagram · 4 màn hình · 18 mã MSG</span>
+    <span><b>Entity gốc:</b> inv_luot_tinh_gia_xuat_kho</span>
+    <span><b>Quyền:</b> TinhGiaXuatKho.Calculate</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Bản đồ một lượt tính giá</a></li>
+    <li><a href="#s1"><span>01</span>Chọn kỳ và phạm vi</a></li>
+    <li><a href="#s2"><span>02</span>Kích hoạt &amp; cổng chặn</a></li>
+    <li><a href="#s3"><span>03</span>Gom batch</a></li>
+    <li><a href="#s4"><span>04</span>Định tuyến phương pháp</a></li>
+    <li><a href="#s5"><span>05</span>Bình quân cuối kỳ</a></li>
+    <li><a href="#s6"><span>06</span>Điều chuyển phụ thuộc</a></li>
+    <li><a href="#s7"><span>07</span>Bình quân tức thời</a></li>
+    <li><a href="#s8"><span>08</span>FIFO &amp; cost layer</a></li>
+    <li><a href="#s9"><span>09</span>Khi tồn về 0 hoặc âm</a></li>
+    <li><a href="#s10"><span>10</span>Áp giá &amp; Sổ Cái</a></li>
+    <li><a href="#s11"><span>11</span>Kết quả &amp; batch lỗi</a></li>
+    <li><a href="#s12"><span>12</span>Chạy lại &amp; đồng thời</a></li>
+    <li><a href="#s13"><span>13</span>Tra cứu MSG &amp; quyền</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Bản đồ một lượt tính giá</h2>
+  <p class="lede">Tính giá xuất kho không phải chứng từ — nó là một <strong>lượt xử lý định kỳ</strong>. Bản ghi <span class="f">inv_luot_tinh_gia_xuat_kho</span> mang trạng thái riêng, và chính trạng thái <em>Đang chạy</em> là thứ khóa không cho lượt thứ hai khởi động trong cùng kỳ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(( )) -- "Khi batch được tạo" --> R
+    R["<b>ĐANG CHẠY</b><br/>Lượt tính giá đang thực thi<br/>Chặn lượt thứ hai bằng MSG_016"]
+    OK["<b>HOÀN THÀNH</b><br/>Lưu kết quả và Sổ Cái xong<br/>MSG_004"]
+    WE["<b>HOÀN THÀNH CÓ LỖI</b><br/>Có batch không ra đơn giá<br/>MSG_021 và màn kết quả lỗi"]
+    ER["<b>LỖI</b><br/>Lỗi hệ thống hoặc toàn cục<br/>Rollback toàn bộ lần tính giá"]
+    CA["<b>ĐÃ HỦY</b><br/>Người dùng bấm Hủy<br/>Rollback toàn bộ · MSG_018"]
+    R -- "Mọi batch tính được giá" --> OK
+    R -- "Có batch vô nghiệm/vô số nghiệm" --> WE
+    R -- "Lỗi tạo batch · lưu · Sổ Cái" --> ER
+    R -- "Bấm Hủy ở popup tiến trình" --> CA
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class OK ok;
+    class WE warn;
+    class ER,CA err;
+</pre>
+    </div>
+    <figcaption><b>Đang chạy là bản lề.</b> Trạng thái này bật lên <em>khi batch được tạo</em> — không phải lúc bấm nút — và tắt khi lượt hoàn thành hoặc lỗi. Chỉ riêng Bình quân cuối kỳ mới có trạng thái thứ ba <em>Hoàn thành có lỗi</em>; hai phương pháp còn lại chỉ có Hoàn thành hoặc Lỗi.</figcaption>
+  </figure>
+
+  <h3>Năm trạng thái tiến trình</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trạng thái</th><th>Điều kiện chuyển</th><th>Tác động khi Hủy giữa chừng</th></tr></thead>
+    <tbody>
+      <tr><td><b>Đang chạy</b></td><td>Khi batch được tạo</td><td>Rollback toàn bộ lần tính giá, kết thúc với <span class="chip c-msg">MSG_018</span></td></tr>
+      <tr><td><b>Hoàn thành</b></td><td>Khi lưu kết quả + cập nhật Sổ Cái thành công</td><td>Không áp dụng</td></tr>
+      <tr><td><b>Hoàn thành có lỗi</b><br><span class="f">chỉ Bình quân cuối kỳ</span></td><td>Khi lưu kết quả các batch thành công và ghi nhận danh sách batch lỗi</td><td>Không áp dụng</td></tr>
+      <tr><td><b>Lỗi</b></td><td>Khi có lỗi hệ thống/toàn cục</td><td>Rollback dữ liệu, hiển thị MSG lỗi tương ứng</td></tr>
+      <tr><td><b>Đã hủy</b></td><td>Khi nhấn nút Hủy trong popup tiến trình</td><td>Rollback toàn bộ, lưu bản ghi với trạng thái "Đã hủy"</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Ba phương pháp trong MVP1</span>
+    <p><strong>Bình quân cuối kỳ</strong> <span class="f">PMKT-U-03630</span> · <strong>Bình quân tức thời</strong> <span class="f">PMKT-U-03631</span> · <strong>FIFO</strong> <span class="f">PMKT-U-03633</span>. Phương pháp <strong>Đích danh</strong> được ghi rõ là <em>phase 2, chưa thuộc phạm vi MVP1</em> nên không có sơ đồ ở trang này. Mỗi vật tư được cấu hình <em>một</em> phương pháp tính giá cụ thể — phương pháp đi theo vật tư, không đi theo lần chạy.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — SCR_TinhGiaXuatKho</span>
+  <h2>Chọn kỳ và phạm vi: bốn tham số quyết định cả lượt chạy</h2>
+  <p class="lede">Màn hình duy nhất người dùng nhìn thấy trước khi tính là form <span class="f">Chọn phạm vi tính giá</span>. Bốn tham số ở đây — khoảng thời gian, danh sách vật tư, hình thức tính giá, ghi chú — quyết định batch nào được tạo và công thức nào được dùng.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A([Menu Kho → Tính giá xuất kho]) --> B{Quyền Calculate?}
+    B -- Không --> B1["MSG_005 · kết thúc luồng"]:::err
+    B -- Có --> C["Form Chọn phạm vi tính giá"]
+
+    C --> P1["Khoảng thời gian<br/>Mặc định Đầu tháng tới hiện tại"]
+    C --> P2["Chọn vật tư<br/>Không bắt buộc"]
+    C --> P3["Hình thức tính giá<br/>Mặc định Tính giá theo kho"]
+    C --> P4["Ghi chú<br/>Không bắt buộc"]
+
+    P1 --> P1a["Autofill Từ ngày · Đến ngày<br/>Sửa tay thì đổi sang Tùy chỉnh"]
+    P2 --> P2a["Popup Chọn vật tư<br/>Lọc theo nhóm · mã · tên"]
+    P2a --> P2b["Tick chọn từng dòng<br/>Nút Chọn hiện 99+ nếu vượt 100"]
+    P3 --> P3a["Theo kho: batch tách theo từng kho"]
+    P3 --> P3b["Không theo kho: gộp mọi kho"]
+
+    C --> D([Bấm Bắt đầu tính giá])
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hình thức tính giá là tham số nặng nhất.</b> Nó không đổi giao diện — ma trận ẩn/hiện của màn này là bảng tĩnh một cột, không có input nào bật/tắt trường khác — nhưng nó quyết định khóa gom batch, và do đó quyết định có phải giải hệ phương trình điều chuyển phụ thuộc hay không.</figcaption>
+  </figure>
+
+  <h3>Form Chọn phạm vi tính giá</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th>Control</th><th>Bắt buộc</th><th>Mặc định</th><th>Quy tắc</th></tr></thead>
+    <tbody>
+      <tr><td>Khoảng thời gian</td><td class="mono">SelectSearch</td><td>Y</td><td>Đầu tháng tới hiện tại</td><td>Theo <span class="chip c-br">BR8</span> chung</td></tr>
+      <tr><td>Từ ngày</td><td class="mono">DatePicker</td><td>Y</td><td>—</td><td>Autofill theo Khoảng thời gian; Đến ngày ≥ Từ ngày</td></tr>
+      <tr><td>Đến ngày</td><td class="mono">DatePicker</td><td>Y</td><td>—</td><td>Sửa tay ⇒ Khoảng thời gian = Tùy chỉnh</td></tr>
+      <tr><td>Chọn vật tư</td><td class="mono">MultiSelectSearch</td><td>N</td><td>—</td><td>Mở Popup Chọn vật tư <span class="chip c-br">BR3</span></td></tr>
+      <tr><td>Hình thức tính giá</td><td class="mono">RadioCheckbox</td><td>Y</td><td>Tính giá theo kho</td><td>Tính giá theo kho / Tính giá không theo kho</td></tr>
+      <tr><td>Ghi chú</td><td class="mono">TextField</td><td>N</td><td>—</td><td>Trim khoảng trắng <span class="chip c-br">BR43</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Thuật ngữ dễ nhầm</span>
+    <p><strong>"Hình thức tính giá" trên màn hình = "Phạm vi tính giá" trong BR.</strong> Hai tên gọi cùng chỉ một thứ: <em>Theo kho</em> (tính riêng cho từng kho) hay <em>Không theo kho</em> (tính gộp tất cả kho). Riêng FIFO thì <strong>mặc định theo kho</strong> — khóa batch của FIFO luôn có mã kho.</p>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Tài liệu chưa quy định</span>
+    <p>Điều kiện <strong>enable nút "Bắt đầu tính giá"</strong> khi chưa nhập đủ trường bắt buộc chưa được mô tả ở bất kỳ đâu trong bộ tài liệu — ma trận ẩn/hiện ghi rõ đây là điểm cần BA xác nhận, hiện để trạng thái <span class="f">Show</span>. Không suy diễn thêm ở sơ đồ này.</p>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — BR-00 · BR-01 · BR-02</span>
+  <h2>Kích hoạt và chuỗi cổng chặn</h2>
+  <p class="lede">Tính giá có <strong>ba đường vào</strong> khác nhau, và mỗi đường bỏ qua một số cổng kiểm. Nhầm đường vào là nhầm cả bộ điều kiện chặn — đây là chỗ dễ sai nhất của epic.</p>
+
+  <h3>Ba đường kích hoạt</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    M(["Bấm Bắt đầu tính giá"]) --> M1["Thủ công<br/>Kiểm BR-00 · kiểm tồn kho âm<br/>Có popup tiến trình"]
+    G(["Ghi sổ phiếu nhập/xuất"]) --> G1{"Ngày hạch toán = Ngày hiện tại?"}
+    G1 -- Không --> G2["Không tự động tính giá"]:::warn
+    G1 -- Có --> G3["Tự động<br/>Bỏ BR-00 · bỏ kiểm tồn kho âm<br/>Không hiện popup tiến trình"]
+    U(["Bỏ ghi sổ giao dịch nhập kho"]) --> U1{"Còn giao dịch phía sau<br/>cùng vật tư/kho?"}
+    U1 -- Có --> U2["MSG_020 · không tự tính lại"]:::err
+    U1 -- Không --> U3["Tự động tính lại giá<br/>cho giao dịch nhập kho"]
+
+    M1 --> Z(["Vào chuỗi cổng chặn"])
+    G3 --> Z
+    U3 --> Z
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Không có giao dịch ghi sổ lùi ngày nào tự động tính giá.</b> Tự động chỉ chạy khi <span class="f">NgayHachToan</span> đúng bằng ngày hiện tại. Với bỏ ghi sổ, tự động tính lại còn hẹp hơn nữa: chỉ áp cho <em>giao dịch nhập kho</em> và chỉ khi phía sau nó không còn giao dịch nào của cùng vật tư/kho theo thứ tự <span class="f">NgayHachToan</span>.</figcaption>
+  </figure>
+
+  <h3>Chuỗi cổng chặn trước khi tạo batch</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S([Bắt đầu tính giá]) --> V0{Có quyền Calculate?}
+    V0 -- Không --> E0["MSG_005"]:::err
+    V0 -- Có --> V1{"Đã có lượt Đang chạy trong kỳ?"}
+    V1 -- Có --> E1["MSG_016 · nút bị chặn"]:::err
+    V1 -- Không --> V2{Kỳ kế toán đã đóng?}
+    V2 -- Có --> E2["MSG_001"]:::err
+    V2 -- Không --> V3{"Không có giao dịch trong kỳ?"}
+    V3 -- Có --> E3["MSG_006"]:::warn
+    V3 -- Không --> V4{"Không có chứng từ Đã ghi sổ?"}
+    V4 -- Có --> E4["MSG_007"]:::warn
+    V4 -- Không --> V5{"FIFO và có chứng từ tick<br/>Tự động áp giá hoặc Tự nhập đơn giá?"}
+    V5 -- Có --> E5["MSG_013 · FIFO không hỗ trợ"]:::err
+    V5 -- Không --> V6{"Có vật tư tồn kho âm?"}
+    V6 -- Không --> V7
+    V6 -- Có --> W1["SCR_CanhBaoTonKhoAm<br/>MSG_002 với số vật tư N"]:::warn
+    W1 -- "Người dùng chọn Hủy" --> E6["Kết thúc · không có thông báo"]:::err
+    W1 -- "Người dùng chọn Tiếp tục" --> V7
+    V7["Tạo batch theo BR-03"] --> V8{Lỗi khi tạo batch?}
+    V8 -- Có --> E7["MSG_008 · kết thúc luồng"]:::err
+    V8 -- Không --> OK(["Lượt chuyển sang Đang chạy"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Thứ tự các cổng là bắt buộc, không hoán đổi.</b> Kiểm lượt đang chạy đứng <em>trước</em> kiểm kỳ kế toán; kiểm dữ liệu rỗng đứng trước kiểm tồn kho âm. Hai cổng dữ liệu rỗng (MSG_006 · MSG_007) là <em>Warning</em> chứ không phải lỗi hệ thống — chúng kết thúc luồng êm, không rollback gì cả.</figcaption>
+  </figure>
+
+  <h3>Cổng nào áp cho đường vào nào</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cổng kiểm</th><th class="mono">MSG</th><th>Thủ công</th><th>Tự động khi Ghi sổ</th></tr></thead>
+    <tbody>
+      <tr><td>Quyền <span class="f">TinhGiaXuatKho.Calculate</span></td><td class="mono">005</td><td>Có</td><td>—</td></tr>
+      <tr><td>Lượt tính giá đang chạy (BR-00)</td><td class="mono">016</td><td>Có</td><td><b>Bỏ qua</b></td></tr>
+      <tr><td>Kỳ kế toán mở (BR-01)</td><td class="mono">001</td><td>Có</td><td>Có</td></tr>
+      <tr><td>Có giao dịch trong kỳ</td><td class="mono">006</td><td>Có</td><td>Có</td></tr>
+      <tr><td>Có chứng từ "Đã ghi sổ"</td><td class="mono">007</td><td>Có</td><td>Có</td></tr>
+      <tr><td>Cảnh báo tồn kho âm (BR-02)</td><td class="mono">002</td><td>Có</td><td><b>Bỏ qua</b></td></tr>
+      <tr><td>FIFO không hỗ trợ tự áp giá</td><td class="mono">013</td><td>Có</td><td>Có</td></tr>
+      <tr><td>Popup tiến trình</td><td class="mono">—</td><td>Có</td><td><b>Không hiện</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Kỳ kế toán — trạng thái hiện tại</span>
+    <p>BR-01 của cả ba use case đều ghi chú: <em>"Chưa cần làm quy tắc này đến khi xây dựng chức năng Khóa sổ. Hiện tại chưa có chức năng Khóa sổ nên kỳ kế toán luôn ở trạng thái Mở."</em> Nhánh MSG_001 vẫn phải vẽ trong luồng vì nó nằm trong AD, nhưng thực thi thì hoãn tới khi phân hệ Khóa sổ có mốc <em>Ngày khóa sổ</em> theo <span class="chip c-br">BR17</span>.</p>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Đếm N ở cảnh báo tồn kho âm</span>
+    <p>Nội dung <span class="chip c-msg">MSG_002</span>: <em>"Có {N} vật tư có tồn kho âm trong kỳ. Tính giá khi tồn kho âm có thể dẫn đến kết quả không chính xác. Bạn có muốn tiếp tục tính giá không?"</em> — khi đếm N, <strong>trùng mã vật tư thì chỉ tính = 1 mã</strong>. Danh sách bên dưới hiển thị Nhóm vật tư · Mã · Tên · Kho · ĐVT · Số lượng, riêng cột Số lượng hiển thị màu đỏ.</p>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — BR-03</span>
+  <h2>Gom batch: khóa gom quyết định mọi thứ phía sau</h2>
+  <p class="lede">Một batch là <strong>một vật tư trong một kho</strong> — đơn vị nhỏ nhất mà hệ thống tính ra được một đơn giá. Batch cũng là đơn vị ghi nhận lỗi: hỏng một batch không kéo sập cả lượt.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Giao dịch nhập/xuất trong kỳ"] --> F1{"Trạng thái = Đã ghi sổ?"}
+    F1 -- Không --> X1["Loại khỏi batch"]:::err
+    F1 -- Có --> F2{"Ngày hạch toán thuộc kỳ đã chọn?"}
+    F2 -- Không --> X1
+    F2 -- Có --> F3{"Giao dịch nhập có<br/>Tự động áp giá = Checked?"}
+    F3 -- "Có · Bình quân" --> X2["Loại khỏi công thức<br/>Được áp giá sau"]:::warn
+    F3 -- Không --> K["Gom theo khóa batch"]
+    K --> K1["Mã vật tư"]
+    K --> K2["Kho — nếu phạm vi theo kho<br/>FIFO thì luôn theo kho"]
+    K --> K3["Kỳ dương lịch<br/>Tức thời: khoảng nhiều kỳ thì tách"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Loại trừ khác với bỏ qua.</b> Giao dịch nhập có <span class="f">Tự động áp giá = Checked</span> bị loại khỏi <em>công thức</em> — không đóng góp số lượng lẫn giá trị vào đơn giá bình quân — nhưng vẫn nằm trong phạm vi xử lý: sau khi có đơn giá bình quân, hệ thống quay lại <em>áp</em> chính đơn giá đó cho chúng.</figcaption>
+  </figure>
+
+  <h3>Điều kiện gom batch theo từng phương pháp</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Điều kiện</th><th>Bình quân cuối kỳ</th><th>Bình quân tức thời</th><th>FIFO</th></tr></thead>
+    <tbody>
+      <tr><td>Mã vật tư</td><td>Cùng mã → cùng batch</td><td>Cùng mã → cùng batch</td><td>Cùng mã → cùng batch</td></tr>
+      <tr><td>Kho</td><td>Cùng kho nếu phạm vi theo kho</td><td>Cùng kho nếu phạm vi theo kho</td><td><b>Mặc định theo kho</b></td></tr>
+      <tr><td>Trạng thái chứng từ</td><td>Chỉ "Đã ghi sổ"</td><td>Chỉ "Đã ghi sổ"</td><td>Chỉ "Đã ghi sổ"</td></tr>
+      <tr><td>Ngày hạch toán</td><td>Thuộc kỳ đã chọn</td><td>Thuộc khoảng thời gian đã chọn; nhiều kỳ dương lịch thì tách batch theo kỳ</td><td>Thuộc kỳ đã chọn</td></tr>
+      <tr><td>Loại trừ</td><td>Nhập có Tự động áp giá = Checked</td><td>Nhập có Tự động áp giá = Checked</td><td>Không loại trừ — chặn ngay từ đầu bằng <span class="chip c-msg">MSG_013</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Loại giao dịch tham gia — chiều IN</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Loại chứng từ</th><th>Số lượng</th><th>Giá trị</th><th class="mono">Entity</th></tr></thead>
+    <tbody>
+      <tr><td>Số dư đầu kỳ</td><td>—</td><td>—</td><td class="mono">—</td></tr>
+      <tr><td>Nhập thành phẩm · Nhập khác</td><td class="mono">SoLuongNhapQuyDoi</td><td class="mono">ThanhTienNhap</td><td class="mono">inv_phieu_nhap_kho_chi_tiet</td></tr>
+      <tr><td>Nhập mua hàng từ NCC<br><span class="f">LoaiNghiepVu = NhapKho và LoaiDongHang = true</span></td><td class="mono">SoLuongTheoDVC</td><td class="mono">TongGiaTriNhapKhoQuyDoi</td><td class="mono">pur_chung_tu_mua_hang_chi_tiet</td></tr>
+      <tr><td>Nhập xử lý chênh lệch kiểm kê</td><td class="mono">SoLuongNhapQuyDoi</td><td class="mono">ThanhTienNhap</td><td class="mono">inv_phieu_nhap_kho_chi_tiet</td></tr>
+      <tr><td>Phiếu nhập điều chuyển</td><td class="mono">SoLuongThucNhan × HeSoQuyDoi</td><td class="mono">ThanhTienNhap</td><td class="mono">inv_phieu_nhap_dieu_chuyen_chi_tiet</td></tr>
+      <tr><td>Chứng từ điều chỉnh giá hàng mua<br><span class="f">tick Điều chỉnh giá trị hàng nhập kho</span></td><td>Mặc định = 0</td><td class="mono">TongTienHangHoa</td><td class="mono">pur_chung_tu_dieu_chinh_gia_hang_mua_chi_tiet</td></tr>
+      <tr><td>Phân bổ chi phí mua hàng<br><span class="f">tức thời · FIFO</span></td><td>Mặc định = 0</td><td class="mono">ChiPhiPhanBoQuyDoi</td><td class="mono">pur_phan_bo_chi_phi_mua_hang</td></tr>
+      <tr><td>Nhập hàng bán trả lại</td><td class="mono">SoLuong</td><td class="mono">GiaVon</td><td class="mono">sal_chung_tu_tra_lai_hang_ban_chi_tiet</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Loại giao dịch tham gia — chiều OUT</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Loại chứng từ</th><th>Số lượng</th><th>Giá trị</th><th class="mono">Entity</th></tr></thead>
+    <tbody>
+      <tr><td>Xuất trả NCC<br><span class="f">tick Trả lại hàng trong kho</span></td><td class="mono">SoLuong</td><td class="mono">TongTienHangHoa</td><td class="mono">pur_chung_tu_tra_lai_hang_mua_chi_tiet</td></tr>
+      <tr><td>Xuất bán hàng · Xuất sản xuất · Xuất khác</td><td class="mono">SoLuongXuatQuyDoi</td><td class="mono">ThanhTienXuat</td><td class="mono">inv_phieu_xuat_kho_chi_tiet</td></tr>
+      <tr><td>Phiếu xuất lắp ráp · Phiếu xuất tháo dỡ</td><td class="mono">SoLuongXuatQuyDoi</td><td class="mono">ThanhTienXuat</td><td class="mono">inv_phieu_xuat_kho_chi_tiet</td></tr>
+      <tr><td>Xuất xử lý chênh lệch kiểm kê</td><td class="mono">SoLuongXuatQuyDoi</td><td class="mono">ThanhTienXuat</td><td class="mono">inv_phieu_xuat_kho_chi_tiet</td></tr>
+      <tr><td>Phiếu xuất điều chuyển</td><td class="mono">SoLuongDieuChuyenQuyDoi</td><td class="mono">ThanhTienXuat</td><td class="mono">inv_phieu_xuat_dieu_chuyen_chi_tiet</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Xuất trả NCC là ngoại lệ hai đầu</span>
+    <p>Trong bảng loại giao dịch nó được đánh dấu <span class="f">OUT*</span>: ở Bình quân cuối kỳ nó bị <strong>trừ khỏi</strong> tổng nhập trong kỳ, ở Bình quân tức thời nó có <strong>công thức riêng</strong> (BR-05), và ở cả ba phương pháp nó <strong>không được áp giá</strong>.</p>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Thứ tự sắp xếp giao dịch — quy tắc chung</span>
+    <p><span class="f">NgayHachToan</span> lưu kiểu <span class="f">DateTime</span>, mặc định là ngày giờ hiện tại theo giờ máy local của người dùng. Thứ tự tính giá: <strong>1)</strong> <span class="f">NgayHachToan</span> tăng dần → <strong>2)</strong> trùng thì <span class="f">NgayChungTu</span> tăng dần → <strong>3)</strong> vẫn trùng thì <span class="f">SoChungTu</span> tăng dần → <strong>4)</strong> vẫn trùng thì <span class="f">Id</span> tăng dần để thứ tự ổn định. Riêng FIFO có thêm luật: <em>cùng ngày thì ưu tiên chứng từ nhập trước chứng từ xuất</em>.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — Định tuyến</span>
+  <h2>Batch nào đi vào công thức nào</h2>
+  <p class="lede">Sau khi có batch, hệ thống rẽ nhánh hai lần: lần đầu theo <strong>phương pháp tính giá cấu hình trên vật tư</strong>, lần hai — chỉ với Bình quân cuối kỳ — theo <strong>phạm vi tính giá và sự tồn tại của điều chuyển phụ thuộc</strong>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    B(["Batch vật tư + kho"]) --> M{"Phương pháp tính giá của vật tư"}
+
+    M -- "Bình quân cuối kỳ" --> C1{"Phạm vi tính giá theo kho?"}
+    C1 -- Không --> F1["BR-04.1<br/>Bình quân gia quyền cơ bản"]
+    C1 -- Có --> C2{"Có giao dịch điều chuyển phụ thuộc?"}
+    C2 -- Không --> F1
+    C2 -- Có --> F2["BR-04.2<br/>Giải hệ phương trình N kho"]:::warn
+
+    M -- "Bình quân tức thời" --> F3["Duyệt tuần tự từng giao dịch<br/>Tính lại bình quân sau mỗi lần nhập"]
+    M -- FIFO --> F4["Replay cost layer<br/>Xuất từ lớp giá cũ nhất còn tồn"]
+    M -- "Đích danh" --> F5["Phase 2 — ngoài phạm vi MVP1"]:::warn
+
+    F1 --> A(["Sang chuỗi áp giá"]):::ok
+    F2 --> A
+    F3 --> A
+    F4 --> A
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Chỉ một nhánh duy nhất phải giải hệ phương trình.</b> Điều kiện đủ là <em>vừa</em> chọn phạm vi theo kho <em>vừa</em> tồn tại vòng điều chuyển nội bộ. Thiếu một trong hai, batch rơi về công thức bình quân cơ bản BR-04.1.</figcaption>
+  </figure>
+
+  <h3>Ba phương pháp cạnh nhau</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tiêu chí</th><th>Bình quân cuối kỳ</th><th>Bình quân tức thời</th><th>FIFO</th></tr></thead>
+    <tbody>
+      <tr><td>Thời điểm tính</td><td>Cuối kỳ</td><td>Sau mỗi giao dịch, thời gian thực</td><td>Replay theo thứ tự ngày hạch toán</td></tr>
+      <tr><td>Đơn giá xuất trong kỳ</td><td><b>Tạm thời = 0</b>, cuối kỳ cập nhật lại</td><td>Có ngay khi ghi sổ</td><td>Lấy từ cost layer khi ghi sổ</td></tr>
+      <tr><td>Đơn vị lưu giá</td><td>Một đơn giá cho cả batch</td><td>Đơn giá bình quân trượt</td><td>Nhiều dòng áp giá theo từng cost layer</td></tr>
+      <tr><td>Điều chuyển phụ thuộc</td><td>Giải hệ phương trình BR-04.2</td><td>Không đặt ra</td><td>Không đặt ra</td></tr>
+      <tr><td>Tự động áp giá / Tự nhập đơn giá</td><td>Hỗ trợ — loại khỏi công thức rồi áp sau</td><td>Hỗ trợ</td><td><b>Không hỗ trợ</b> <span class="chip c-msg">MSG_013</span></td></tr>
+      <tr><td>Lỗi cục bộ</td><td>Ghi nhận theo batch, chạy tiếp</td><td>Rollback cả lượt</td><td>Rollback cả lượt</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — PMKT-U-03630 · BR-04.1</span>
+  <h2>Bình quân cuối kỳ: một đơn giá cho cả kỳ</h2>
+  <p class="lede">Phương pháp này đảo ngược trình tự thông thường: phiếu xuất được ghi sổ <em>trước</em> với giá vốn bằng 0, rồi cuối kỳ mới có đơn giá thật và hệ thống quay lại sửa cả chứng từ lẫn bút toán.</p>
+
+  <div class="note">
+    <span class="lbl">Công thức BR-04.1 — nguyên văn</span>
+    <p><code>Đơn giá xuất kho = (Giá trị Số dư tồn đầu kỳ + Tổng giá trị nhập trong kỳ) / (Tổng số lượng số dư tồn đầu kỳ + Tổng số lượng nhập trong kỳ)</code></p>
+    <p><code>Tổng giá trị nhập trong kỳ = Σ(Giá trị giao dịch IN) - Σ(Giá trị OUT có Tự nhập đơn giá = Checked) - Σ(Giá trị Xuất trả NCC Có tick Trả lại hàng trong kho)</code></p>
+    <p><code>Tổng số lượng nhập trong kỳ = Σ(Số lượng giao dịch IN) - Σ(Số lượng OUT có Tự nhập đơn giá = Checked) - Σ(Số lượng Xuất trả NCC Có tick Trả lại hàng trong kho)</code></p>
+    <p>Với phiếu điều chỉnh giá chứng từ mua hàng: <em>Loại điều chỉnh = Tăng</em> thì Giá trị = <span class="f">TongTienHangHoa</span>; <em>Loại điều chỉnh = Giảm</em> thì Giá trị = <span class="f">-TongTienHangHoa</span>.</p>
+  </div>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Batch vật tư + kho"]) --> B["Cộng Giá trị và Số lượng<br/>số dư tồn đầu kỳ"]
+    B --> C["Cộng dồn mọi giao dịch IN trong kỳ"]
+    C --> D["Trừ OUT có Tự nhập đơn giá = Checked"]
+    D --> E["Trừ Xuất trả NCC<br/>có tick Trả lại hàng trong kho"]
+    E --> F{"Mẫu số = 0?"}
+    F -- Có --> X1["Lỗi batch: Mẫu số bằng 0<br/>MSG_012 · bỏ qua batch"]:::err
+    F -- Không --> G["Đơn giá xuất kho của batch<br/>Giữ full precision"]
+    G --> H{"Tổng giá trị nhập âm?"}
+    H -- "Có · do điều chỉnh giá âm" --> H1["Vẫn tính bình thường<br/>Đơn giá có thể âm"]:::warn
+    H -- Không --> I
+    H1 --> I["Sang BR-05: xác định thứ tự tính<br/>theo trạng thái tồn từng phiếu"]
+    I --> J(["Áp giá cho phiếu xuất"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Mẫu số bằng 0 là lỗi nghiệp vụ, không phải lỗi hệ thống.</b> Khi <span class="f">Tổng số lượng tồn đầu kỳ + Tổng số lượng nhập trong kỳ = 0</span>, hệ thống ghi nhận lỗi cho đúng batch đó rồi chuyển sang batch tiếp theo — không rollback cả lượt.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Ghi sổ tạm trong kỳ — luật riêng của Bình quân cuối kỳ</span>
+    <p>Khi ghi sổ phiếu xuất trong kỳ, nếu vật tư có phương pháp = <em>Bình quân cuối kỳ</em>, hệ thống ghi nhận <strong>đơn giá vốn / thành tiền vốn tạm thời = 0</strong>. Cuối kỳ khi chạy tính giá, hệ thống cập nhật lại đơn giá vốn, thành tiền vốn <em>và</em> bút toán giá vốn trên Sổ Cái cho các phiếu đã ghi sổ trong kỳ — tất cả nằm trong <strong>cùng một giao dịch nguyên tử</strong> với lần tính giá. Nếu batch lỗi thì chứng từ thuộc batch đó giữ nguyên giá vốn = 0, không bị chạm tới.</p>
+  </div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — BR-04.2 · BR-04.3</span>
+  <h2>Điều chuyển phụ thuộc: khi các kho định giá lẫn nhau</h2>
+  <p class="lede">Điều chuyển nội bộ tạo thành vòng — kho A xuất sang B, B sang C, C lại về A — thì đơn giá của mỗi kho phụ thuộc đơn giá kho kia. Không tính tuần tự được nữa: phải lập và giải hệ phương trình. Có bao nhiêu kho trong vòng, có bấy nhiêu ẩn.</p>
+
+  <h3>Cấu trúc một vòng phụ thuộc</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    KA["<b>KHO A</b><br/>V0A · Q0A<br/>Ẩn cần tìm: CA"]
+    KB["<b>KHO B</b><br/>V0B · Q0B<br/>Ẩn cần tìm: CB"]
+    KC["<b>KHO C</b><br/>V0C · Q0C<br/>Ẩn cần tìm: CC"]
+    KA -- "QAB · DepQtyAB" --> KB
+    KB -- "QBC · DepQtyBC" --> KC
+    KC -- "QCA · DepQtyCA" --> KA
+
+    N1["V0 · Q0 không gồm<br/>giao dịch điều chuyển phụ thuộc"]
+    N2["DepQty: phần còn tạo thành tiền<br/>và còn phụ thuộc đơn giá kho xuất"]
+    N3["ZeroQty: phần vượt tồn<br/>thành tiền = 0 · không vào hệ"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class N3 warn;
+</pre>
+    </div>
+    <figcaption><b>Vòng ba kho chỉ là ví dụ tối giản.</b> Tài liệu ghi rõ số kho tham gia không giới hạn; khi vòng có nhiều hơn 3 kho, hệ được giải bằng phương pháp ma trận. Điểm đầu và điểm cuối của vòng phải trùng nhau thì mới gọi là phụ thuộc.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Tách số lượng điều chuyển trước khi lập hệ — nguyên văn</span>
+    <p>Với dòng điều chuyển <span class="f">X → Y</span>, gọi <span class="f">QXY</span> là tổng số lượng xuất điều chuyển trên dòng và <span class="f">SX</span> là số lượng tồn kho của kho X trước khi xuất:</p>
+    <p><code>Nếu SX &gt; 0 và SX - QXY &gt; 0: DepQtyXY = QXY ; ZeroQtyXY = 0</code></p>
+    <p><code>Nếu SX &gt; 0 và SX - QXY &lt;= 0: DepQtyXY = SX ; ZeroQtyXY = QXY - SX</code></p>
+    <p><code>Nếu SX &lt;= 0: DepQtyXY = 0 ; ZeroQtyXY = QXY</code></p>
+    <p>Do một dòng chi tiết chỉ lưu một đơn giá, đơn giá hiển thị vẫn phân bổ trên tổng số lượng dòng:<br>
+    <code>Thành tiền điều chuyển X → Y = DepQtyXY × CX</code><br>
+    <code>Đơn giá dòng điều chuyển X → Y = Thành tiền điều chuyển X → Y / QXY</code></p>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Hệ phương trình và điều kiện giải — nguyên văn</span>
+    <p><code>CA = (V0A + DepQtyCA × CC) / (Q0A + QCA)</code><br>
+    <code>CB = (V0B + DepQtyAB × CA) / (Q0B + QAB)</code><br>
+    <code>CC = (V0C + DepQtyBC × CB) / (Q0C + QBC)</code></p>
+    <p>Đặt <code>a = DepQtyCA / (Q0A + QCA)</code> · <code>bA = V0A / (Q0A + QCA)</code> · <code>c = DepQtyAB / (Q0B + QAB)</code> · <code>bB = V0B / (Q0B + QAB)</code> · <code>d = DepQtyBC / (Q0C + QBC)</code> · <code>bC = V0C / (Q0C + QBC)</code>, khi đó <code>CA = bA + a × CC</code> · <code>CB = bB + c × CA</code> · <code>CC = bC + d × CB</code>.</p>
+    <p>Hệ thống tính <code>D = 1 - a × c × d</code> và, khi <span class="f">D = 0</span>, tính tiếp <code>R = bA + a × bC + a × d × bB</code>.</p>
+  </div>
+
+  <h3>Định đoạt nghiệm</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Batch có điều chuyển phụ thuộc"]) --> B["Tách DepQty và ZeroQty<br/>cho từng cạnh của vòng"]
+    B --> C{"Có cạnh nào DepQty = 0?"}
+    C -- Có --> C1["Vòng phụ thuộc bị cắt<br/>a × c × d = 0"]:::ok
+    C -- Không --> D
+    C1 --> D["Lập hệ và tính D = 1 - a × c × d"]
+    D --> E{"Mẫu số Q0 + Q bằng 0?"}
+    E -- Có --> X1["Loại lỗi: Mẫu số bằng 0"]:::err
+    E -- Không --> F{"D khác 0?"}
+    F -- Có --> G["Nghiệm duy nhất<br/>Tính CA · CB · CC"]:::ok
+    F -- Không --> H["Hệ suy biến · tính R"]
+    H --> I{"R khác 0?"}
+    I -- Có --> X2["Loại lỗi: Vô nghiệm"]:::err
+    I -- Không --> X3["Loại lỗi: Vô số nghiệm"]:::err
+
+    X1 --> Y["Ghi nhận lỗi batch MSG_009<br/>Không áp giá cho batch này"]:::warn
+    X2 --> Y
+    X3 --> Y
+    Y --> Z(["Chuyển sang batch tiếp theo"])
+    G --> Z
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hệ thống không tự chọn đơn giá thay thế cho batch lỗi.</b> Không áp giá, không cập nhật thành tiền xuất, không cập nhật giá trung bình phiếu nhập tự động áp giá, không đụng bút toán giá vốn — batch lỗi được để nguyên si và ghi vào danh sách lỗi.</figcaption>
+  </figure>
+
+  <h3>Nội dung một bản ghi lỗi batch</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thông tin tối thiểu</th><th>Nguồn / Giá trị</th></tr></thead>
+    <tbody>
+      <tr><td>Mã vật tư · Tên vật tư</td><td>Vật tư của batch lỗi</td></tr>
+      <tr><td>Kho</td><td>Mã kho và tên kho lỗi</td></tr>
+      <tr><td>Phương pháp tính giá</td><td>Bình quân cuối kỳ</td></tr>
+      <tr><td>Loại lỗi</td><td>Vô nghiệm / Vô số nghiệm / Mẫu số bằng 0</td></tr>
+      <tr><td>Vòng điều chuyển phụ thuộc</td><td>Danh sách kho/chứng từ trong vòng, nếu xác định được</td></tr>
+      <tr><td>Mô tả nguyên nhân</td><td>Diễn giải lỗi</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Mâu thuẫn trong tài liệu BA</span>
+    <p>Activity Diagram <span class="f">AD_BinhQuanCuoiKy.puml</span> vẽ nhánh <em>"Không thể giải hệ phương trình?"</em> dẫn thẳng tới <span class="chip c-msg">MSG_009</span> rồi <span class="f">stop</span> — tức dừng cả lượt. Nhưng use case BR-04.3 và màn <span class="f">SCR_KetQuaTinhGiaLoi</span> quy định ngược lại: <strong>ghi nhận lỗi batch, bỏ qua batch lỗi và tiếp tục xử lý batch tiếp theo</strong>. Trang này vẽ theo UC/BR-04.3 vì đó là bản có màn hình kết quả lỗi và mã <span class="chip c-msg">MSG_021</span> đi kèm. Cần BA chốt lại AD.</p>
+    <p>Tương tự với <span class="chip c-msg">MSG_012</span>: bảng Luồng phụ ghi <em>"Kết thúc luồng"</em>, còn mục Edge Cases ghi <em>"ghi nhận lỗi batch, bỏ qua batch lỗi và tiếp tục batch khác"</em>.</p>
+  </div>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — PMKT-U-03631</span>
+  <h2>Bình quân tức thời: đơn giá trượt theo từng giao dịch</h2>
+  <p class="lede">Không có công thức tổng cho cả kỳ. Hệ thống sắp xếp toàn bộ giao dịch theo ngày hạch toán rồi <strong>duyệt tuần tự</strong>, mỗi giao dịch nhập lại kéo đơn giá bình quân về một giá trị mới, và mọi phiếu xuất phía sau ăn theo giá trị đó.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Khởi tạo biến tồn ban đầu<br/>từ Số dư đầu kỳ"] --> B(["Lấy giao dịch tiếp theo"])
+    B --> C{"Loại giao dịch?"}
+
+    C -- "IN không phải Xuất trả NCC" --> I1["BR-04<br/>Bình quân theo tồn trước và nhập mới"]
+    I1 --> I2["SL tồn sau = SL trước + SL nhập<br/>Giá trị sau = trước + TT nhập"]
+    I2 --> I3{"Tự động áp giá = Checked?"}
+    I3 -- Có --> I4["Áp giá trung bình cho phiếu nhập"]
+    I3 -- Không --> I5["Không áp giá"]
+
+    C -- "OUT Xuất trả NCC" --> R1["BR-05<br/>Trừ thành tiền và số lượng xuất"]
+    R1 --> R2["Không áp giá cho giao dịch này"]:::warn
+
+    C -- "OUT khác Xuất trả NCC" --> O1{"Tự nhập đơn giá = Un-checked?"}
+    O1 -- Không --> O2["Giữ nguyên đơn giá người dùng nhập"]:::warn
+    O1 -- Có --> O3["Xác định đơn giá theo BR-08<br/>theo tồn trước và tồn sau"]
+    O3 --> O4["Áp giá · Thành tiền = ĐG × SL xuất"]
+
+    I4 --> U["Cập nhật biến tạm<br/>Giá bình quân trước = sau"]
+    I5 --> U
+    R2 --> U
+    O2 --> U
+    O4 --> U
+    U --> V{"Còn giao dịch?"}
+    V -- Có --> B
+    V -- Không --> W(["Lưu kết quả · cập nhật Sổ Cái"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Ba nhánh loại giao dịch không đối xứng.</b> IN cập nhật đơn giá bình quân; Xuất trả NCC cập nhật tồn nhưng <em>không</em> được áp giá; OUT thường thì chỉ được áp giá khi <span class="f">Tự nhập đơn giá = Un-checked</span>. Cả ba nhánh đều đổ về cùng một bước cập nhật biến tạm trước khi lấy giao dịch kế tiếp.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Công thức — nguyên văn</span>
+    <p><b>BR-04 — giao dịch IN:</b><br><code>Đơn giá bình quân = (Số lượng tồn trước × Giá bình quân trước + Số lượng nhập × Đơn giá nhập) / (Số lượng tồn trước + Số lượng nhập)</code></p>
+    <p><b>BR-05 — Xuất trả NCC có tick Trả lại hàng trong kho:</b><br><code>Đơn giá bình quân = (Thành tiền bình quân trước - Thành tiền xuất) / (Số lượng tồn trước - Số lượng xuất)</code></p>
+    <p><b>BR-06 — giao dịch OUT khác:</b><br><code>Đơn giá xuất kho = Đơn giá bình quân</code><br><code>Thành tiền xuất kho = Đơn giá bình quân × Số lượng xuất</code><br><code>Giá trị tồn kho sau = Giá trị tồn kho trước - Thành tiền xuất kho</code><br><code>Số lượng tồn kho sau = Số lượng tồn kho trước - Số lượng xuất</code></p>
+  </div>
+
+  <h3>Ví dụ minh họa theo tài liệu</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Ngày</th><th>Loại</th><th class="num">SL tồn trước</th><th class="num">Giá BQ trước</th><th class="num">SL nhập/xuất</th><th class="num">Đơn giá</th><th class="num">SL tồn sau</th><th class="num">Giá BQ sau</th></tr></thead>
+    <tbody>
+      <tr><td>—</td><td>ĐK</td><td class="num">—</td><td class="num">—</td><td class="num">100</td><td class="num">10.000</td><td class="num">100</td><td class="num">10.000</td></tr>
+      <tr><td>1</td><td>IN</td><td class="num">100</td><td class="num">10.000</td><td class="num">+50</td><td class="num">12.000</td><td class="num">150</td><td class="num">10.667</td></tr>
+      <tr><td>2</td><td>OUT</td><td class="num">150</td><td class="num">10.667</td><td class="num">-30</td><td class="num">10.667</td><td class="num">120</td><td class="num">10.667</td></tr>
+      <tr><td>3</td><td>IN</td><td class="num">120</td><td class="num">10.667</td><td class="num">+20</td><td class="num">11.000</td><td class="num">140</td><td class="num">10.714</td></tr>
+      <tr><td>4</td><td>OUT</td><td class="num">140</td><td class="num">10.714</td><td class="num">-40</td><td class="num">10.714</td><td class="num">100</td><td class="num">10.714</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Giao dịch đầu tiên khi chưa có số dư đầu kỳ: <span class="f">Số lượng tồn trước = 0</span>, <span class="f">Giá bình quân trước = 0</span> — đơn giá bình quân sau giao dịch đầu bằng đúng đơn giá nhập. Nếu <span class="f">Số lượng tồn trước + Số lượng nhập = 0</span> thì không tính được, báo <span class="chip c-msg">MSG_012</span>.</p>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — PMKT-U-03633</span>
+  <h2>FIFO: sổ cost layer là nguồn sự thật</h2>
+  <p class="lede">FIFO không có "đơn giá của vật tư" — nó có <strong>các lớp giá tồn</strong>. Mỗi dòng chi tiết vật tư trên phiếu nhập sinh đúng một cost layer, mỗi phiếu xuất tiêu dần các layer từ cũ nhất, và một phiếu xuất có thể sinh nhiều dòng áp giá với nhiều đơn giá khác nhau.</p>
+
+  <h3>Replay cost layer trong một lượt tính giá</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["B1 · Sắp xếp theo ngày hạch toán<br/>Cùng ngày thì nhập trước xuất"] --> B["B2 · Lấy layer có SL tồn dương<br/>Sắp xếp từ cũ nhất tới mới nhất"]
+    B --> C(["Lấy giao dịch tiếp theo"])
+    C --> D{"Là giao dịch nhập?"}
+
+    D -- Có --> N1["B3 · Tạo cost layer mới<br/>Mã VT · Kho · SL · Đơn giá · Ngày HT"]
+    N1 --> N2{"Chứng từ điều chỉnh giá hàng mua?"}
+    N2 -- Có --> N3["Layer mới với SL = 0<br/>Giá trị = Giá trị thay đổi"]:::warn
+    N2 -- Không --> U
+
+    D -- "Không · Xuất trả NCC" --> R1{"Có chỉ đích danh<br/>chứng từ mua hàng gốc?"}
+    R1 -- Có --> R2["Trừ SL và giá trị layer tương ứng<br/>theo thứ tự từ trên xuống"]
+    R1 -- Không --> R3["Trừ layer cũ nhất còn tồn"]
+    R2 --> U
+    R3 --> U
+
+    D -- "Không · xuất thường" --> O1["B4 · Lấy layer cũ nhất còn tồn"]
+    O1 --> O2["SL lấy = Min của SL cần xuất còn lại<br/>và SL tồn của layer"]
+    O2 --> O3["Ghi dòng áp giá: VT · Kho · SL lấy<br/>Đơn giá layer · Giá trị xuất"]
+    O3 --> O4{"Còn SL cần xuất?"}
+    O4 -- "Có · layer hiện tại đã hết" --> O1
+    O4 -- Không --> O5["Cộng tổng giá trị xuất của phiếu"]
+    O5 --> U
+    N3 --> U
+
+    U(["Cập nhật SL tồn các layer"]) --> V{"Còn giao dịch?"}
+    V -- Có --> C
+    V -- Không --> W(["Áp giá · lưu kết quả · Sổ Cái"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Đơn giá ghi trên từng dòng áp giá là đơn giá của cost layer, không phải đơn giá chung của phiếu.</b> Đơn giá của phiếu chỉ là con số dẫn xuất: tổng giá trị xuất chia tổng số lượng xuất.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Công thức FIFO — nguyên văn</span>
+    <p><code>Số lượng xuất từ cost layer = Min {Số lượng cần xuất còn lại, Số lượng tồn của cost layer}</code></p>
+    <p><code>Giá trị tồn cost layer = SL tồn × Đơn giá</code></p>
+    <p><code>Thành tiền xuất = Σ(SL take × Đơn giá cost layer)</code></p>
+    <p><code>Đơn giá xuất kho của phiếu = Tổng giá trị xuất kho / Tổng số lượng xuất</code></p>
+    <p>Ví dụ tài liệu: layer 1 có SL 10 đơn giá 80.000, layer 2 có SL 11 đơn giá 75.000, xuất 15 đơn vị ⇒ lấy 10 từ layer 1 được 800.000, lấy 5 từ layer 2 được 375.000, tổng 1.175.000, đơn giá xuất kho = 1.175.000 / 15 = 78.333.</p>
+  </div>
+
+  <h3>Vòng đời cost layer theo thao tác ghi sổ</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Ghi sổ chứng từ nhập kho"]) --> A1["Tạo bản ghi inv_cost_layer<br/>SoLuongConLai · GiaTriConLai · DG"]
+    B(["Bỏ ghi sổ chứng từ nhập kho"]) --> B1["Xóa cost layer tương ứng"]
+    B1 --> B2["Không tự tính lại giá<br/>các giao dịch phía sau"]:::warn
+    C(["Ghi sổ chứng từ xuất kho"]) --> C1["Tiêu dùng layer cũ nhất còn tồn<br/>để lấy giá xuất tức thời"]
+    D(["Bỏ ghi sổ chứng từ xuất kho"]) --> D1["Hoàn lại SL đã tiêu dùng"]
+    D1 --> D2["Kích hoạt tính lại giá<br/>cho giao dịch phía sau"]:::ok
+    E(["Tính giá theo kỳ"]) --> E1["Replay toàn bộ nhập xuất trong kỳ<br/>để chia lại cost layer"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Bỏ ghi sổ nhập và bỏ ghi sổ xuất xử lý ngược nhau.</b> Bỏ ghi sổ <em>nhập</em> chỉ xóa layer và giữ nguyên giá đã áp phía sau; bỏ ghi sổ <em>xuất</em> thì hoàn lại số lượng đã tiêu dùng và bật cờ tính lại cho các giao dịch hạch toán sau nó.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Không dùng chung dữ liệu</span>
+    <p>Tuyệt đối không dùng bảng tồn kho live <span class="f">inv_ton_kho</span> thay cho cost layer của FIFO. <span class="f">inv_ton_kho</span> chỉ quản lý tổng số lượng tồn live, phục vụ kiểm soát tồn kho âm runtime và bán hàng. Bốn entity của epic: <span class="f">inv_luot_tinh_gia_xuat_kho</span> · <span class="f">inv_cost_layer</span> · <span class="f">inv_ket_qua_tinh_gia_xuat_kho</span> · <span class="f">inv_ap_gia_xuat_kho_chi_tiet</span>.</p>
+  </div>
+
+  <h3>Cạm bẫy cost layer</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tình huống</th><th>Xử lý theo tài liệu</th></tr></thead>
+    <tbody>
+      <tr><td>Layer có SL tồn = 0</td><td>Không dùng để áp giá, loại khỏi danh sách layer active</td></tr>
+      <tr><td>Chứng từ điều chỉnh giá có giá trị âm</td><td>Trừ giá trị cost layer; giá trị tồn layer có thể âm, khi xuất đơn giá vẫn lấy từ layer và có thể âm</td></tr>
+      <tr><td>Xuất trả NCC đích danh nhưng layer không đủ SL</td><td>Trừ tiếp từ các layer cũ nhất khác còn tồn</td></tr>
+      <tr><td>Không có số dư đầu kỳ và không có giao dịch nhập</td><td>Không thể xuất kho — kết thúc luồng với <span class="chip c-msg">MSG_007</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — BR-05 · BR-08</span>
+  <h2>Khi tồn về 0 hoặc âm: đảo ngược thứ tự tính</h2>
+  <p class="lede">Quy tắc này áp cho <strong>cả ba phương pháp</strong> và là chỗ sai nhiều nhất. Phiếu xuất bình thường tính đơn giá trước rồi nhân ra thành tiền; phiếu đưa tồn về 0 hoặc âm thì ngược lại — tính thành tiền trước, đơn giá là con số suy ra.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Một phiếu xuất trong batch"]) --> B{"Tồn trước xuất?"}
+
+    B -- "Dương" --> C{"Tồn sau xuất còn dương?"}
+    C -- Có --> N1["Phiếu bình thường<br/>Đơn giá → Thành tiền"]:::ok
+    N1 --> N2["Thành tiền = Đơn giá × SL xuất"]
+
+    C -- "Không · về 0 hoặc âm" --> S1["Phiếu đặc biệt<br/>Thành tiền → Đơn giá"]:::warn
+    S1 --> S2["Tách DepQty = SL tồn trước xuất<br/>ZeroQty = SL xuất - DepQty"]
+    S2 --> S3["Thành tiền dòng = DepQty × Đơn giá<br/>Phần ZeroQty có thành tiền = 0"]
+    S3 --> S4["Đơn giá hiển thị trên dòng<br/>= Thành tiền dòng / Tổng SL xuất"]
+
+    B -- "Bằng 0" --> Z1["Thành tiền = 0 · Đơn giá = 0"]:::warn
+    B -- "Âm" --> Z2["Về âm sâu hơn<br/>Thành tiền = 0 · Đơn giá = 0"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Phần vượt tồn luôn có thành tiền bằng 0.</b> Hệ quả: đơn giá hiển thị trên dòng xuất bị "pha loãng" — nó không bằng đơn giá tồn kho mà bằng thành tiền chia cho <em>tổng</em> số lượng xuất, kể cả phần âm kho. Phần <span class="f">ZeroQty</span> cũng không tham gia giải hệ phương trình điều chuyển phụ thuộc.</figcaption>
+  </figure>
+
+  <h3>Bốn tổ hợp trạng thái tồn</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tồn trước xuất</th><th>Tồn sau xuất</th><th>Loại phiếu</th><th>Thứ tự tính</th><th>Đơn giá</th></tr></thead>
+    <tbody>
+      <tr><td>Dương</td><td>Dương</td><td>Bình thường</td><td><b>Đơn giá → Thành tiền</b></td><td>Theo phương pháp của vật tư</td></tr>
+      <tr><td>Dương</td><td>Về 0 hoặc âm</td><td>Đặc biệt</td><td><b>Thành tiền → Đơn giá</b></td><td>(Tổng thành tiền nhập − Tổng giá trị xuất của các phiếu trước) / Số lượng xuất</td></tr>
+      <tr><td>Bằng 0</td><td>Về âm</td><td>Đặc biệt</td><td><b>Thành tiền → Đơn giá</b></td><td>0</td></tr>
+      <tr><td>Âm</td><td>Về âm sâu hơn</td><td>Đặc biệt</td><td><b>Thành tiền → Đơn giá</b></td><td>0</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ví dụ bốn phiếu liên tiếp</h3>
+  <p>Giả sử tổng thành tiền nhập 1.000.000đ, tổng số lượng nhập 100 — ví dụ này lấy nguyên từ UC Bình quân cuối kỳ và UC Bình quân tức thời.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Phiếu</th><th class="num">Tồn trước</th><th class="num">SL xuất</th><th class="num">Tồn sau</th><th>Loại phiếu</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td class="num">100</td><td class="num">30</td><td class="num">70</td><td>Bình thường</td><td class="num">10.000</td><td class="num">300.000</td></tr>
+      <tr><td>2</td><td class="num">70</td><td class="num">50</td><td class="num">20</td><td>Bình thường</td><td class="num">10.000</td><td class="num">500.000</td></tr>
+      <tr><td>3</td><td class="num">20</td><td class="num">30</td><td class="num">-10</td><td>Đặc biệt</td><td class="num">6.667</td><td class="num">200.000</td></tr>
+      <tr><td>4</td><td class="num">-10</td><td class="num">20</td><td class="num">-30</td><td>Đặc biệt</td><td class="num">0</td><td class="num">0</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Chi tiết phiếu 3: phần tồn thực tế 20 × 10.000 = 200.000, phần vượt tồn 10 × 0 = 0, thành tiền 200.000, đơn giá = 200.000 / 30 = 6.667.</p>
+
+  <div class="note">
+    <span class="lbl">Precision — <span class="chip c-br">BR7</span></span>
+    <p>Trong suốt quá trình tính, hệ thống <strong>giữ full precision</strong> cho số lượng, đơn giá, thành tiền, giá trị tồn, cost layer, hệ phương trình và mọi biến trung gian. <strong>Không làm tròn</strong> sau từng giao dịch, từng cost layer, từng batch con hay từng bước giải hệ. Chỉ làm tròn khi ghi kết quả cuối cùng vào chứng từ, Sổ Cái, báo cáo — theo <em>Commercial rounding</em>, 0.005 → 0.01.</p>
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — BR-06 · Hậu điều kiện</span>
+  <h2>Áp giá và cập nhật bút toán giá vốn</h2>
+  <p class="lede">Tính ra đơn giá mới là nửa việc. Nửa còn lại — ghi đơn giá lên chứng từ xuất, áp giá trung bình cho phiếu nhập tự động áp giá, rồi <em>sửa lại</em> bút toán giá vốn trên Sổ Cái — phải nằm trong một giao dịch nguyên tử duy nhất.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Batch đã có đơn giá"]) --> B["Bước 1 · Xác định đơn giá xuất<br/>theo trạng thái tồn trước và sau"]
+    B --> C["Bước 2 · Áp giá cho giao dịch xuất<br/>có Tự nhập đơn giá = Un-checked"]
+    C --> C1["Theo thứ tự Ngày hạch toán<br/>từ cũ nhất đến mới nhất"]
+    C1 --> D{"Lỗi khi áp giá?"}
+    D -- Có --> X1["MSG_010 · rollback cả lượt"]:::err
+    D -- Không --> E["Bước 3 · Áp giá TB cho phiếu nhập<br/>có Tự động áp giá = Checked"]
+    E --> E1{"Lỗi khi áp giá trung bình?"}
+    E1 -- Có --> X1
+    E1 -- Không --> F["Cập nhật đơn giá và thành tiền vốn<br/>cho phiếu xuất đã ghi sổ giá vốn = 0"]
+    F --> G["Lưu kết quả tính giá"]
+    G --> G1{"Lỗi khi lưu kết quả?"}
+    G1 -- Có --> X2["MSG_011 · rollback cả lượt"]:::err
+    G1 -- Không --> H["Cập nhật lại bút toán giá vốn Sổ Cái<br/>thay bút toán tạm 0 bằng giá tính"]
+    H --> H1{"Lỗi khi cập nhật Sổ Cái?"}
+    H1 -- Có --> X2
+    H1 -- Không --> I["Ghi lịch sử tính giá"]
+    I --> J(["MSG_004 · tải lại dữ liệu"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Cập nhật chứng từ và cập nhật phát sinh Nợ/Có Sổ Cái nằm trong một giao dịch nguyên tử.</b> Lỗi ở vế nào cũng kéo cả hai vế quay lại — không có trạng thái nửa vời kiểu chứng từ đã có giá vốn mới mà Sổ Cái vẫn giữ bút toán bằng 0.</figcaption>
+  </figure>
+
+  <h3>Quy tắc ghi đè khi chạy lại</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tình huống</th><th>Hành vi</th></tr></thead>
+    <tbody>
+      <tr><td>Phiếu xuất có <span class="f">Tự nhập đơn giá = Un-checked</span> đã được áp giá lần trước</td><td><b>Ghi đè hoàn toàn</b> — đơn giá cũ bị thay bằng đơn giá mới tính từ công thức</td></tr>
+      <tr><td>Phiếu xuất có <span class="f">Tự nhập đơn giá = Checked</span></td><td><b>Không ghi đè</b> — giữ nguyên đơn giá người dùng đã nhập, không tham gia tính lại</td></tr>
+      <tr><td>Phiếu nhập có <span class="f">Tự động áp giá = Checked</span> đã được áp giá lần trước</td><td><b>Ghi đè hoàn toàn</b> — đơn giá trung bình cũ bị thay bằng giá trung bình mới</td></tr>
+      <tr><td>Chạy lại nhiều lần trong cùng kỳ</td><td>Mỗi lần chạy tính lại từ đầu với toàn bộ giao dịch trong kỳ, ghi đè kết quả cũ</td></tr>
+      <tr><td>Chứng từ chưa ghi sổ</td><td>Không tham gia tính giá — việc ghi đè chỉ áp cho chứng từ "Đã ghi sổ"</td></tr>
+      <tr><td>Xuất trả NCC có tick Trả lại hàng trong kho</td><td>Không áp giá ở bất kỳ phương pháp nào</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Bút toán Sổ Cái — <span class="chip c-br">BR36</span></span>
+    <p>Khi sinh lại bút toán giá vốn, hệ thống <strong>không gộp</strong> các dòng bút toán có cùng tài khoản hay cùng nội dung hạch toán. Mỗi cặp tài khoản phát sinh trên chứng từ sinh thành hai dòng riêng biệt trên Sổ Cái theo đúng dữ liệu nguồn. Chi tiết mapping tài khoản nằm ở tài liệu <span class="f">TaiLieuMappingSoCai</span>, ngoài phạm vi bộ tài liệu epic này.</p>
+  </div>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — SCR_ThongBaoTinhGia · SCR_KetQuaTinhGiaLoi</span>
+  <h2>Kết quả, batch lỗi và hủy giữa chừng</h2>
+  <p class="lede">Popup tiến trình chỉ hiện cho <strong>đúng người bấm nút</strong>. Tiến trình do hệ thống tự kích hoạt hoặc do người dùng khác khởi tạo thì chạy im lặng — một lượt tính giá có thể đang chạy mà màn hình của bạn không thấy gì.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Popup Đang tính giá"]) --> B{"Kết cục của lượt"}
+    B -- "Mọi batch thành công" --> R1["Đóng popup sau 3 giây<br/>MSG_004"]:::ok
+    B -- "Có batch lỗi nghiệp vụ" --> R2["Đóng popup sau 3 giây<br/>MSG_021 · mở màn kết quả lỗi"]:::warn
+    B -- "0 vật tư cần tính" --> R3["Về 100% ngay · MSG_006"]:::warn
+    B -- "Lỗi hệ thống giữa chừng" --> R4["Dừng ở phần trăm hiện tại<br/>MSG_008 tới MSG_012 · rollback"]:::err
+    B -- "Người dùng bấm Hủy" --> R5["Rollback toàn bộ<br/>Lưu trạng thái Đã hủy · MSG_018"]:::err
+    B -- "F5 hoặc mất kết nối" --> R6["Popup đóng · tiến trình chạy ngầm<br/>Mở lại màn thấy kết quả"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Batch lỗi nghiệp vụ không làm dừng thanh tiến trình.</b> Phần trăm vẫn tăng theo số batch đã xử lý; chỉ lỗi hệ thống mới đóng băng con số tại chỗ. Công thức: <span class="f">Phần trăm = (Vật tư đã tính / Tổng vật tư cần tính) × 100%</span>.</figcaption>
+  </figure>
+
+  <h3>Màn Kết quả tính giá lỗi</h3>
+  <p>Chỉ mở khi phương pháp là <strong>Bình quân cuối kỳ</strong> và quy trình đã xử lý xong toàn bộ batch với ít nhất một batch không xác định được đơn giá duy nhất hoặc không đủ dữ liệu.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Khối</th><th>Nội dung</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="6">Thông tin tổng quan</td><td>Kỳ tính giá — kỳ kế toán hoặc khoảng thời gian người dùng đã chọn</td></tr>
+      <tr><td>Phương pháp tính giá — Bình quân cuối kỳ</td></tr>
+      <tr><td>Tổng batch — tổng số batch vật tư + kho đã xử lý</td></tr>
+      <tr><td>Batch thành công — số batch đã tính và áp giá thành công</td></tr>
+      <tr><td>Batch lỗi — số batch không tính được giá</td></tr>
+      <tr><td>Ghi chú — nội dung <span class="chip c-msg">MSG_021</span></td></tr>
+      <tr><td>Bảng danh sách lỗi</td><td>STT · Mã vật tư · Tên vật tư · Kho · Phương pháp tính giá</td></tr>
+      <tr><td>Chức năng</td><td>Xuất Excel toàn bộ danh sách lỗi theo bộ lọc hiện tại <span class="chip c-br">BR39</span> · Đóng để quay lại màn Tính giá xuất kho</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Nội dung MSG_021 — nguyên văn</span>
+    <p><em>"Có {N} vật tư không tính được giá với phương pháp bình quân cuối kỳ. Vui lòng kiểm tra các chứng từ nhập/xuất của các vật tư chạy lỗi để xử lý và thực hiện tính lại giá xuất kho"</em></p>
+  </div>
+
+  <h3>Tình huống biên của popup tiến trình</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tình huống</th><th>Phần trăm</th><th>Hành vi mong đợi</th></tr></thead>
+    <tbody>
+      <tr><td>0 vật tư cần tính</td><td>100% ngay lập tức</td><td>Đóng popup, hiển thị <span class="chip c-msg">MSG_006</span></td></tr>
+      <tr><td>Lỗi hệ thống giữa chừng</td><td>Dừng ở giá trị hiện tại</td><td>Đóng popup, hiển thị lỗi tương ứng, rollback toàn bộ lần tính giá</td></tr>
+      <tr><td>Batch vật tư + kho lỗi nghiệp vụ</td><td>Vẫn tiếp tục tăng</td><td>Ghi nhận batch lỗi, tiếp tục batch khác, không áp giá cho batch lỗi</td></tr>
+      <tr><td>Người dùng nhấn Hủy</td><td>Dừng ở giá trị hiện tại</td><td>Rollback toàn bộ, lưu bản ghi "Đã hủy", <span class="chip c-msg">MSG_018</span></td></tr>
+      <tr><td>Làm mới trang (F5) / mất kết nối</td><td>Không xác định</td><td>Popup đóng, tiến trình vẫn chạy ngầm ở server; mở lại màn thì thấy kết quả nếu đã hoàn tất</td></tr>
+      <tr><td>Tiến trình do người dùng khác khởi tạo</td><td>Không hiển thị popup</td><td>Nếu có quyền xem, thấy trạng thái "Đang chạy" ở màn danh sách tiến trình</td></tr>
+      <tr><td>Hoàn thành 100% không có batch lỗi</td><td>100%</td><td>Tự đóng popup sau 3 giây, <span class="chip c-msg">MSG_004</span></td></tr>
+      <tr><td>Hoàn thành 100% có batch lỗi</td><td>100%</td><td>Tự đóng popup sau 3 giây, <span class="chip c-msg">MSG_021</span> và mở màn Kết quả tính giá lỗi</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — BR-08 · BR-09 · BR-10</span>
+  <h2>Chạy lại, đồng thời và phạm vi rollback</h2>
+  <p class="lede">Tính giá không khóa nghiệp vụ. Trong lúc một lượt đang chạy, người dùng vẫn ghi sổ và bỏ ghi sổ chứng từ nhập/xuất bình thường — hệ quả là kết quả tính giá luôn phải chịu được việc bị tính lại và ghi đè.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Lỗi trong một lượt tính giá"]) --> B{"Loại lỗi?"}
+    B -- "Nghiệp vụ theo batch" --> C["Vô nghiệm · vô số nghiệm<br/>mẫu số bằng 0 của một vật tư + kho"]
+    C --> C1["Ghi nhận lỗi batch<br/>Bỏ qua batch · chạy tiếp batch khác"]:::warn
+    C1 --> C2["Không rollback theo từng dòng<br/>trong cùng một batch lỗi"]
+
+    B -- "Hệ thống hoặc toàn cục" --> D["Lỗi tạo batch · lưu kết quả<br/>cập nhật Sổ Cái · lỗi database"]
+    D --> D1["Rollback toàn bộ lần tính giá"]:::err
+    D1 --> D2["Gồm cả cập nhật giá xuất kho<br/>lịch sử áp giá và bút toán Sổ Cái"]
+    D2 --> D3{"Lượt được kích hoạt từ Ghi sổ?"}
+    D3 -- Có --> D4["Chứng từ không được ghi sổ<br/>MSG_019"]:::err
+    D3 -- Không --> D5["Kết thúc luồng"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Chỉ Bình quân cuối kỳ có khái niệm lỗi cục bộ.</b> Ở Bình quân tức thời và FIFO, mọi lỗi đều là lỗi toàn cục: BR-11/BR-08 của hai use case đó ghi rõ "không áp dụng rollback riêng theo vật tư, kho, batch con, cost layer hoặc từng dòng giao dịch".</figcaption>
+  </figure>
+
+  <h3>Luật đồng thời và chạy lại</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Luật</th><th>Nội dung</th></tr></thead>
+    <tbody>
+      <tr><td>Không khóa ghi sổ</td><td>Hệ thống không khóa ghi sổ/bỏ ghi sổ giao dịch nhập/xuất khi đang có lượt tính giá chạy</td></tr>
+      <tr><td>Chặn lượt song song</td><td>Nhưng không cho khởi động lượt tính giá thứ hai trong cùng kỳ — <span class="chip c-msg">MSG_016</span></td></tr>
+      <tr><td>Chạy lại</td><td>Tính lại từ đầu và overwrite toàn bộ kết quả cũ của các chứng từ tham gia</td></tr>
+      <tr><td>Không cộng dồn delta</td><td>Không cộng dồn delta từ kết quả tính giá trước</td></tr>
+      <tr><td>Ghi sổ lùi ngày</td><td>Không có giao dịch ghi sổ lùi ngày tự động tính giá</td></tr>
+      <tr><td>Bỏ ghi sổ nhập kho</td><td>Chỉ tự động tính lại khi không tồn tại giao dịch phía sau của cùng vật tư/kho theo <span class="f">NgayHachToan</span>; ngược lại báo <span class="chip c-msg">MSG_020</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Hệ quả cần lường trước</span>
+    <p>Vì ghi sổ không bị khóa trong lúc tính giá, một chứng từ có thể được ghi sổ <em>sau</em> khi batch của nó đã được gom nhưng <em>trước</em> khi lượt kết thúc. Bộ tài liệu BA <strong>chưa quy định</strong> chứng từ đó thuộc lượt hiện tại hay lượt sau — cần BA làm rõ trước khi hiện thực hóa, không tự đặt luật.</p>
+  </div>
+</section>
+
+<!-- ============ 13 ============ -->
+<section id="s13">
+  <span class="snum">13 — Tra cứu</span>
+  <h2>Điều kiện chặn, mã thông báo và quyền</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> trong các sơ đồ trên. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-03629_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Bước</th><th>Điều kiện</th><th class="mono">Mã</th><th>Loại</th><th>Phạm vi rollback</th></tr></thead>
+    <tbody>
+      <tr><td>Vào chức năng</td><td>Không có quyền truy cập chức năng tính giá</td><td class="mono">005</td><td>Error</td><td>—</td></tr>
+      <tr><td rowspan="2">Trước khi chạy</td><td>Đang có quy trình tính giá chạy trong kỳ</td><td class="mono">016</td><td>Error</td><td>—</td></tr>
+      <tr><td>Kỳ kế toán đã đóng</td><td class="mono">001</td><td>Error</td><td>—</td></tr>
+      <tr><td rowspan="2">Kiểm dữ liệu</td><td>Không có giao dịch nào trong kỳ để tính giá</td><td class="mono">006</td><td>Warning</td><td>—</td></tr>
+      <tr><td>Không có chứng từ "Đã ghi sổ" trong kỳ để tính giá</td><td class="mono">007</td><td>Warning</td><td>—</td></tr>
+      <tr><td>Cảnh báo</td><td>Có {N} vật tư có tồn kho âm trong kỳ — chọn Tiếp tục hoặc Hủy</td><td class="mono">002</td><td>Warning</td><td>—</td></tr>
+      <tr><td>Chặn riêng FIFO</td><td>Có chứng từ Tự động áp giá hoặc Tự nhập đơn giá = Checked</td><td class="mono">013</td><td>Error</td><td>—</td></tr>
+      <tr><td>Tạo batch</td><td>Lỗi khi tạo batch tính giá</td><td class="mono">008</td><td>Error</td><td>Toàn bộ lượt</td></tr>
+      <tr><td rowspan="2">Tính giá</td><td>Không thể tính giá cho vật tư có điều chuyển phụ thuộc</td><td class="mono">009</td><td>Error</td><td><b>Chỉ batch đó</b></td></tr>
+      <tr><td>Vật tư {MaVatTu} không có số lượng để tính giá</td><td class="mono">012</td><td>Error</td><td><b>Chỉ batch đó</b></td></tr>
+      <tr><td>Sổ FIFO</td><td>Lỗi khi cập nhật sổ FIFO</td><td class="mono">015</td><td>Error</td><td>Toàn bộ lượt</td></tr>
+      <tr><td>Áp giá</td><td>Lỗi khi áp giá cho giao dịch</td><td class="mono">010</td><td>Error</td><td>Toàn bộ lượt</td></tr>
+      <tr><td>Lưu kết quả</td><td>Lỗi khi lưu kết quả tính giá</td><td class="mono">011</td><td>Error</td><td>Toàn bộ lượt</td></tr>
+      <tr><td>Bất kỳ bước nào</td><td>Có lỗi xảy ra. Vui lòng thử lại sau</td><td class="mono">003</td><td>Error</td><td>Toàn bộ lượt</td></tr>
+      <tr><td>Tự động khi Ghi sổ</td><td>Không thể ghi sổ chứng từ do tính giá xuất kho thất bại</td><td class="mono">019</td><td>Error</td><td>Rollback cả thao tác ghi sổ</td></tr>
+      <tr><td>Tự động khi Bỏ ghi sổ</td><td>Đã tồn tại giao dịch phát sinh phía sau</td><td class="mono">020</td><td>Error</td><td>—</td></tr>
+      <tr><td rowspan="3">Kết thúc</td><td>Tính giá xuất kho thành công</td><td class="mono">004</td><td>Success</td><td>—</td></tr>
+      <tr><td>Hủy tiến trình tính giá xuất kho thành công</td><td class="mono">018</td><td>Success</td><td>Toàn bộ lượt</td></tr>
+      <tr><td>Có {N} vật tư không tính được giá với bình quân cuối kỳ</td><td class="mono">021</td><td>Warning</td><td>Chỉ các batch lỗi</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">TinhGiaXuatKho.Calculate</td><td>Vào màn Tính giá xuất kho · bấm Bắt đầu tính giá · cả ba phương pháp Bình quân cuối kỳ, Bình quân tức thời, FIFO</td></tr>
+      <tr><td class="mono">—</td><td>Luồng tự động khi Ghi sổ / Bỏ ghi sổ chạy dưới danh nghĩa hệ thống, tài liệu không gán mã quyền riêng</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Những chỗ tài liệu chưa quy định</span>
+    <p>Trang này <strong>không vẽ</strong> các luồng sau vì bộ tài liệu BA chưa quy định: phương pháp <em>Đích danh</em> (ghi rõ phase 2); màn hình danh sách các lượt tính giá đã chạy (được nhắc tới ở tình huống biên popup nhưng không có SCR); điều kiện enable nút "Bắt đầu tính giá"; cách xử lý chứng từ được ghi sổ xen giữa lúc lượt đang chạy; và mapping tài khoản Nợ/Có cụ thể của bút toán giá vốn (nằm ở <span class="f">TaiLieuMappingSoCai</span>, ngoài epic).</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-03629 · Tính giá xuất kho</span>
+  <span>Dựng từ 3 UC · 3 Activity Diagram · 4 màn hình · 18 mã MSG</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

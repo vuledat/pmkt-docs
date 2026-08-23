@@ -635,9 +635,9 @@ erDiagram
 | `KtthSchemaMigrationIT` | Sau V359: 2 bảng tồn tại, có RLS **ENABLE + FORCE**, có policy `tenant_isolation`, có `trg_audit_*`, có GRANT `pmkt_app` |
 | `KtthSchemaMigrationIT` | Sau V360: `mst_loai_chung_tu` có `code = 'PBT'` |
 | `KtthSchemaMigrationIT` | 2 bảng mới thoả quy ước chung: có `tenant_id`, RLS ENABLE+FORCE, policy `tenant_isolation`, trigger `trg_audit_*`, bộ cột soft-delete — **kiểm bằng `pg_class`/`pg_policy`/`pg_trigger` trong chính IT này** |
-| `JpaMetamodelArchTest` | ✅ **đã có sẵn**, tự phủ 5 entity mới ngay khi chúng mang `@Entity` — dựng metamodel + `Metadata.validate()` không cần DB (`src/test/java/vn/dopai/pmkt/cell/arch/JpaMetamodelArchTest.java:25-48`). **Không phải viết thêm** |
+| `JpaMetamodelArchTest` | ✅ **đã có sẵn**, tự phủ 5 entity mới ngay khi chúng mang `@Entity` — dựng metamodel + `Metadata.validate()` không cần DB (`src/test/java/vn/vtt/pmkt/cell/arch/JpaMetamodelArchTest.java:25-48`). **Không phải viết thêm** |
 
-> ⚠️ **Đính chính vòng 2 (§2.4-Đ7 ở [00](00-ke-hoach-tong.md)):** bản trước trích `SchemaConventionTest` như một test đang chạy. **Không có file test nào tên đó** — `find src/test -name "*Convention*"` rỗng; chuỗi "SchemaConvention" chỉ xuất hiện trong **comment migration** (`V202`, `V132`, `V194`, `V245`…). Bộ arch test thật của repo: `HandlerAuthorizationArchTest`, `JpaMetamodelArchTest`, `ProxyArchTest`, `ProxyModularityTest` (`src/test/java/vn/dopai/pmkt/cell/arch/`). ⇒ Quy ước schema phải **tự kiểm trong IT của module**, không có ai kiểm hộ.
+> ⚠️ **Đính chính vòng 2 (§2.4-Đ7 ở [00](00-ke-hoach-tong.md)):** bản trước trích `SchemaConventionTest` như một test đang chạy. **Không có file test nào tên đó** — `find src/test -name "*Convention*"` rỗng; chuỗi "SchemaConvention" chỉ xuất hiện trong **comment migration** (`V202`, `V132`, `V194`, `V245`…). Bộ arch test thật của repo: `HandlerAuthorizationArchTest`, `JpaMetamodelArchTest`, `ProxyArchTest`, `ProxyModularityTest` (`src/test/java/vn/vtt/pmkt/cell/arch/`). ⇒ Quy ước schema phải **tự kiểm trong IT của module**, không có ai kiểm hộ.
 | `BuTruConstraintIT` | INSERT cặp ghép có `so_tien_bu_tru_phai_thu ≠ so_tien_bu_tru_phai_tra` → **vi phạm CHECK** |
 | `BuTruConstraintIT` | INSERT `so_tien_bu_tru_phai_thu = 0` → vi phạm CHECK |
 | `BuTruConstraintIT` | INSERT `chung_tu_phai_thu_id = chung_tu_phai_tra_id` → vi phạm CHECK |

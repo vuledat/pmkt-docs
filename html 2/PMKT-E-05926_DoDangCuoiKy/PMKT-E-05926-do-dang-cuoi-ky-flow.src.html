@@ -1,0 +1,938 @@
+<title>Luồng Dở dang cuối kỳ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-05926 · Tính giá thành — Bước 4</p>
+  <h1>Luồng xử lý Dở dang cuối kỳ</h1>
+  <p>Toàn bộ luồng nghiệp vụ của epic Cập nhật dở dang cuối kỳ — từ chọn kỳ và phương pháp đánh giá, ba bộ trường nhập liệu tương ứng, công thức tính, chuỗi lưu và nhập Excel, cho tới vai trò của số dở dang cuối kỳ trong công thức tính giá thành. Mỗi sơ đồ bám đúng Activity Diagram và BR trong bộ tài liệu BA.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 5 use case · 5 màn hình · BR1–BR12</span>
+    <span><b>Entity gốc:</b> cost_do_dang_cuoi_ky + _chi_tiet</span>
+    <span><b>Quyền:</b> GTTT.AllPermission</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Tổng quan &amp; trạng thái kỳ</a></li>
+    <li><a href="#s1"><span>01</span>Chọn kỳ · xem danh sách</a></li>
+    <li><a href="#s2"><span>02</span>Ba phương pháp đánh giá</a></li>
+    <li><a href="#s3"><span>03</span>Đổi phương pháp</a></li>
+    <li><a href="#s4"><span>04</span>Công thức tại màn nhập</a></li>
+    <li><a href="#s5"><span>05</span>Thêm mới</a></li>
+    <li><a href="#s6"><span>06</span>Chỉnh sửa</a></li>
+    <li><a href="#s7"><span>07</span>Xóa</a></li>
+    <li><a href="#s8"><span>08</span>Lấy lại định mức</a></li>
+    <li><a href="#s9"><span>09</span>Nhập Excel</a></li>
+    <li><a href="#s10"><span>10</span>Quan hệ dữ liệu</a></li>
+    <li><a href="#s11"><span>11</span>Vai trò trong tính giá thành</a></li>
+    <li><a href="#s12"><span>12</span>Tra cứu chặn · quyền · khoảng trống</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Một bước trong chuỗi bảy bước tính giá thành</h2>
+  <p class="lede">Dở dang cuối kỳ <strong>không phải chứng từ</strong> — không có ghi sổ, không sinh bút toán. Nó là <em>tham số đầu vào</em> của bước Tính giá thành, và ngược lại nhận giá trị ghi đè từ chính bước đó. Vòng đời của nó bám vào <strong>trạng thái kỳ tính giá thành</strong>, không phải vào trạng thái của riêng bản ghi.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    B1["1 · Dở dang đầu kỳ"] --> B2["2 · Hạch toán chi phí"]
+    B2 --> B3["3 · Nhập kho thành phẩm"]
+    B3 --> B4["<b>4 · Dở dang cuối kỳ</b><br/>epic này"]
+    B4 --> B5["5 · Phân bổ chi phí"]
+    B5 --> B6["6 · Tính giá thành"]
+    B6 --> B7["7 · Kết chuyển chi phí"]
+    B6 -. "ghi ngược 4 trường chi phí" .-> B4
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class B4 ok;
+</pre>
+    </div>
+    <figcaption><b>Quan hệ hai chiều với bước 6.</b> Bước 4 cấp <em>số lượng · tỷ lệ hoàn thành · định mức</em> cho công thức tính giá thành; bước 6 tính xong thì ghi ngược giá trị tiền vào bốn trường chi phí của master dở dang cuối kỳ. Người dùng không bao giờ nhập tay bốn trường đó.</figcaption>
+  </figure>
+
+  <h3>Trạng thái kỳ là công tắc gác mọi thao tác ghi</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A["<b>CHƯA THỰC HIỆN</b><br/>Nhập liệu mở hoàn toàn"]
+    B["<b>ĐANG THỰC HIỆN</b><br/>Nhập liệu vẫn mở"]
+    C["<b>ĐÃ HOÀN THÀNH</b><br/>Khóa mọi thao tác ghi"]
+    A -- "chạy các bước tính giá thành" --> B
+    B -- "hoàn thành kỳ" --> C
+    A --> D1["Thêm · Sửa · Xóa · Import<br/>Chọn phương pháp · Lấy định mức"]
+    B --> D1
+    C --> D2["Nút bị ẩn ở UI<br/>API vẫn từ chối · MSG_105"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class D1 ok;
+    class D2 err;
+</pre>
+    </div>
+    <figcaption><b>Ẩn ở UI chưa đủ.</b> Mọi màn của epic đều khai lại cùng một ràng buộc bất biến ở tầng server: kỳ <em>Đã hoàn thành</em> thì thêm / sửa / xóa / import đều bị từ chối kể cả khi gọi API trực tiếp.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Chưa thực hiện</th><th>Đang thực hiện</th><th>Đã hoàn thành</th><th class="mono">Chặn</th></tr></thead>
+    <tbody>
+      <tr><td>Xem danh sách</td><td>Hiện</td><td>Hiện</td><td>Hiện</td><td class="mono">—</td></tr>
+      <tr><td>Thêm mới</td><td>Hiện</td><td>Hiện</td><td><b>Ẩn</b></td><td class="mono">105</td></tr>
+      <tr><td>Chỉnh sửa</td><td>Hiện</td><td>Hiện</td><td><b>Ẩn</b></td><td class="mono">105</td></tr>
+      <tr><td>Xóa</td><td>Hiện</td><td>Hiện</td><td><b>Ẩn</b></td><td class="mono">105</td></tr>
+      <tr><td>Import excel</td><td>Hiện</td><td>Hiện</td><td><b>Ẩn</b></td><td class="mono">105</td></tr>
+      <tr><td>Chọn phương pháp</td><td>Hiện</td><td>Hiện</td><td><b>Ẩn</b></td><td class="mono">105</td></tr>
+      <tr><td>Lấy lại định mức giá thành</td><td>Hiện <span class="chip c-warn">chỉ PP Định mức</span></td><td>Hiện <span class="chip c-warn">chỉ PP Định mức</span></td><td><b>Ẩn</b></td><td class="mono">105</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Nguồn: bảng Chức năng của <span class="f">SCR_DoDangCuoiKy_DanhSach</span> <span class="chip c-br">BR2</span> <span class="chip c-br">BR3</span> <span class="chip c-br">BR4</span> <span class="chip c-br">BR6</span> <span class="chip c-br">BR7</span> <span class="chip c-br">BR8</span>, đối chiếu quy chuẩn chung <span class="chip c-br">BR25</span> — nút không có quyền thì <em>ẩn</em>, không disable.</p>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — UC_DoDangCuoiKy_DanhSach</span>
+  <h2>Chọn kỳ rồi mới có danh sách</h2>
+  <p class="lede">Màn danh sách nhận hai tham số ngữ cảnh trước khi đọc dữ liệu: <strong>kỳ tính giá thành đang chọn</strong> và <strong>phương pháp đánh giá đã lưu của kỳ đó</strong>. Bộ cột của lưới do tham số thứ hai quyết định, nên phải đọc kỳ trước, đọc dữ liệu sau.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Menu Tính giá thành → Bước 4"]) --> B{"Có quyền GTTT.AllPermission?"}
+    B -- Không --> B1["Thông báo không có quyền<br/>MSG_002"]
+    B -- Có --> C["Mở SCR_DoDangCuoiKy_DanhSach"]
+    C --> D["Đọc phương pháp đánh giá của kỳ<br/>KyTinhGiaThanh"]
+    D --> E["Đọc chi tiết dở dang cuối kỳ<br/>của kỳ đang chọn"]
+    E --> F{"Có bản ghi nào?"}
+    F -- Không --> F1["MSG_001 Không có dữ liệu"]
+    F -- Có --> G["Lưới 20 dòng mỗi trang<br/>Sắp xếp theo Mã sản phẩm"]
+    G --> H["Tìm kiếm chung theo<br/>Mã sản phẩm · Tên sản phẩm"]
+    H --> I{"Có kết quả?"}
+    I -- Không --> F1
+    I -- Có --> J["Hiển thị kết quả lọc"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class B1 err;
+    class F1 warn;
+    class J ok;
+</pre>
+    </div>
+    <figcaption><b>Một mã thông báo cho hai ngoại lệ.</b> Danh sách trống và tìm kiếm không ra kết quả cùng dùng <span class="chip c-msg">MSG_001</span> — tài liệu UC mô tả hai câu khác nhau nhưng bảng thông báo của màn chỉ khai một mã.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột lưới</th><th class="mono">Nguồn dữ liệu</th><th>Tìm kiếm</th><th>Sắp xếp</th></tr></thead>
+    <tbody>
+      <tr><td>Mã sản phẩm</td><td class="mono">ChiTietDoDangCuoiKy.VatTuId</td><td>Y</td><td>Y</td></tr>
+      <tr><td>Tên sản phẩm</td><td class="mono">theo sản phẩm của dòng</td><td>Y</td><td>Y</td></tr>
+      <tr><td>Đơn vị tính</td><td class="mono">theo sản phẩm của dòng</td><td>N</td><td>N</td></tr>
+      <tr><td>Số lượng dở dang cuối kỳ</td><td class="mono">ChiTietDoDangCuoiKy.SoLuong</td><td>N</td><td>N</td></tr>
+      <tr><td>Tỷ lệ hoàn thành (%)</td><td class="mono">ChiTietDoDangCuoiKy.TyLeHoanThanh</td><td>N</td><td>N</td></tr>
+      <tr><td>Định mức NVL · nhân công · SX chung</td><td class="mono">ChiTietDoDangCuoiKy.DinhMucNVL<br>DinhMucNhanCong · DinhMucSXChung</td><td>N</td><td>N</td></tr>
+      <tr><td>Số lượng hoàn thành tương đương</td><td class="mono">tính theo BR1 — không lưu cột riêng</td><td>N</td><td>N</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Phân trang mặc định 20 bản ghi mỗi trang theo <span class="chip c-br">BR1</span>; cột STT và checkbox chọn dòng theo <span class="chip c-br">BR2</span>; cơ chế tìm nhanh theo <span class="chip c-br">BR11</span>; định dạng số và làm tròn theo <span class="chip c-br">BR7</span> — số lượng <span class="f">decimal(18,3)</span>, phần trăm <span class="f">decimal(5,2)</span>, tiền <span class="f">decimal(18,2)</span>.</p>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — BR8 · BR9 màn Danh sách</span>
+  <h2>Ba phương pháp, ba bộ trường khác nhau</h2>
+  <p class="lede">Phương pháp đánh giá là <strong>thuộc tính của kỳ</strong>, không phải của từng dòng. Một giá trị duy nhất định hình đồng thời: bộ cột trên lưới, bộ trường trên form Thêm mới / Chỉnh sửa, cấu trúc file Excel mẫu, và cấu trúc lưới kiểm tra khi import.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    P{"Phương pháp đánh giá của kỳ"}
+    P -- "Sản phẩm hoàn thành tương đương" --> A["Số lượng dở dang cuối kỳ<br/>Tỷ lệ hoàn thành %<br/>SL hoàn thành tương đương"]
+    P -- "Nguyên vật liệu trực tiếp" --> B["Số lượng dở dang cuối kỳ"]
+    P -- "Định mức giá thành" --> C["Số lượng dở dang cuối kỳ<br/>Tỷ lệ hoàn thành %<br/>Định mức NVL · NC · SXC<br/>Tổng đơn giá định mức"]
+    A --> Z["Mã · Tên · Đơn vị tính sản phẩm<br/>luôn có ở cả ba phương pháp"]
+    B --> Z
+    C --> Z
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class Z ok;
+</pre>
+    </div>
+    <figcaption><b>Trường không thuộc bộ của phương pháp thì ẩn hẳn, không disable.</b> Nguyên tắc lập ma trận Ẩn/Hiện của epic: trường vắng mặt trong bảng đặc tả của phương pháp tương ứng thì <span class="f">Hide</span> — không render, chứ không hiển thị xám.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường / cột</th><th>SP hoàn thành tương đương</th><th>NVL trực tiếp</th><th>Định mức giá thành</th></tr></thead>
+    <tbody>
+      <tr><td>Mã sản phẩm</td><td>Hiện</td><td>Hiện</td><td>Hiện</td></tr>
+      <tr><td>Tên sản phẩm · Đơn vị tính</td><td>Read-only</td><td>Read-only</td><td>Read-only</td></tr>
+      <tr><td>Số lượng dở dang cuối kỳ</td><td>Hiện</td><td>Hiện</td><td>Hiện</td></tr>
+      <tr><td>Tỷ lệ hoàn thành (%)</td><td>Hiện</td><td><b>Ẩn</b></td><td>Hiện</td></tr>
+      <tr><td>Số lượng hoàn thành tương đương</td><td>Read-only</td><td><b>Ẩn</b></td><td><b>Ẩn</b></td></tr>
+      <tr><td>Định mức NVL · nhân công · SX chung</td><td><b>Ẩn</b></td><td><b>Ẩn</b></td><td>Hiện</td></tr>
+      <tr><td>Tổng đơn giá định mức</td><td><b>Ẩn</b></td><td><b>Ẩn</b></td><td>Read-only</td></tr>
+      <tr><td>Nút Lấy lại định mức</td><td><b>Ẩn</b> <span class="chip c-warn">suy luận</span></td><td><b>Ẩn</b> <span class="chip c-warn">suy luận</span></td><td>Hiện</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Ma trận này áp cho <strong>cả ba màn</strong>: Thêm mới, Chỉnh sửa (form tham chiếu nguyên màn Thêm mới) và lưới kiểm tra Tab 2 của Nhập Excel. Riêng bộ nút khác nhau — xem mục <a href="#s5">05</a> và <a href="#s6">06</a>.</p>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — BR8 · luồng phụ 4 của UC Danh sách</span>
+  <h2>Đổi phương pháp là thao tác phá dữ liệu</h2>
+  <p class="lede">Đổi giá trị dropdown Phương pháp đánh giá <strong>xóa toàn bộ</strong> bản ghi dở dang cuối kỳ của kỳ hiện tại — vì ba bộ trường không quy đổi được sang nhau. Đây là thao tác nguy hiểm nhất của màn danh sách, và là nhánh duy nhất trong epic có cảnh báo trước khi mất dữ liệu.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Chọn phương pháp khác trên dropdown"]) --> B{"Kỳ đang Đã hoàn thành?"}
+    B -- Có --> B1["Nút Chọn phương pháp bị ẩn"]
+    B -- Không --> C{"Kỳ đã có dữ liệu dở dang?"}
+    C -- Không --> E["Ghi phương pháp mới vào kỳ"]
+    C -- Có --> D["Cảnh báo MSG_106<br/>Xóa dữ liệu dở dang đã nhập?"]
+    D -- "Người dùng Hủy" --> D1["Dropdown quay về phương pháp cũ"]
+    D -- "Người dùng Đồng ý" --> D2["Xóa toàn bộ bản ghi dở dang<br/>cuối kỳ của kỳ hiện tại"]
+    D2 --> E
+    E --> F["Đổi bộ cột lưới · làm mới danh sách"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class B1 err;
+    class D,D2 warn;
+    class F ok;
+</pre>
+    </div>
+    <figcaption><b>Từ chối phải khôi phục dropdown.</b> Nếu người dùng bấm Hủy trên cảnh báo, giá trị dropdown <em>tự động quay về phương pháp cũ</em> — không được để dropdown hiển thị giá trị mới trong khi kỳ vẫn giữ phương pháp cũ.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Điểm dễ sai</span>
+    <p><strong>Xóa ở đây là xóa cả kỳ, không phải xóa dòng đang chọn.</strong> Phạm vi xóa là <em>toàn bộ bản ghi dở dang cuối kỳ của kỳ tính giá thành hiện tại</em> — cả master lẫn detail. Chính sách xóa mềm chung <span class="chip c-br">BR29</span> vẫn áp: không hard delete, và xóa lan xuống bản ghi con.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — Công thức</span>
+  <h2>Hai công thức tính tại chỗ trên form</h2>
+  <p class="lede">Màn nhập liệu chỉ có <strong>hai trường tự tính</strong>, cả hai đều real-time ngay khi gõ và cả hai đều không cho sửa. Ngoài chúng ra, mọi con số trên màn này đều do người dùng nhập.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Nhập Số lượng dở dang cuối kỳ"] --> C["SL hoàn thành tương đương<br/>= Số lượng × Tỷ lệ / 100"]
+    B["Nhập Tỷ lệ hoàn thành %"] --> C
+    C --> C1["Chỉ có ở phương pháp<br/>Sản phẩm hoàn thành tương đương"]
+    D["Nhập Định mức NVL"] --> G
+    E["Nhập Định mức nhân công"] --> G
+    F["Nhập Định mức SX chung"] --> G
+    G["Tổng đơn giá định mức<br/>= NVL + Nhân công + SX chung"]
+    G --> G1["Chỉ có ở phương pháp<br/>Định mức giá thành"]
+    G --> G2{"Tổng đơn giá định mức lớn hơn 0?"}
+    G2 -- Không --> G3["Chặn lưu · MSG_110"]
+    G2 -- Có --> G4["Qua cổng validate định mức"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class G3 err;
+    class G4 ok;
+    class C1,G1 warn;
+</pre>
+    </div>
+    <figcaption><b>Ba định mức lẻ không bắt buộc, nhưng tổng thì bắt buộc.</b> Người dùng được để trống từng ô định mức; điều bị chặn là tổng ba ô bằng 0. Xóa rỗng một ô thì hệ thống tự gán lại 0, không để null.</figcaption>
+  </figure>
+
+  <h3>Nguyên văn công thức theo BR</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Đại lượng</th><th>Công thức nguyên văn</th><th class="mono">Nguồn BR</th></tr></thead>
+    <tbody>
+      <tr><td>Số lượng hoàn thành tương đương</td><td>Số lượng hoàn thành tương đương = Số lượng dở dang cuối kỳ × (Tỷ lệ hoàn thành / 100)</td><td class="mono">BR1 Danh sách<br>BR4 Thêm mới</td></tr>
+      <tr><td>Số lượng hoàn thành tương đương<br><span style="color:var(--ink-faint)">bản viết trong UC</span></td><td>Số lượng hoàn thành tương đương = SoLuong * TyLeHoanThanh / 100</td><td class="mono">UC_ThemMoi</td></tr>
+      <tr><td>Tổng đơn giá định mức</td><td>TongDonGiaDinhMuc = DinhMucNVL + DinhMucNhanCong + DinhMucSXChung</td><td class="mono">UC_ThemMoi<br>BR5 Thêm mới</td></tr>
+      <tr><td>Giá trị dở dang cuối kỳ theo yếu tố<br><span style="color:var(--ink-faint)">tính ở bước 6, ghi ngược về đây</span></td><td>GiaTriDoDangCuoiKy_YeuTo = SoLuongDoDangCuoiKyTuongDuong × HeSoDonVi_YeuTo</td><td class="mono">BR6 Chỉnh sửa</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ràng buộc giá trị</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th>Ràng buộc nguyên văn</th><th>Mặc định</th><th class="mono">MSG</th></tr></thead>
+    <tbody>
+      <tr><td>Số lượng dở dang cuối kỳ</td><td>Số lượng dở dang cuối kỳ phải lớn hơn 0</td><td class="num">0</td><td class="mono">102</td></tr>
+      <tr><td>Tỷ lệ hoàn thành (%)</td><td>Tỷ lệ hoàn thành (%) phải lớn hơn hoặc bằng 0 và nhỏ hơn hoặc bằng 100</td><td class="num">0</td><td class="mono">103 · 108</td></tr>
+      <tr><td>Định mức NVL · nhân công · SX chung</td><td>Các trường định mức nhập giá trị phải ≥ 0. Nếu người dùng xóa rỗng, hệ thống tự động gán lại bằng 0</td><td>theo khai báo định mức</td><td class="mono">109</td></tr>
+      <tr><td>Tổng đơn giá định mức</td><td>Không bắt buộc nhập từng giá trị định mức, nhưng tổng đơn giá định mức phải &gt; 0</td><td class="num">tự tính</td><td class="mono">110</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Lệch giữa hai tài liệu</span>
+    <p>Bảng trường của <span class="f">SCR_DoDangCuoiKy_ThemMoi</span> ghi <em>Tỷ lệ hoàn thành mặc định 0</em>; phần Ghi chú của ma trận Ẩn/Hiện lại ghi <em>mặc định 100</em>. Trang này lấy theo màn hình gốc — <strong>mặc định 0</strong> — vì ma trận là bảng dẫn xuất. Cần BA chốt lại trước khi code.</p>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — UC_DoDangCuoiKy_ThemMoi</span>
+  <h2>Thêm mới: một dòng nhập, hai bản ghi sinh ra</h2>
+  <p class="lede">Đơn vị nghiệp vụ người dùng thao tác là <em>một sản phẩm dở dang</em>, nhưng bên dưới là cặp master + detail. Master sinh tự động theo khóa <span class="f">(KyTinhGiaThanhId, DoiTuongTapHopChiPhiId)</span>, người dùng không thấy và không nhập nó.</p>
+
+  <h3>Chuỗi nhập liệu</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Nút Thêm mới trên màn danh sách"]) --> B{"Trạng thái kỳ?"}
+    B -- "Đã hoàn thành" --> B1["Nút bị ẩn — BR2"]
+    B -- "Chưa / Đang thực hiện" --> C["Mở modal Thêm mới"]
+    C --> D["Chọn Mã sản phẩm qua combogrid<br/>nguồn đối tượng tập hợp chi phí"]
+    D --> E["Tự điền Tên sản phẩm · Đơn vị tính"]
+    E --> F{"Phương pháp của kỳ?"}
+    F -- "SP hoàn thành tương đương" --> G1["Nhập Số lượng · Tỷ lệ<br/>SL tương đương tự tính"]
+    F -- "NVL trực tiếp" --> G2["Chỉ nhập Số lượng"]
+    F -- "Định mức giá thành" --> G3["Nhập Số lượng · Tỷ lệ<br/>3 định mức nạp theo danh mục"]
+    G3 --> H["Nút Lấy lại định mức<br/>nạp lại từ danh mục định mức"]
+    G1 --> Z(["Bấm Lưu hoặc Lưu và thêm mới"])
+    G2 --> Z
+    H --> Z
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class B1 err;
+    class H warn;
+</pre>
+    </div>
+    <figcaption><b>Combogrid là nguồn duy nhất của Mã sản phẩm.</b> Danh mục đối tượng tập hợp chi phí lọc theo loại <em>sản phẩm</em>; chọn xong thì Tên sản phẩm và Đơn vị tính chỉ hiển thị, không cho sửa. Quy chuẩn combogrid theo <span class="chip c-br">BR5</span>.</figcaption>
+  </figure>
+
+  <h3>Chuỗi lưu — nơi mọi thứ có thể hỏng</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Bấm Lưu hoặc Lưu và thêm mới"]) --> V1{"Mã sản phẩm có giá trị?"}
+    V1 -- Không --> E1["MSG_101"]
+    V1 -- Có --> V2{"Số lượng lớn hơn 0?"}
+    V2 -- Không --> E2["MSG_102"]
+    V2 -- Có --> V3{"Tỷ lệ từ 0 đến 100?"}
+    V3 -- Không --> E3["MSG_103"]
+    V3 -- Có --> V4{"Trùng mã trong cùng kỳ?"}
+    V4 -- Có --> E4["MSG_104"]
+    V4 -- Không --> V5{"Kỳ Đã hoàn thành — chặn server"}
+    V5 -- Có --> E5["MSG_105"]
+    V5 -- Không --> T["Mở giao dịch atomic"]
+    T --> T1["Tạo master nếu chưa có<br/>khóa Kỳ + Đối tượng tập hợp"]
+    T1 --> T2["Tạo detail cho sản phẩm"]
+    T2 --> R{"Ghi thành công?"}
+    R -- Không --> E6["Rollback toàn bộ<br/>MSG_202 · MSG_003"]
+    R -- Có --> OK["MSG_201 · làm mới danh sách"]
+    OK --> N{"Nút vừa bấm là gì?"}
+    N -- "Lưu" --> N1["Đóng modal"]
+    N -- "Lưu và thêm mới" --> N2["Mở lại modal với trường trống"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class E1,E2,E3,E4,E5,E6 err;
+    class OK ok;
+</pre>
+    </div>
+    <figcaption><b>Không có bản ghi một phần.</b> Master và detail ghi trong cùng một giao dịch; hỏng ở bất kỳ đâu thì rollback sạch và form giữ nguyên dữ liệu người dùng đã nhập để sửa lại.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Khóa duy nhất nghiệp vụ</span>
+    <p><span class="f">(KyTinhGiaThanhId, DoiTuongTapHopChiPhiId)</span> — một mã sản phẩm chỉ xuất hiện <strong>một lần trong một kỳ</strong>. Đây vừa là điều kiện tái dùng master, vừa là luật chặn trùng <span class="chip c-msg">MSG_104</span>. Kiểm trùng ở tầng dữ liệu theo <span class="chip c-br">BR19</span>, phạm vi dữ liệu theo tenant theo <span class="chip c-br">BR28</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — UC_DoDangCuoiKy_ChinhSua</span>
+  <h2>Chỉnh sửa: cùng form, ít nút hơn</h2>
+  <p class="lede">Form chỉnh sửa tham chiếu nguyên form Thêm mới — cùng ba bộ trường, cùng bốn luật validate. Khác biệt duy nhất là bộ nút: chỉ còn <strong>Lưu</strong> và <strong>Hủy</strong>, không có <em>Lưu và thêm mới</em>, không có <em>Lấy lại định mức</em>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Nút Chỉnh sửa trên dòng lưới"]) --> B{"Kỳ Đã hoàn thành?"}
+    B -- Có --> B1["Nút ẩn · API từ chối MSG_105"]
+    B -- Không --> C["Mở modal với dữ liệu hiện tại"]
+    C --> D["Sửa Số lượng · Tỷ lệ · Định mức"]
+    D --> E{"Bấm Hủy?"}
+    E -- Có --> E1["Đóng modal · không lưu"]
+    E -- "Bấm Lưu" --> F["Validate như màn Thêm mới"]
+    F --> G{"Hợp lệ?"}
+    G -- Không --> G1["MSG_101 · 102 · 103 · 104"]
+    G -- Có --> H["Giao dịch atomic<br/>cập nhật detail rồi tổng hợp master"]
+    H --> I{"Thành công?"}
+    I -- Không --> I1["Rollback · MSG_302"]
+    I -- Có --> I2["MSG_301 · làm mới danh sách"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class B1,G1,I1 err;
+    class I2 ok;
+</pre>
+    </div>
+    <figcaption><b>Kiểm trạng thái kỳ hai lần.</b> Một lần khi mở modal (bước 3) và một lần khi validate trước ghi (bước 6) — vì kỳ có thể được người khác chuyển sang <em>Đã hoàn thành</em> trong lúc modal đang mở.</figcaption>
+  </figure>
+
+  <p>Sau khi sửa xong, danh sách <strong>giữ nguyên trang hiện tại</strong>, không nhảy về trang 1 <span class="chip c-br">BR29.4</span>. Bốn trường chi phí của master không xuất hiện trên form này — chúng chỉ được bước Tính giá thành ghi vào <span class="chip c-br">BR6 Chỉnh sửa</span>.</p>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — UC_DoDangCuoiKy_Xoa</span>
+  <h2>Xóa detail, master đi theo khi rỗng</h2>
+  <p class="lede">Người dùng xóa <em>một sản phẩm dở dang</em>, tức một bản ghi detail. Master chỉ bị xóa kèm khi nó không còn detail nào — đó là điểm khác biệt so với xóa chứng từ thông thường.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Nút Xóa trên dòng lưới"]) --> B{"Có quyền?"}
+    B -- Không --> B1["Ẩn nút Xóa"]
+    B -- Có --> C{"Kỳ Đã hoàn thành?"}
+    C -- Có --> C1["Ẩn nút · API từ chối MSG_105"]
+    C -- Không --> D["Popup xác nhận<br/>Xóa dở dang của sản phẩm này?"]
+    D -- "Hủy" --> D1["Đóng popup · không xóa"]
+    D -- "Xác nhận" --> E["Mở giao dịch atomic"]
+    E --> E1["Xóa detail của sản phẩm"]
+    E1 --> E2{"Master còn detail nào?"}
+    E2 -- "Còn" --> F["Giữ master · tổng hợp lại"]
+    E2 -- "Không còn" --> G["Xóa luôn master"]
+    F --> H{"Thành công?"}
+    G --> H
+    H -- Không --> H1["Rollback · MSG_402"]
+    H -- Có --> H2["MSG_401 · làm mới danh sách"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class B1,C1,H1 err;
+    class D warn;
+    class H2 ok;
+</pre>
+    </div>
+    <figcaption><b>Nội dung popup có tên sản phẩm.</b> Đặc tả nguyên văn: <em>"Bạn có chắc chắn muốn xóa dở dang cuối kỳ &lt;Tên sản phẩm&gt;?"</em> — popup không có trường nhập liệu, không ghi gì xuống LDM.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">BR chung vẫn áp dù epic không nhắc</span>
+    <p><span class="chip c-br">BR29.1</span> chỉ xóa mềm, không hard delete · <span class="chip c-br">BR29.2</span> xóa lan xuống bản ghi con cũng dưới dạng xóa mềm · <span class="chip c-br">BR29.4</span> giữ nguyên vị trí trang; nếu trang hiện tại rỗng sau khi xóa thì lùi về trang liền trước · <span class="chip c-br">BR3</span> nút xác nhận bên phải, nút hủy bên trái, ESC tương đương Đóng.</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — BR6 màn Danh sách</span>
+  <h2>Lấy lại định mức giá thành</h2>
+  <p class="lede">Chức năng hàng loạt duy nhất của epic: nạp lại giá trị định mức từ danh mục <span class="f">cost_dinh_muc_gia_thanh</span> và <strong>ghi đè</strong> lên các bản ghi dở dang cuối kỳ đã nhập. Chỉ tồn tại ở phương pháp Định mức giá thành.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Nút Lấy lại định mức giá thành"]) --> B{"Phương pháp là Định mức giá thành?"}
+    B -- Không --> B1["Nút không hiển thị"]
+    B -- Có --> C{"Kỳ Đã hoàn thành?"}
+    C -- Có --> C1["Nút bị ẩn"]
+    C -- Không --> D["Xác nhận MSG_107<br/>Ghi đè định mức hiện tại"]
+    D -- "Hủy" --> D1["Không thay đổi gì"]
+    D -- "Đồng ý" --> E["Duyệt từng dòng dở dang cuối kỳ"]
+    E --> F{"Mã SP có trong danh mục định mức?"}
+    F -- Có --> G["Ghi đè 3 định mức theo danh mục<br/>Tính lại tổng đơn giá định mức"]
+    F -- Không --> H["Giữ nguyên giá trị nhập tay"]
+    G --> I{"Thành công?"}
+    H --> I
+    I -- Có --> I1["MSG_203"]
+    I -- Không --> I2["MSG_204"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class B1,C1,I2 err;
+    class D,H warn;
+    class I1 ok;
+</pre>
+    </div>
+    <figcaption><b>Sản phẩm không có trong danh mục thì bỏ qua, không xóa trắng.</b> Nguyên văn BR6: <em>"Các bản ghi mã sản phẩm tồn tại trong khai báo dở dang cuối kỳ nhưng không tồn tại trong danh mục định mức giá thành thì không cập nhật, giữ nguyên giá trị đã nhập tay"</em>.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nơi đặt nút</th><th>Phạm vi tác động</th><th>Xác nhận trước</th><th class="mono">MSG</th></tr></thead>
+    <tbody>
+      <tr><td>Màn danh sách — "Lấy lại định mức giá thành"</td><td>Toàn bộ bản ghi dở dang cuối kỳ của kỳ</td><td>Có <span class="chip c-msg">107</span></td><td class="mono">203 · 204</td></tr>
+      <tr><td>Modal Thêm mới — "Lấy lại định mức"</td><td>Chỉ mã sản phẩm đang chọn trên form</td><td>Không quy định</td><td class="mono">không quy định</td></tr>
+      <tr><td>Import Excel — tự động</td><td>Chỉ dòng bỏ trống <b>cả ba</b> cột định mức</td><td>Không</td><td class="mono">—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Ba nơi cùng đọc một danh mục nhưng khác phạm vi và khác điều kiện kích hoạt — đừng dùng chung một API không tham số.</p>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — UC_NhapExcel</span>
+  <h2>Nhập Excel: hai tab tuyến tính</h2>
+  <p class="lede">Popup import gồm hai bước bắt buộc theo thứ tự: chọn file rồi kiểm tra dữ liệu. Được quay lại tab trước, nhưng không được nhảy thẳng sang tab 2. Cấu trúc file mẫu <em>và</em> cấu trúc lưới kiểm tra đều đổi theo phương pháp đánh giá của kỳ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Nút Import excel"]) --> A0{"Kỳ Chưa hoặc Đang thực hiện?"}
+    A0 -- Không --> A1["Chặn mở chức năng"]
+    A0 -- Có --> B["Tab 1 — Chọn file excel"]
+    B --> B1["Tải tệp mẫu đúng phương pháp"]
+    B --> B3["Checkbox Cho phép ghi đè"]
+    B --> B2["Kéo thả file xlsx hoặc xls"]
+    B2 --> C{"Đã chọn file hợp lệ?"}
+    C -- Chưa --> C1["Nút Tiếp theo vẫn disable"]
+    C -- Rồi --> D["Đọc dữ liệu từ dòng 4<br/>bỏ qua dòng trắng"]
+    D --> E["Tab 2 — Lưới kiểm tra dữ liệu"]
+    E --> F["Sửa trực tiếp · Thêm dòng · Xóa dòng<br/>validate lại real-time"]
+    F --> E
+    E --> G["Tải file lỗi có cột Chi tiết lỗi"]
+    E --> H(["Bấm Xác nhận lưu"])
+    H --> I{"Mọi dòng đều Hợp lệ?"}
+    I -- Không --> I1["Báo lỗi từng dòng · không lưu"]
+    I -- Có --> J["Lưu dữ liệu · đóng popup<br/>tải lại màn danh sách"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class A1,I1 err;
+    class C1 warn;
+    class J ok;
+</pre>
+    </div>
+    <figcaption><b>Xác nhận lưu là cổng tất-cả-hoặc-không.</b> Chỉ lưu khi <em>toàn bộ</em> dòng trên lưới hợp lệ — không có chế độ lưu phần hợp lệ và bỏ phần lỗi. Tài liệu không nói nút bị disable khi còn lỗi, nên nút vẫn bấm được và chặn ở phía sau.</figcaption>
+  </figure>
+
+  <h3>Chuỗi validate một dòng trên lưới kiểm tra</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    R(["Một dòng đọc từ file excel"]) --> V1{"Mã sản phẩm trống?"}
+    V1 -- Có --> E1["MSG_101"]
+    V1 -- Không --> V2{"Mã có trong danh mục sản phẩm?"}
+    V2 -- Không --> E2["Mã không tồn tại"]
+    V2 -- Có --> V3{"Trùng mã trong chính file?"}
+    V3 -- Có --> E3["Trùng trong file tải lên"]
+    V3 -- Không --> V4{"Đã tick Cho phép ghi đè?"}
+    V4 -- Không --> V5{"Trùng mã đã có trong kỳ?"}
+    V5 -- Có --> E4["MSG_104"]
+    V5 -- Không --> V6
+    V4 -- Có --> V6{"Số lượng lớn hơn 0?"}
+    V6 -- Không --> E5["MSG_102"]
+    V6 -- Có --> V7{"Tỷ lệ từ 0 đến 100?"}
+    V7 -- Không --> E6["MSG_103 hoặc MSG_108"]
+    V7 -- Có --> V8{"Có định mức nào âm?"}
+    V8 -- Có --> E7["MSG_109"]
+    V8 -- Không --> V9{"Tổng đơn giá định mức lớn hơn 0?"}
+    V9 -- Không --> E8["MSG_110"]
+    V9 -- Có --> OK["Trạng thái dòng Hợp lệ"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class E1,E2,E3,E4,E5,E6,E7,E8 err;
+    class OK ok;
+</pre>
+    </div>
+    <figcaption><b>Checkbox ghi đè chỉ tắt <em>một</em> phép kiểm.</b> Nó bỏ qua kiểm trùng với dữ liệu đã có trên hệ thống, nhưng <strong>không</strong> bỏ qua kiểm trùng trong chính file tải lên — hai dòng cùng mã trong một file luôn là lỗi.</figcaption>
+  </figure>
+
+  <h3>Cấu trúc file mẫu theo phương pháp</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Cột</th><th>Tên cột trong Excel</th><th>SP tương đương</th><th>NVL trực tiếp</th><th>Định mức</th><th>Bắt buộc</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">A</td><td>Mã sản phẩm(*)</td><td>Có</td><td>Có</td><td>Có</td><td>Y</td></tr>
+      <tr><td class="mono">B</td><td>Số lượng dở dang cuối kỳ(*)</td><td>Có</td><td>Có</td><td>Có</td><td>Y</td></tr>
+      <tr><td class="mono">C</td><td>Tỷ lệ hoàn thành (%)</td><td>Có</td><td>—</td><td>Có</td><td>N · trống hiểu là 0</td></tr>
+      <tr><td class="mono">D</td><td>Định mức NVL</td><td>—</td><td>—</td><td>Có</td><td>N · ≥ 0</td></tr>
+      <tr><td class="mono">E</td><td>Định mức nhân công</td><td>—</td><td>—</td><td>Có</td><td>N · ≥ 0</td></tr>
+      <tr><td class="mono">F</td><td>Định mức SX chung</td><td>—</td><td>—</td><td>Có</td><td>N · ≥ 0</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Sheet <span class="f">DoDangCuoiKy</span> · dòng 1 tiêu đề bảng · dòng 2 ghi chú hướng dẫn · dòng 3 tiêu đề cột · dữ liệu từ dòng 4. Đối chiếu mã sản phẩm <strong>không phân biệt hoa thường</strong>. File tải từ nút "Tải file lỗi" có thêm cột <em>Chi tiết lỗi</em> ở sau cùng, chữ đỏ.</p>
+
+  <div class="note">
+    <span class="lbl">Tự nạp định mức khi import</span>
+    <p>Chỉ áp cho dòng <strong>bỏ trống cả ba</strong> cột D · E · F: hệ thống map mã sản phẩm sang <span class="f">cost_dinh_muc_gia_thanh</span> và điền đủ ba cột; không tìm thấy thì giữ rỗng. Nếu người dùng đã nhập <em>ít nhất một</em> cột định mức, hệ thống giữ nguyên giá trị người dùng, không ghi đè. Tổng đơn giá định mức tính lại sau khi điền, rồi mới kiểm luật lớn hơn 0 <span class="chip c-msg">MSG_110</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — CRUD matrix</span>
+  <h2>Quan hệ dữ liệu và ranh giới ghi</h2>
+  <p class="lede">Bốn entity liên quan, nhưng epic này chỉ được ghi vào hai. Hai entity còn lại chỉ đọc — và bốn trường chi phí của chính master cũng nằm ngoài tầm ghi của epic.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    K["<b>cost_ky_tinh_gia_thanh</b><br/>Trạng thái kỳ<br/>PhuongPhapDanhGiaDoDang"] -- "chỉ đọc" --> M
+    O["<b>mst_doi_tuong_tap_hop_chi_phi</b><br/>lọc loại sản phẩm"] -- "chỉ đọc" --> D
+    M["<b>cost_do_dang_cuoi_ky</b><br/>master · khóa Kỳ + Đối tượng"] --> D["<b>cost_do_dang_cuoi_ky_chi_tiet</b><br/>1 dòng = 1 sản phẩm"]
+    N["<b>cost_dinh_muc_gia_thanh</b><br/>danh mục định mức"] -. "nạp giá trị định mức" .-> D
+    M --> M2["4 trường chi phí của master<br/>không nhập tay ở epic này"]
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class M,D ok;
+    class M2 warn;
+</pre>
+    </div>
+    <figcaption><b>Master không phải là "phiếu".</b> Nó là nhóm theo cặp <em>kỳ × đối tượng tập hợp chi phí</em>, sinh và hủy tự động theo detail — không có màn hình nào tạo master trực tiếp.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Entity</th><th>Danh sách</th><th>Thêm</th><th>Sửa</th><th>Xóa</th><th>Import</th><th>Lấy lại định mức</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">cost_do_dang_cuoi_ky</td><td>R</td><td>C</td><td>U R</td><td>D</td><td>C U</td><td>U</td></tr>
+      <tr><td class="mono">cost_do_dang_cuoi_ky_chi_tiet</td><td>R</td><td>C</td><td>U R</td><td>D</td><td>C U</td><td>U</td></tr>
+      <tr><td class="mono">cost_ky_tinh_gia_thanh</td><td>R</td><td>R</td><td>R</td><td>R</td><td>R</td><td>R</td></tr>
+      <tr><td class="mono">cost_dinh_muc_gia_thanh</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>R</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Ngoại lệ đáng chú ý: thao tác <em>Chọn phương pháp đánh giá</em> ghi vào <span class="f">cost_ky_tinh_gia_thanh</span> (trường <span class="f">PhuongPhapDanhGiaDoDang</span>) — CRUD matrix của epic không liệt kê thao tác này nên bảng trên chỉ ghi R. Trường hệ thống bắt buộc trên mọi entity theo <span class="chip c-br">BR46</span>, cách ly tenant theo <span class="chip c-br">BR28</span>.</p>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — Liên kết PMKT-E-05938</span>
+  <h2>Số dở dang cuối kỳ đi vào công thức giá thành thế nào</h2>
+  <p class="lede">Đây là lý do tồn tại của epic. Ba giá trị người dùng nhập ở bước 4 — <em>số lượng · tỷ lệ hoàn thành · định mức</em> — được bước 6 quy đổi thành <strong>tiền</strong>, rồi trừ khỏi tổng chi phí để ra giá thành.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Dở dang cuối kỳ đã nhập<br/>Số lượng · Tỷ lệ · Định mức"] --> B{"Cấu hình Chi phí đưa 1 lần<br/>của từng yếu tố"}
+    B -- "Có" --> C1["SL dở dang = SL cuối kỳ"]
+    B -- "Không" --> C2["SL dở dang<br/>= SL cuối kỳ × Tỷ lệ / 100"]
+    C1 --> D{"Phương pháp đánh giá"}
+    C2 --> D
+    D -- "SP hoàn thành tương đương" --> E1["Hệ số đơn vị = Đầu kỳ + Phát sinh<br/>chia cho SL nhập kho + SL dở dang"]
+    D -- "NVL trực tiếp" --> E2["Chỉ tính cho yếu tố NVL<br/>Nhân công và SX chung bằng 0"]
+    D -- "Định mức giá thành" --> E3["Giá trị dở dang cuối kỳ<br/>= Định mức × SL dở dang"]
+    E1 --> F["Giá trị dở dang cuối kỳ<br/>= Hệ số đơn vị × SL dở dang"]
+    E2 --> F
+    E3 --> F
+    F --> G["Tổng chi phí yếu tố = Đầu kỳ<br/>cộng Phát sinh trừ Dở dang cuối kỳ"]
+    G --> H["Ghi ngược 4 trường chi phí<br/>vào master dở dang cuối kỳ"]
+    G --> I["Đổi dở dang cuối kỳ phải chạy lại<br/>Phân bổ · Tính giá thành<br/>Kết chuyển chi phí"]
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class H ok;
+    class I warn;
+</pre>
+    </div>
+    <figcaption><b>Tỷ lệ hoàn thành không phải lúc nào cũng được dùng.</b> Yếu tố chi phí có cấu hình <em>Chi phí đưa 1 lần = Có</em> thì lấy nguyên số lượng dở dang, bỏ qua tỷ lệ. Hiện UI chỉ cho cấu hình ở yếu tố NVL; nhân công và SX chung mặc định <em>đưa nhiều lần</em>.</figcaption>
+  </figure>
+
+  <h3>Công thức nguyên văn từ BR4 — SCR_TinhGiaThanh_DanhSach</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Bước</th><th>Công thức</th></tr></thead>
+    <tbody>
+      <tr><td>Tổng giá thành</td><td class="mono">TongGiaThanh = TongChiPhiNVL + TongChiPhiNhanCong + TongChiPhiSXChung</td></tr>
+      <tr><td>Từng yếu tố</td><td class="mono">TongChiPhiYeuTo = GiaTriDoDangDauKy + ChiPhiYeuTo_PhatSinhTrongKy − GiaTriDoDangCuoiKy</td></tr>
+      <tr><td>SL dở dang — đưa 1 lần</td><td class="mono">SoLuongDoDang_YeuTo = SoLuongDoDangCuoiKy</td></tr>
+      <tr><td>SL dở dang — đưa nhiều lần</td><td class="mono">SoLuongDoDang_YeuTo = SoLuongDoDangCuoiKy × (TyLeHoanThanh / 100)</td></tr>
+      <tr><td>SP hoàn thành tương đương</td><td class="mono">HeSoDonVi_YeuTo = (GiaTriDoDangDauKy_YeuTo + ChiPhiYeuTo_PhatSinhTrongKy) / (SoLuongNhapKhoTrongKy + SoLuongDoDang_YeuTo)<br>GiaTriDoDangCuoiKy_YeuTo = HeSoDonVi_YeuTo × SoLuongDoDang_YeuTo</td></tr>
+      <tr><td>NVL trực tiếp</td><td class="mono">HeSoDonVi_NVL = (GiaTriDoDangDauKy_NVL + ChiPhiNVL_PhatSinhTrongKy) / (SoLuongNhapKhoTrongKy + SoLuongDoDang_NVL)<br>GiaTriDoDangCuoiKy_NVL = HeSoDonVi_NVL × SoLuongDoDang_NVL<br>Nhân công và SX chung: GiaTriDoDangCuoiKy_YeuTo = 0</td></tr>
+      <tr><td>Định mức giá thành</td><td class="mono">GiaTriDoDangCuoiKy_YeuTo = DinhMuc_YeuTo × SoLuongDoDang_YeuTo</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Hai trường hợp biên phải xử lý</span>
+    <p><strong>Nhập kho = 0 nhưng dở dang lớn hơn 0:</strong> toàn bộ chi phí phát sinh dồn hết vào giá trị dở dang cuối kỳ, <span class="f">TongChiPhiYeuTo = 0</span>.<br>
+    <strong>Nhập kho + dở dang = 0 mà vẫn có chi phí:</strong> dừng tiến trình tính giá thành và báo lỗi — có chi phí nhưng không có đối tượng để phân bổ. Nếu tổng chi phí cũng bằng 0 thì bỏ qua, hệ số và giá trị dở dang đều bằng 0.</p>
+  </div>
+
+  <p><span class="chip c-br">BR5 màn Danh sách</span> nói rõ hệ quả dây chuyền: <em>"Nếu dở dang cuối kỳ thay đổi, các bước sau trong quy trình tính giá thành cần chạy lại: phân bổ chi phí, tính giá thành, kết chuyển chi phí"</em>. Tài liệu epic <strong>chưa quy định</strong> hệ thống tự cảnh báo hay tự đánh dấu các bước sau là lỗi thời — nên trang này không vẽ nhánh đó.</p>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — Tra cứu</span>
+  <h2>Điều kiện chặn · quyền · khoảng trống tài liệu</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> trong các sơ đồ trên. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-05926_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện chặn</th><th class="mono">Mã</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="6">Lưu ở Thêm mới / Chỉnh sửa</td><td>Mã sản phẩm để trống</td><td class="mono">101</td></tr>
+      <tr><td>Số lượng dở dang cuối kỳ không lớn hơn 0</td><td class="mono">102</td></tr>
+      <tr><td>Tỷ lệ hoàn thành ngoài khoảng 0 đến 100</td><td class="mono">103</td></tr>
+      <tr><td>Tỷ lệ hoàn thành để trống</td><td class="mono">108</td></tr>
+      <tr><td>Mã sản phẩm đã tồn tại trong kỳ</td><td class="mono">104</td></tr>
+      <tr><td>Tổng đơn giá định mức không lớn hơn 0</td><td class="mono">110</td></tr>
+      <tr><td>Thêm mới · Chỉnh sửa · Xóa · Import</td><td>Kỳ tính giá thành đã hoàn thành — chặn cả ở tầng server</td><td class="mono">105</td></tr>
+      <tr><td rowspan="4">Import Excel — mức dòng</td><td>Định mức nhập âm</td><td class="mono">109</td></tr>
+      <tr><td>Mã sản phẩm không tồn tại trong danh mục</td><td class="mono">106 <span class="chip c-warn">xung đột</span></td></tr>
+      <tr><td>Mã sản phẩm trùng lặp trong chính file tải lên</td><td class="mono">107 <span class="chip c-warn">xung đột</span></td></tr>
+      <tr><td>Trùng mã đã có trong kỳ khi không tick ghi đè</td><td class="mono">104</td></tr>
+      <tr><td>Đổi phương pháp đánh giá</td><td>Kỳ đã có dữ liệu dở dang — cảnh báo xóa dữ liệu</td><td class="mono">106</td></tr>
+      <tr><td>Lấy lại định mức giá thành</td><td>Xác nhận ghi đè định mức hiện tại</td><td class="mono">107</td></tr>
+      <tr><td>Mọi màn</td><td>Không có quyền truy cập chức năng</td><td class="mono">002</td></tr>
+      <tr><td>Mọi thao tác ghi</td><td>Lỗi hệ thống · rollback giao dịch</td><td class="mono">003 · 202 · 302 · 402</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Thông báo kết quả</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Thành công</th><th>Thất bại</th></tr></thead>
+    <tbody>
+      <tr><td>Thêm mới · Lưu và thêm mới</td><td><span class="chip c-ok">201</span></td><td><span class="chip c-msg">202</span></td></tr>
+      <tr><td>Chỉnh sửa</td><td><span class="chip c-ok">301</span></td><td><span class="chip c-msg">302</span></td></tr>
+      <tr><td>Xóa</td><td><span class="chip c-ok">401</span></td><td><span class="chip c-msg">402</span></td></tr>
+      <tr><td>Lấy lại định mức giá thành</td><td><span class="chip c-ok">203</span></td><td><span class="chip c-msg">204</span></td></tr>
+      <tr><td>Import Excel</td><td><span class="chip c-warn">chưa khai mã</span></td><td><span class="chip c-warn">chưa khai mã</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Quy chuẩn hiển thị toast / notification theo <span class="chip c-br">BR26</span>.</p>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">GTTT.AllPermission</td><td><span class="chip c-perm">toàn bộ</span> Xem danh sách · Thêm mới · Chỉnh sửa · Xóa · Import Excel · Chọn phương pháp · Lấy lại định mức</td></tr>
+      <tr><td class="mono">không có quyền</td><td>Màn danh sách báo <span class="chip c-msg">MSG_002</span>; các nút thao tác <b>ẩn</b> hoàn toàn theo <span class="chip c-br">BR25</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Khoảng trống tài liệu — không suy diễn, ghi lại để BA chốt</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Vấn đề</th><th>Hiện trạng tài liệu</th></tr></thead>
+    <tbody>
+      <tr><td>Trùng mã MSG_106 và MSG_107</td><td><span class="f">6.messages.md</span> khai 106 = cảnh báo đổi phương pháp, 107 = xác nhận lấy lại định mức. Bảng lỗi của màn Nhập Excel lại dùng 106 = mã sản phẩm không tồn tại, 107 = trùng mã trong file. Hai cách dùng loại trừ nhau.</td></tr>
+      <tr><td>Mặc định Tỷ lệ hoàn thành</td><td>Màn Thêm mới ghi <b>0</b>; ghi chú ma trận Ẩn/Hiện ghi <b>100</b>.</td></tr>
+      <tr><td>Thông báo kết quả Import Excel</td><td>Không có mã MSG cho lưu thành công / thất bại của luồng import.</td></tr>
+      <tr><td>Chặn mở Import khi kỳ đã hoàn thành</td><td>UC ghi "hiển thị thông báo chặn" nhưng không gắn mã — suy theo BR7 màn Nhập Excel thì dùng <span class="chip c-msg">105</span>.</td></tr>
+      <tr><td>Use case "Lấy lại định mức giá thành"</td><td>Có trong function breakdown và CRUD matrix, nhưng <b>không có</b> UC và AD riêng; chỉ đặc tả qua BR6 của màn Danh sách.</td></tr>
+      <tr><td>Ma trận vai trò / phân quyền chi tiết</td><td>Chỉ một quyền gộp <span class="f">GTTT.AllPermission</span>; chưa tách View / Create / Edit / Delete. Báo cáo review đã nêu là lỗi chặn.</td></tr>
+      <tr><td>Ràng buộc dữ liệu theo tenant · audit log</td><td>Không được mô tả trong epic; mặc định áp <span class="chip c-br">BR28</span> và <span class="chip c-br">BR46</span>.</td></tr>
+      <tr><td>Cảnh báo các bước sau lỗi thời</td><td>BR5 chỉ nói "cần chạy lại", không quy định hệ thống cảnh báo hay khóa bước.</td></tr>
+      <tr><td>Nút "Lấy lại định mức" trên form Thêm mới</td><td>Không nói tường minh nút ẩn ở hai phương pháp còn lại — ma trận đánh dấu là ô suy luận.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-05926 · Dở dang cuối kỳ</span>
+  <span>Dựng từ 5 UC · 5 Activity Diagram · 5 màn hình · 3 ma trận Ẩn/Hiện</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

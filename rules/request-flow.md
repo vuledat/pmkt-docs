@@ -96,7 +96,7 @@ Route chính:
 
 ## 5. Front Door resolve tenant và chọn cell
 
-File: `../front-door/src/main/java/vn/dopai/pmkt/frontdoor/TenantRoutingFilter.java`
+File: `../front-door/src/main/java/vn/vtt/pmkt/frontdoor/TenantRoutingFilter.java`
 
 `TenantRoutingFilter` là nơi xử lý routing multi-tenant.
 
@@ -151,8 +151,8 @@ Route bên trong cell:
 
 Các file chính:
 
-- `../cell-gateway/src/main/java/vn/dopai/pmkt/cellgw/TenantClaimAuthorizationManager.java`
-- `../cell-gateway/src/main/java/vn/dopai/pmkt/cellgw/TenantConsistencyFilter.java`
+- `../cell-gateway/src/main/java/vn/vtt/pmkt/cellgw/TenantClaimAuthorizationManager.java`
+- `../cell-gateway/src/main/java/vn/vtt/pmkt/cellgw/TenantConsistencyFilter.java`
 
 ### 7.1. `TenantClaimAuthorizationManager`
 
@@ -180,7 +180,7 @@ Nó làm các việc sau:
 
 ## 8. Cell-app nhận request ở controller nào
 
-File: `cell-app/src/main/java/vn/dopai/pmkt/cell/master_data/internal/ChucDanhController.java`
+File: `cell-app/src/main/java/vn/vtt/pmkt/cell/master_data/internal/ChucDanhController.java`
 
 Controller map trực tiếp endpoint:
 
@@ -210,7 +210,7 @@ Mỗi API đều có `@PreAuthorize(...)` để chặn theo quyền nghiệp v�
 
 ## 9. Cell-app nạp quyền nghiệp vụ như nào
 
-File: `cell-app/src/main/java/vn/dopai/pmkt/cell/platform_iam/internal/PermissionAuthoritiesFilter.java`
+File: `cell-app/src/main/java/vn/vtt/pmkt/cell/platform_iam/internal/PermissionAuthoritiesFilter.java`
 
 Filter này chạy sau khi JWT đã được xác thực và làm các việc:
 
@@ -226,7 +226,7 @@ Filter này chạy sau khi JWT đã được xác thực và làm các việc:
 
 ## 10. Từ controller xuống service xử lý nghiệp vụ
 
-File: `cell-app/src/main/java/vn/dopai/pmkt/cell/master_data/internal/ChucDanhServiceImpl.java`
+File: `cell-app/src/main/java/vn/vtt/pmkt/cell/master_data/internal/ChucDanhServiceImpl.java`
 
 Controller gọi `ChucDanhService`, implementation là `ChucDanhServiceImpl`.
 
@@ -250,7 +250,7 @@ Với `create/update/delete`, service còn xử lý thêm:
 
 ## 11. Tenant isolation được áp ở DB bằng RLS
 
-File: `cell-app/src/main/java/vn/dopai/pmkt/cell/config/TenantRls.java`
+File: `cell-app/src/main/java/vn/vtt/pmkt/cell/config/TenantRls.java`
 
 `tenantRls.bind()` set các session variable vào PostgreSQL:
 

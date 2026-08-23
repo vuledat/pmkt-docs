@@ -3,7 +3,7 @@
 > **Trạng thái:** BẢN NHÁP CHỜ BA/DEV BE REVIEW  
 > **Ngày khảo sát:** 2026-08-07  
 > **Phạm vi:** toàn bộ `PMKT-E-00542-HoaDonMuaHang`  
-> **Module đích:** `cell-app/src/main/java/vn/dopai/pmkt/cell/nhan_hoa_don` (greenfield - tạo package mới độc lập)
+> **Module đích:** `cell-app/src/main/java/vn/vtt/pmkt/cell/nhan_hoa_don` (greenfield - tạo package mới độc lập)
 
 ---
 

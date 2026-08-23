@@ -154,7 +154,7 @@ Tầng 2 sinh ra trước Tầng 1 bản `_Update`. Vì thế **phần lớn l�
 | Nguyên tệ (đồng tiền giao dịch) | `PSNo` | `so_tien_phat_sinh_no_ngoai_te` |
 | Đồng tiền hạch toán | `PSNoQuyDoi` | `so_tien_phat_sinh_no` |
 
-Nguồn: `cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/hach_toan/api/dto/DongSoCaiDto.java` — *"số phát sinh Nợ theo ĐỒNG TIỀN HẠCH TOÁN"*; LDM [`ldm-SoKeToan-Update.puml:55`](../ba/Common/LDM_update/ldm-SoKeToan-Update.puml) — *"Phát sinh nợ theo NGUYÊN TỆ"*.
+Nguồn: `cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/hach_toan/api/dto/DongSoCaiDto.java` — *"số phát sinh Nợ theo ĐỒNG TIỀN HẠCH TOÁN"*; LDM [`ldm-SoKeToan-Update.puml:55`](../ba/Common/LDM_update/ldm-SoKeToan-Update.puml) — *"Phát sinh nợ theo NGUYÊN TỆ"*.
 
 ⚠ Đổi tên `PSNo → so_tien_phat_sinh_no` theo trực giác sẽ **đảo ngược toàn bộ sổ cái ngoại tệ**. Không có lỗi biên dịch, không có test nào chặn. Phải chốt hướng đặt tên ở [Q4](#4-xung-đột--câu-hỏi-phải-chốt-trước-khi-code) trước khi động vào bảng này.
 
@@ -287,7 +287,7 @@ Hai luật cứng:
 
 #### 3.3.2 Bốn tầng base class — bảng nào kế thừa gì
 
-Đã có sẵn trong `cell-app/src/main/java/vn/dopai/pmkt/cell/core/entity/`, **không dựng lại**:
+Đã có sẵn trong `cell-app/src/main/java/vn/vtt/pmkt/cell/core/entity/`, **không dựng lại**:
 
 | Base class | Cột thêm vào | Dùng cho |
 |---|---|---|
@@ -642,7 +642,7 @@ cd cell-app && ./gradlew unitTest
 - `docs/doing/ghi-so-kho-kernel-plan.md` — kernel ghi sổ kho (mâu thuẫn ở Q5)
 - `docs/be-khung-kien-truc-chuan.md` — khung kiến trúc backend
 - `docs/conventions.md` — quy ước đặt tên
-- `cell-app/src/main/java/vn/dopai/pmkt/cell/core/entity/` — 5 base class đang chạy
+- `cell-app/src/main/java/vn/vtt/pmkt/cell/core/entity/` — 5 base class đang chạy
 
 ---
 

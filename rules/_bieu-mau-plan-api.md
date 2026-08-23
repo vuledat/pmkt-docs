@@ -29,7 +29,7 @@ NGUYÊN TẮC XUYÊN SUỐT
 | Use case | `<PMKT-U-xxxxx — Tên use case>` |
 | Màn hình | `<SCR_xxx.md, SCR_yyy.md>` |
 | Tài liệu nguồn | `<pmkt-docs/ba/PMKT-E-xxxxx_.../>` + `../../pmkt-docs/ba/Common/business_rules.md` |
-| Module BE | `<cell-app/src/main/java/vn/dopai/pmkt/cell/<module>/>` |
+| Module BE | `<cell-app/src/main/java/vn/vtt/pmkt/cell/<module>/>` |
 | Bảng DB | `<ten_bang>` (`<đã có sẵn N cột / phải tạo mới>`) |
 
 ---
@@ -495,4 +495,4 @@ cd cell-app && ./gradlew build
 - `<pmkt-docs/ba/…/3.crud-matrix.puml>`
 - `../../pmkt-docs/ba/Common/business_rules.md` — `<liệt kê đúng các BR đã dùng>`
 - `conventions.md`, `../../CLAUDE.md`, `../../cell-app/CLAUDE.md`
-- Mẫu code tham khảo: `<cell-app/src/main/java/vn/dopai/pmkt/cell/…>`
+- Mẫu code tham khảo: `<cell-app/src/main/java/vn/vtt/pmkt/cell/…>`

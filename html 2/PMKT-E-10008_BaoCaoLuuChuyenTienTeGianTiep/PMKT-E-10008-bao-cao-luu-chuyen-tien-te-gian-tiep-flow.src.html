@@ -1,0 +1,995 @@
+<title>Luồng Lưu chuyển tiền tệ gián tiếp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-10008 · Phân hệ Báo cáo tài chính</p>
+  <h1>Luồng Báo cáo lưu chuyển tiền tệ gián tiếp</h1>
+  <p>Toàn bộ luồng của mẫu B 03-DN theo phương pháp gián tiếp — từ tham số kỳ báo cáo, bốn nguồn số liệu, 48 mã tham số công thức, wizard bốn bước phân loại hoạt động, tới kết xuất Excel / XML. Trục trình bày theo vòng đời kỳ báo cáo, không theo thứ tự file BA.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 8 use case · 8 màn hình · 20 mã MSG</span>
+    <span><b>Entity gốc:</b> rpt_bao_cao_tai_chinh</span>
+    <span><b>Quyền:</b> LapBCTC.*</span>
+    <span><b>Đối chiếu:</b> khác PP trực tiếp PMKT-E-10007 — xem mục 12</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Vòng đời báo cáo</a></li>
+    <li><a href="#s1"><span>01</span>Tham số kỳ báo cáo</a></li>
+    <li><a href="#s2"><span>02</span>Danh sách báo cáo</a></li>
+    <li><a href="#s3"><span>03</span>Thiết lập chỉ tiêu</a></li>
+    <li><a href="#s4"><span>04</span>Thiết lập công thức</a></li>
+    <li><a href="#s5"><span>05</span>Bốn nguồn số liệu</a></li>
+    <li><a href="#s6"><span>06</span>Wizard phân loại hoạt động</a></li>
+    <li><a href="#s7"><span>07</span>Tính số liệu &amp; Tải lại</a></li>
+    <li><a href="#s8"><span>08</span>Công thức HĐ kinh doanh</a></li>
+    <li><a href="#s9"><span>09</span>Đầu tư · Tài chính · Kết luồng</a></li>
+    <li><a href="#s10"><span>10</span>Lưu · Sửa · Xóa · Xem</a></li>
+    <li><a href="#s11"><span>11</span>Kết xuất Excel &amp; XML</a></li>
+    <li><a href="#s12"><span>12</span>Khác gì bản trực tiếp</a></li>
+    <li><a href="#s13"><span>13</span>Tra cứu chặn &amp; quyền</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Vòng đời một kỳ báo cáo</h2>
+  <p class="lede">Báo cáo lưu chuyển tiền tệ gián tiếp chỉ có <strong>một trạng thái nghiệp vụ</strong>: đã nộp cơ quan thuế hay chưa. Trạng thái đó là bản lề gác cả Sửa lẫn Xóa; mọi ràng buộc còn lại nằm ở quyền và ở tính đủ của thiết lập công thức.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(( )) -- "Tạo mới — LapBCTC.Create" --> A
+    A["<b>CHƯA NỘP CQT</b><br/>Sửa · Xóa · Tải lại mở<br/>BaoCaoTaiChinh.TrangThai"]
+    B["<b>ĐÃ NỘP CQT</b><br/>Khóa Sửa · khóa Xóa<br/>Chỉ còn Xem · Kết xuất"]
+    D["<b>ĐÃ XÓA</b><br/>Mất khỏi danh sách<br/>Xóa kèm dòng chi tiết"]
+    A -- "Đánh dấu đã nộp CQT" --> B
+    B -- "Bỏ đánh dấu đã nộp CQT" --> A
+    A -- "Xóa — xác nhận MSG 201" --> D
+    B -. "chặn bằng MSG 309" .-> D
+
+    classDef st fill:#ffffff,stroke:#2f6f8f,color:#16202b;
+    classDef gone fill:#faf8f3,stroke:#cdc7b9,color:#6f6a61;
+    class A,B st;
+    class D gone;
+</pre>
+    </div>
+    <figcaption><b>Không có đường tắt từ Đã nộp CQT sang Đã xóa.</b> Muốn sửa hay xóa một báo cáo đã đánh dấu nộp thuế, phải bấm <em>Bỏ đánh dấu đã nộp CQT</em> ở màn danh sách trước; bấm thẳng Sửa hoặc Xóa chỉ nhận về <span class="chip c-msg">MSG 309</span>.</figcaption>
+  </figure>
+
+  <h3>Bảy entity, ba nhóm dữ liệu độc lập nhau</h3>
+  <p>Điểm dễ nhầm nhất của epic này: <strong>thiết lập chỉ tiêu và kết quả phân loại hoạt động không thuộc về một báo cáo cụ thể</strong>. Chúng sống độc lập, dùng lại cho mọi kỳ; chỉ hai entity đầu bảng mới gắn theo từng lần lập.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nhóm</th><th class="mono">Entity</th><th>Nắm giữ</th><th>Vòng đời</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="2">Bản ghi báo cáo</td><td class="mono">rpt_bao_cao_tai_chinh</td><td>Tên · Ngày lập · Kỳ · Người lập · Kế toán trưởng · Người đại diện · TrangThai</td><td>Theo từng lần lập</td></tr>
+      <tr><td class="mono">rpt_bao_cao_luu_chuyen_tien_te_gian_tiep_chi_tiet</td><td>Snapshot chỉ tiêu: MaChiTieu · TenChiTieu · MaThuyetMinh · SoNamNay · SoNamTruoc · ThuTu</td><td>Theo từng lần lập</td></tr>
+      <tr><td rowspan="2">Thiết lập báo cáo</td><td class="mono">rpt_thiet_lap_chi_tieu</td><td>Danh sách chỉ tiêu, loại chỉ tiêu, cờ In · In đậm · In nghiêng · Đã sửa CT</td><td>Dùng chung mọi kỳ</td></tr>
+      <tr><td class="mono">rpt_thiet_lap_cong_thuc</td><td>Từng dòng công thức: PhepTinh · MaThamSo · TaiKhoanNo · TaiKhoanCo hoặc MaChiTieu</td><td>Dùng chung mọi kỳ</td></tr>
+      <tr><td rowspan="3">Phân loại hoạt động</td><td class="mono">rpt_hoat_dong_so_du_cong_no</td><td>Bước 1 — LoaiHoatDong của số dư công nợ theo đối tượng</td><td>Phân loại 1 lần, dùng lại</td></tr>
+      <tr><td class="mono">rpt_hoat_dong_so_du_tai_khoan</td><td>Bước 2 — SoTienKinhDoanh · SoTienDauTu · SoTienTaiChinh</td><td>Phân loại 1 lần, dùng lại</td></tr>
+      <tr><td class="mono">rpt_hoat_dong_chung_tu</td><td>Bước 3 — NghiepVu · Bước 4 — HoatDong của từng dòng bút toán</td><td>Phân loại 1 lần, dùng lại</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Đọc đúng thứ tự</span>
+    <p>Muốn có số liệu, ba lớp phải xong theo đúng thứ tự: <strong>chỉ tiêu</strong> (mục 03) → <strong>công thức</strong> (mục 04) → <strong>phân loại hoạt động</strong> (mục 06). Thiếu lớp nào thì lớp sau không có gì để quét: wizard bước 1–4 chỉ nhặt lên đúng những tài khoản, cặp bút toán đã xuất hiện trong công thức đang thiết lập <span class="chip c-br">BR1–BR5 SCR_ChonHoatDong</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — SCR_ChonKyBaoCao</span>
+  <h2>Tham số lọc: kỳ này, kỳ trước và ba lớp chặn</h2>
+  <p class="lede">Popup chọn kỳ là cổng vào duy nhất của báo cáo. Nó quyết định hai thứ về sau: khoảng ngày dùng cho cột <em>kỳ này</em> / <em>kỳ trước</em>, và nhãn tiêu đề hai cột số liệu.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Tạo mới ở màn danh sách"]) --> B{"Có LapBCTC.Create?"}
+    B -- Không --> B1["Chặn — MSG 301"]:::err
+    B -- Có --> C["Mở popup Chọn kỳ báo cáo"]
+    C --> D["Nhập Năm và Khoảng thời gian"]
+    D --> E{"Khoảng thời gian là gì?"}
+    E -- "Năm" --> E1["Fill 1/1 → 31/12 năm hiện tại<br/>vẫn cho sửa lại hai mốc"]
+    E -- "Quý · Tháng · 6 tháng" --> E2["Fill mốc cố định theo kỳ<br/>disable Từ ngày và Đến ngày"]
+    E -- "Tùy chọn" --> E3["Tự nhập Từ ngày · Đến ngày"]
+    E1 --> F["Tùy chọn tick kỳ trước<br/>mặc định lùi đúng 1 năm"]
+    E2 --> F
+    E3 --> F
+    F --> G["Tick mẫu B 03-DN gián tiếp"]
+    G --> H{"Đã chọn ≥ 1 báo cáo?"}
+    H -- Không --> H1["Không cho lập — BR2"]:::err
+    H -- Có --> I{"Từ ngày → Đến ngày ≤ 15 tháng?"}
+    I -- Không --> I1["Chặn — MSG 307"]:::err
+    I -- Có --> J{"Tối đa 1 mốc khác Năm đã chọn?"}
+    J -- Không --> J1["Chặn — MSG 308"]:::err
+    J -- Có --> K{"Trùng kỳ báo cáo đã lập?"}
+    K -- Có --> K1["Hỏi MSG 204<br/>vẫn cho lập tiếp"]:::warn
+    K -- Không --> L(["Mở màn thêm mới báo cáo"])
+    K1 --> L
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Trùng kỳ chỉ cảnh báo, không chặn.</b> <span class="chip c-msg">MSG 204</span> là thông báo dạng xác nhận: hệ thống báo đã có báo cáo lập trong khoảng thời gian này rồi vẫn cho lập tiếp. Hai mã 307 và 308 mới là chặn cứng.</figcaption>
+  </figure>
+
+  <h3>Kỳ trước suy ra từ kỳ này</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th class="mono">Field</th><th>Hành vi</th></tr></thead>
+    <tbody>
+      <tr><td>Thiết lập khoảng thời gian kỳ trước</td><td class="mono">ThietLapKyTruoc</td><td>Mặc định không tích ⇒ hai trường kỳ trước bị disable</td></tr>
+      <tr><td>Từ ngày (Kỳ trước)</td><td class="mono">NgayTuKyTruoc</td><td>Mặc định = Từ ngày (Kỳ này) với năm lùi 1, cho sửa lại</td></tr>
+      <tr><td>Đến ngày (Kỳ trước)</td><td class="mono">NgayDenKyTruoc</td><td>Mặc định = Đến ngày (Kỳ này) với năm lùi 1, cho sửa lại</td></tr>
+      <tr><td colspan="3">Năm nhuận: mốc 29/2 khi lùi về năm không nhuận được chuyển thành 28/2.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Kỳ đã chọn quyết định nhãn hai cột số liệu</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Khoảng thời gian đã chọn</th><th>Nhãn cột trái</th><th>Nhãn cột phải</th></tr></thead>
+    <tbody>
+      <tr><td>Năm</td><td>Năm nay</td><td>Năm trước</td></tr>
+      <tr><td>Quý 1 … Quý 4</td><td>Quý này</td><td>Quý trước</td></tr>
+      <tr><td>Tháng · 6 tháng · Tùy chọn</td><td>Kỳ này</td><td>Kỳ trước</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Danh sách giá trị và cơ chế đồng bộ Từ ngày – Đến ngày tuân thủ <span class="chip c-br">BR8</span> chung; định dạng và làm tròn số tiền theo <span class="chip c-br">BR7</span>.</p>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — UC_DanhSach · SCR_DanhSach_BaoCao</span>
+  <h2>Danh sách: bảng điều phối bảy nút</h2>
+  <p class="lede">Màn danh sách là nơi duy nhất mở được cả bốn hướng: lập mới, xem, sửa/xóa, và vào thiết lập báo cáo. Ba nhóm điều kiện gác nút hoàn toàn khác nhau — nhầm nhóm là lỗi hay gặp nhất khi code màn này.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Mở menu Báo cáo tài chính"]) --> B{"Có LapBCTC.View?"}
+    B -- Không --> B1["Chặn — MSG 301"]:::err
+    B -- Có --> C["Lọc theo Tenant hiện tại<br/>sắp xếp Ngày lập giảm dần"]
+    C --> D{"Có dữ liệu?"}
+    D -- Không --> D1["Trạng thái danh sách trống"]:::warn
+    D -- Có --> E["Lưới 20 dòng mỗi trang<br/>kèm icon trạng thái nộp CQT"]
+
+    E --> G1{{"Gác theo quyền, không theo dòng"}}
+    E --> G2{{"Gác theo dòng đang chọn"}}
+    E --> G3{{"Gác theo TrangThai nộp CQT"}}
+
+    G1 -- "LapBCTC.Create" --> A1["Tạo mới"]
+    G1 -- "LapBCTC.Edit" --> A2["Thiết lập báo cáo"]
+    G2 -- "Đã chọn một báo cáo" --> A3["Xem chi tiết"]
+    G2 -- "Đã chọn + LapBCTC.Edit" --> A4["Sửa"]
+    G2 -- "Đã chọn + LapBCTC.Delete" --> A5["Xóa"]
+    G3 -- "Chưa nộp CQT" --> A6["Đánh dấu đã nộp CQT"]
+    G3 -- "Đã nộp CQT" --> A7["Bỏ đánh dấu đã nộp CQT"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Enable ≠ cho phép thao tác.</b> Nút Sửa và Xóa vẫn enable khi báo cáo đã nộp CQT — quyền và dòng chọn đủ điều kiện; hệ thống chỉ chặn ở lúc bấm bằng <span class="chip c-msg">MSG 309</span> <span class="chip c-br">BR1 SCR_DanhSach</span>. Riêng cặp nút đánh dấu nộp CQT thì <em>ẩn/hiện</em> theo trạng thái, không phải enable/disable.</figcaption>
+  </figure>
+
+  <h3>Sáu cột, ba cột cho sắp xếp</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột</th><th class="mono">Nguồn</th><th>Sắp xếp</th></tr></thead>
+    <tbody>
+      <tr><td>Tên báo cáo</td><td class="mono">BaoCaoTaiChinh.Ten</td><td>Y</td></tr>
+      <tr><td>Khoảng thời gian</td><td class="mono">NgayTu → NgayDen</td><td>N</td></tr>
+      <tr><td>Ngày lập</td><td class="mono">BaoCaoTaiChinh.NgayLap</td><td>Y — mặc định giảm dần</td></tr>
+      <tr><td>Người lập</td><td class="mono">BaoCaoTaiChinh.NguoiLap</td><td>Y</td></tr>
+      <tr><td>Kế toán trưởng</td><td class="mono">BaoCaoTaiChinh.KeToanTruong</td><td>N</td></tr>
+      <tr><td>Giám đốc</td><td class="mono">NguoiDaiDienPhapLuat</td><td>N</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Phân trang mặc định 20 dòng theo <span class="chip c-br">BR1</span>, hiển thị và sắp xếp theo <span class="chip c-br">BR2</span>, lọc dữ liệu theo Tenant hiện tại theo <span class="chip c-br">BR28</span>.</p>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — UC_ThietLapBaoCao · SCR_ThietLap_ChiTieu</span>
+  <h2>Thiết lập chỉ tiêu: xương của báo cáo</h2>
+  <p class="lede">Danh sách chỉ tiêu mặc định lấy theo Thông tư 200 — 77 dòng, gồm ba tiêu đề nhóm không mã và các chỉ tiêu mang mã <span class="f">01</span> … <span class="f">70</span>. Mỗi dòng khai <em>loại chỉ tiêu</em>, và chính loại đó quyết định form công thức ở mục 04.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Thiết lập báo cáo"]) --> B{"Có LapBCTC.Edit?"}
+    B -- Không --> B1["Chặn — MSG 301<br/>quay lại màn danh sách"]:::err
+    B -- Có --> C["Hiện lưới chỉ tiêu mặc định"]
+    C --> D{"Người dùng làm gì?"}
+    D -- "Thêm dòng" --> E["Nhập Mã · Tên · Thuyết minh<br/>Loại · In · In đậm · In nghiêng"]
+    D -- "Sửa mã chỉ tiêu" --> F{"Mã đang bị công thức<br/>Tổng hợp tham chiếu?"}
+    D -- "Xóa dòng" --> F
+    D -- "Khôi phục mặc định" --> G["Về chỉ tiêu và công thức gốc"]
+    F -- Có --> F1["Chặn — MSG 311"]:::err
+    F -- Không --> E
+    E --> H{"Mã khác rỗng và trùng<br/>mã chưa bị xóa mềm?"}
+    H -- Có --> H1["Chặn — MSG 310"]:::err
+    H -- Không --> I(["Bấm Lưu"])
+    G --> I
+    I --> J{"Đủ trường bắt buộc?"}
+    J -- Không --> J1["Báo trường thiếu<br/>focus vào ô đó, không lưu"]:::err
+    J -- Có --> K["Ghi rpt_thiet_lap_chi_tieu<br/>quay về màn danh sách"]:::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hai lá chắn quanh Mã chỉ tiêu.</b> <span class="chip c-msg">MSG 310</span> giữ tính duy nhất, <span class="chip c-msg">MSG 311</span> giữ tính toàn vẹn tham chiếu — cả hai chỉ xét bản ghi <em>chưa bị xóa mềm</em> và chỉ áp cho mã khác rỗng, nên ba dòng tiêu đề nhóm không mã không vướng luật này.</figcaption>
+  </figure>
+
+  <h3>Bốn cờ cấu hình trên mỗi chỉ tiêu</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Field</th><th>true</th><th>false</th><th>Sửa được</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">ThietLapChiTieu.In</td><td>Hiển thị ra màn thêm mới</td><td>Không hiển thị ra màn thêm mới</td><td>Y</td></tr>
+      <tr><td class="mono">ThietLapChiTieu.InDam</td><td>Định dạng in đậm</td><td>Không in đậm</td><td>Y</td></tr>
+      <tr><td class="mono">ThietLapChiTieu.InNghieng</td><td>Định dạng in nghiêng</td><td>Không in nghiêng</td><td>Y</td></tr>
+      <tr><td class="mono">ThietLapChiTieu.DaSuaCT</td><td>Công thức đã khác mặc định</td><td>Công thức chưa đổi so với hệ thống</td><td><b>N</b> — hệ thống tự đặt, mặc định false</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Ảnh hưởng xuống báo cáo</span>
+    <p>Màn thêm mới chỉ hiển thị các chỉ tiêu có <span class="f">In</span> = true, sắp xếp theo <span class="f">ThuTu</span> tăng dần. Mặc định <span class="f">61.1</span> và <span class="f">61.2</span> có <span class="f">In</span> = false — chúng vẫn được tính nhưng chỉ hiện qua chỉ tiêu cha <span class="f">61</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — UC_ThietLapBaoCaoChiTiet · SCR_ThietLap_CongThuc</span>
+  <h2>Thiết lập công thức: hai form tùy loại chỉ tiêu</h2>
+  <p class="lede">Popup công thức đổi hẳn bộ trường theo <span class="f">LoaiChiTieu</span>. Chỉ tiêu <strong>Tổng hợp</strong> chỉ cộng trừ các mã chỉ tiêu khác; chỉ tiêu <strong>Chi tiết</strong> mới chạm tới số liệu sổ cái qua mã tham số và cặp tài khoản.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm sửa công thức trên một chỉ tiêu"]) --> B{"LoaiChiTieu là gì?"}
+    B -- "Tổng hợp" --> C["Form: Phép tính + Mã chỉ tiêu<br/>Tên chỉ tiêu tự fill, không sửa"]
+    B -- "Chi tiết" --> D["Form: Phép tính + Mã tham số<br/>+ TK Nợ và TK Có"]
+    C --> C1["Chuỗi hiển thị:<br/>dấu rồi mã trong ngoặc vuông"]
+    D --> D1{"Mã tham số thuộc nhóm nào?"}
+    D1 -- "Nhóm DUNO... · PhatsinhNO..." --> D2["TK Nợ bắt buộc<br/>TK Có disable, để trống"]
+    D1 -- "Nhóm DUCO... · PhatsinhCO..." --> D3["TK Có bắt buộc<br/>TK Nợ disable, để trống"]
+    D1 -- "Nhóm PhatsinhDU..." --> D4["Bắt buộc cả TK Nợ và TK Có"]
+    D2 --> D5["Chuỗi hiển thị:<br/>dấu rồi tham số kèm tài khoản"]
+    D3 --> D5
+    D4 --> D5
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Nhóm mã tham số điều khiển tính bắt buộc của cặp tài khoản.</b> Đây là chiều động duy nhất của popup: 48 mã tham số chia làm ba rổ theo vế Nợ / Có / đối ứng, và rổ nào thì mở đúng ô tài khoản của rổ đó.</figcaption>
+  </figure>
+
+  <h3>Chuỗi lưu công thức</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Thêm dòng · Xóa dòng · Xóa hết dòng"] --> B(["Bấm Lưu"])
+    A2["Khôi phục mặc định"] --> A3["Về công thức gốc hệ thống<br/>báo MSG 006"]:::ok
+    B --> C{"Chỉ tiêu Chi tiết:<br/>tài khoản đã nhập hợp lệ?"}
+    C -- "Không khớp đầu số nào" --> C1["Chặn — MSG 313"]:::err
+    C -- "Khớp tiền tố tài khoản" --> D{"Chỉ tiêu Tổng hợp:<br/>có vòng lặp đệ quy?"}
+    D -- Có --> D1["Chặn — MSG 312<br/>quay lại popup chỉnh sửa"]:::err
+    D -- Không --> E["Ghi rpt_thiet_lap_cong_thuc<br/>báo MSG 004, đóng popup"]:::ok
+    E --> F["Chỉ tiêu được đánh dấu<br/>DaSuaCT nếu khác mặc định"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Tài khoản nhập theo tiền tố, không theo mã đầy đủ.</b> Gõ <span class="f">11</span> là hợp lệ và được hiểu là mọi tài khoản bắt đầu bằng 11 — dạng <span class="f">like 'GiaTri%'</span>. Chỉ khi tiền tố không khớp bất kỳ tài khoản nào trong danh mục mới nhận <span class="chip c-msg">MSG 313</span>.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Cách đọc chuỗi công thức</span>
+    <p><strong>Chỉ tiêu Chi tiết:</strong> <span class="f">Phép tính</span> + <span class="f">Mã tham số</span> + <span class="f">(TK Nợ / TK Có)</span>. Tham số chỉ cần một vế thì bỏ dấu gạch chéo. Ví dụ ba dòng công thức (− PhatsinhDU 111/131), (+ DUNOCK 21), (− PhatsinhCO 11) hiển thị thành: <span class="f">- PhatsinhDU(111/131) + DUNOCK(21) - PhatsinhCO(11)</span>.</p>
+    <p><strong>Chỉ tiêu Tổng hợp:</strong> <span class="f">Phép tính</span> + <span class="f">[Mã chỉ tiêu]</span> — ví dụ <span class="f">[08] + [09] + [10]</span>. Phép tính chỉ nhận hai giá trị Cộng và Trừ <span class="chip c-br">BR7 SCR_ThietLap_CongThuc</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — Nguồn dữ liệu</span>
+  <h2>48 mã tham số, bốn nguồn số liệu</h2>
+  <p class="lede">Đây là chỗ phương pháp gián tiếp phức tạp hẳn so với trực tiếp. Một mã tham số không chỉ nói <em>lấy số dư hay phát sinh</em>, nó còn nói <em>lấy từ bảng nào</em> — sổ cái thô, hay dữ liệu đã qua phân loại thủ công ở wizard bốn bước.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    N1["<b>Sổ cái + Số dư ban đầu</b><br/>dữ liệu thô, không phân loại"] --> P1["15 mã: DUNODK · DUCODK<br/>DUNOCK · DUCOCK<br/>...ChiTietTheoTK · ...TheoTKvaDT<br/>PhatsinhDU · PhatsinhNO · PhatsinhCO"]
+    N2["<b>Bước 1 + Bước 2</b><br/>số dư ban đầu đã gán hoạt động"] --> P2["12 mã họ ...ChiTietTheoHD_SXKD<br/>phần phát sinh trong kỳ<br/>vẫn lấy từ Bước 4"]
+    N3["<b>Bước 3</b><br/>chứng từ đã gán Nghiệp vụ"] --> P3["17 mã ...ChiTiet + tên nghiệp vụ<br/>Thanhly · Ban_BDSDT · Lai<br/>DanhGiaLai · ChiPhiLaiVay ..."]
+    N4["<b>Bước 4</b><br/>chứng từ đã gán Hoạt động"] --> P4["5 mã: PhatsinhDUChiTietTheoHD_SXKD<br/>..._DAUTU · ..._TAICHINH<br/>PhatsinhNO và CO ChiTietTheoHD_SXKD"]
+
+    P1 --> R["Giá trị một dòng công thức"]
+    P2 --> R
+    P3 --> R
+    P4 --> R
+    R --> S["Cộng dồn theo Phép tính<br/>thành số của chỉ tiêu"]
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class R,S ok;
+</pre>
+    </div>
+    <figcaption><b>Ba trên bốn nguồn phụ thuộc thao tác tay của kế toán.</b> Chỉ nhóm 15 mã đầu đọc thẳng sổ cái. 33 mã còn lại trả về 0 nếu người dùng chưa chạy wizard phân loại — số liệu vẫn ra, chỉ là ra sai, không có thông báo lỗi nào bắn lên.</figcaption>
+  </figure>
+
+  <h3>Quy tắc chung áp cho mọi lượt lấy số</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Quy tắc</th><th>Nội dung</th></tr></thead>
+    <tbody>
+      <tr><td>Ánh xạ tài khoản</td><td>Mã tài khoản trong công thức được ánh xạ sang <span class="f">HeThongTaiKhoan.Id</span>; nếu là tài khoản cha thì lấy cả cha lẫn toàn bộ tài khoản con trực thuộc, dạng <span class="f">SoCai.TKID IN (...)</span></td></tr>
+      <tr><td>Tiền tố tài khoản</td><td>Giá trị nhập là phần đầu số hiệu ⇒ tính cho mọi tài khoản <span class="f">like 'GiaTri%'</span>. <span class="f">PhatsinhDU(11/131)</span> gom 1111, 1112, 1121…</td></tr>
+      <tr><td>Phạm vi chi nhánh</td><td>Mọi lượt nhặt từ <span class="f">SoCai</span> đều kèm điều kiện <span class="f">SoCai.ChiNhanhID</span> thuộc phạm vi được phân quyền <span class="chip c-br">BR46.4</span> — không lặp lại ở từng công thức nhưng luôn có hiệu lực</td></tr>
+      <tr><td>Giá trị rỗng</td><td>Số dư hoặc phát sinh không tìm thấy / trả về null ⇒ coi là 0 để tính tiếp, không dừng</td></tr>
+      <tr><td>Tính chất tài khoản</td><td>Nhóm DUNO… trả 0 với tài khoản tính chất Dư Có; nhóm DUCO… trả 0 với tài khoản Dư Nợ; tài khoản lưỡng tính lấy kết quả nếu dương, ngược lại trả 0</td></tr>
+      <tr><td>Mốc thời gian</td><td>Nhóm …CK tính đến hết ngày cuối kỳ; nhóm …DK tính đến ngày đầu kỳ trừ 1</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Tài liệu chưa nhất quán</span>
+    <p><strong>Thiếu một mã ở vế Nợ.</strong> <span class="f">SCR_ChonHoatDong — BR2</span> yêu cầu Bước 2 quét cả <span class="f">DUNODK_ChiTietTheoHD_SXKD_TK</span>, nhưng bảng 48 mã tham số ở <span class="f">SCR_ThietLap_CongThuc — BR2</span> không có mã này (vế Có thì có đủ cả <span class="f">DUCOCK_…_TK</span> lẫn <span class="f">DUCODK_…_TK</span>). Chưa có quy định giải quyết — không tự suy diễn thêm mã.</p>
+    <p><strong>Một mã nằm ở hai bước.</strong> <span class="f">PhatsinhCO_ChiTietTheoHD_SXKD</span> được liệt kê ở cả BR4 (Bước 3 — Nghiệp vụ) lẫn BR5 (Bước 4 — Hoạt động). Phần mô tả cách tính của mã này gắn với Bước 4; tài liệu không nói bước nào là nguồn chính thức.</p>
+  </div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — UC_ChonHoatDong · SCR_ChonHoatDong</span>
+  <h2>Wizard bốn bước: nơi kế toán dạy máy phân loại dòng tiền</h2>
+  <p class="lede">Bốn bước không phải bốn màn giống nhau. Bước 1 và 2 phân loại <em>số dư ban đầu</em>, bước 3 gán <em>nghiệp vụ</em>, bước 4 gán <em>hoạt động</em> — ba miền giá trị khác nhau, ba entity khác nhau.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Chọn loại hoạt động cho chứng từ"]) --> B1
+    B1["<b>Bước 1</b> — Số dư ban đầu<br/>TK chi tiết theo đối tượng<br/>Nguồn: công nợ KH · NCC · NV"]
+    B1 --> C1["Chọn Loại hoạt động cho dòng<br/>hoặc fill hàng loạt dòng đã tick"]
+    C1 -- "Tiếp tục" --> B2
+    B2["<b>Bước 2</b> — Số dư ban đầu<br/>TK không chi tiết đối tượng<br/>chỉ nhặt dòng số dư khác 0"]
+    B2 --> C2["Nhập phân bổ ba cột tiền:<br/>Kinh doanh · Đầu tư · Tài chính"]
+    C2 --> V{"Tổng phân bổ ≤ Dư Nợ + Dư Có?"}
+    V -- Không --> V1["Cảnh báo MSG 314<br/>không cho đi tiếp"]:::err
+    V1 --> C2
+    V -- Có --> B3
+    B3["<b>Bước 3</b> — Chứng từ điều chỉnh<br/>chỉ lấy chứng từ Đã ghi sổ<br/>ngày hạch toán trong kỳ"]
+    B3 --> C3["Chọn Nghiệp vụ cho dòng bút toán<br/>9 giá trị, kể cả Trống"]
+    C3 -- "Tiếp tục" --> B4
+    B4["<b>Bước 4</b> — Chứng từ phát sinh<br/>cũng chỉ chứng từ Đã ghi sổ"]
+    B4 --> C4["Chọn Hoạt động cho dòng bút toán<br/>Trống · Kinh doanh<br/>Đầu tư · Tài chính"]
+    C4 -- "Đồng ý" --> Z["Ghi cả bốn bước<br/>rồi tính lại và fill báo cáo"]:::ok
+    C2 -. "Đóng" .-> B1
+    C3 -. "Đóng" .-> B2
+    C4 -. "Quay lại" .-> B3
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Đồng ý ở Bước 4 ghi kết quả của cả bốn bước, không phụ thuộc báo cáo.</b> Dữ liệu phân loại lưu độc lập với từng lần lập — phân loại một lần rồi dùng lại cho các kỳ sau, kể cả khi người dùng bấm Hủy ở màn báo cáo mà không lưu.</figcaption>
+  </figure>
+
+  <h3>Mỗi bước quét công thức nào, ghi vào đâu</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Bước</th><th>Nhặt dữ liệu lên khi</th><th class="mono">Entity ghi</th><th class="mono">Khóa</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Tài khoản đã xuất hiện trong công thức họ <span class="f">DU*CK/DK_ChiTietTheoHD_SXKD_TKvaDT</span>, mỗi dòng số dư công nợ là một dòng</td><td class="mono">rpt_hoat_dong_so_du_cong_no</td><td class="mono">TaiKhoanId · LoaiDoiTuong · DoiTuongId</td></tr>
+      <tr><td>2</td><td>Số dư khác 0 của tài khoản đã dùng trong họ <span class="f">…ChiTietTheoHD_SXKD</span> và <span class="f">…ChiTietTheoHD_SXKD_TK</span>; mỗi tài khoản một dòng</td><td class="mono">rpt_hoat_dong_so_du_tai_khoan</td><td class="mono">TaiKhoanId</td></tr>
+      <tr><td>3</td><td>Chứng từ Đã ghi sổ, ngày hạch toán trong kỳ, có bút toán khớp 18 mã tham số họ nghiệp vụ</td><td class="mono">rpt_hoat_dong_chung_tu</td><td class="mono">NghiepVu</td></tr>
+      <tr><td>4</td><td>Chứng từ Đã ghi sổ, ngày hạch toán trong kỳ, có bút toán khớp 5 mã tham số họ hoạt động</td><td class="mono">rpt_hoat_dong_chung_tu</td><td class="mono">HoatDong</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Hai miền giá trị không được trộn</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th>Xuất hiện ở</th><th>Miền giá trị</th></tr></thead>
+    <tbody>
+      <tr><td>Loại hoạt động / Hoạt động</td><td>Bước 1 và Bước 4</td><td>Trống · Hoạt động kinh doanh · Hoạt động đầu tư · Hoạt động tài chính</td></tr>
+      <tr><td>Nghiệp vụ</td><td>Bước 3</td><td>Trống · Thanh lý, nhượng bán TSCĐ · Bán BĐS đầu tư · Đánh giá lại tài sản góp vốn, đầu tư · Bán, thu hồi các khoản đầu tư tài chính · Lãi cho vay, lãi tiền gửi, cổ tức và lợi nhuận được chia, lãi đầu tư định kỳ · Chi phí lãi vay, chi trả lãi vay · Đánh giá lại tài khoản ngoại tệ · Chênh lệch tỷ giá khi thanh toán của hoạt động đầu tư, tài chính</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Cả hai combo chỉ cho chọn một giá trị; chọn <em>Trống</em> đồng nghĩa để trống. Bước 1 xác định đối tượng công nợ qua <span class="f">LoaiDoiTuong</span> — khách hàng cá nhân / tổ chức, nhà cung cấp cá nhân / tổ chức, nhân viên. Sắp xếp mọi lưới theo tài khoản rồi mã đối tượng (Bước 1–2), theo ngày hạch toán rồi số chứng từ rồi thứ tự nhập liệu (Bước 3–4); tìm kiếm và lọc theo <span class="chip c-br">BR11</span>, chọn nhiều dòng theo <span class="chip c-br">BR45</span>.</p>
+
+  <div class="note">
+    <span class="lbl">Điểm dễ sai</span>
+    <p><strong>Bước 3 và Bước 4 cùng ghi vào <span class="f">rpt_hoat_dong_chung_tu</span> nhưng vào hai trường khác nhau</strong> — <span class="f">NghiepVu</span> và <span class="f">HoatDong</span>. Một dòng bút toán hoàn toàn có thể vừa được gán nghiệp vụ ở Bước 3 vừa được gán hoạt động ở Bước 4; hai bước dùng hai danh sách công thức tách biệt để nhặt dòng lên.</p>
+  </div>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — SCR_ThemMoi BR3 · BR4</span>
+  <h2>Tính số liệu: hai cột, một cú Tải lại</h2>
+  <p class="lede">Số của cột kỳ này và cột kỳ trước dùng <em>cùng một bộ công thức</em>, chỉ khác khoảng ngày đưa vào. Nút Tải lại chạy lại toàn bộ chuỗi tính — và hỏi trước một câu quyết định cột kỳ trước có bị ghi đè hay không.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Tải lại"]) --> B{"MSG 202 — giữ cột kỳ trước?"}
+    B -- "Hủy" --> B1["Không tính gì<br/>về lại màn báo cáo"]:::warn
+    B -- "Giữ lại" --> C1["Chỉ tính lại cột kỳ này"]
+    B -- "Không giữ" --> C2["Tính lại cả hai cột"]
+    C1 --> D["Duyệt chỉ tiêu có In = true<br/>theo ThuTu tăng dần"]
+    C2 --> D
+    D --> E{"Chỉ tiêu có dòng công thức nào?"}
+    E -- Không --> E1["Dừng tính — MSG 303<br/>kèm mã chỉ tiêu bị thiếu<br/>số liệu giữ nguyên như trước"]:::err
+    E -- Có --> F{"LoaiChiTieu?"}
+    F -- "Chi tiết" --> G1["Giải từng mã tham số<br/>theo bốn nguồn ở mục 05"]
+    F -- "Tổng hợp" --> G2["Cộng trừ giá trị các mã<br/>chỉ tiêu con đã tính xong"]
+    G1 --> H["Cộng dồn theo Phép tính"]
+    G2 --> H
+    H --> I["Fill SoNamNay và SoNamTruoc<br/>người dùng vẫn sửa tay được"]:::ok
+    I --> J["Báo MSG 005 — Tải lại thành công"]:::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Thiếu công thức là chặn cứng, không phải bỏ qua.</b> Một chỉ tiêu Chi tiết hoặc Tổng hợp chưa có dòng công thức nào làm cả lượt tính dừng lại với <span class="chip c-msg">MSG 303</span>, và số liệu trên lưới giữ nguyên như trước khi bấm Tải lại — không có chuyện tính được phần nào ghi phần đó.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Mâu thuẫn cần hỏi BA</span>
+    <p>Bảng chỉ tiêu mặc định ở <span class="f">SCR_ThietLap_ChiTieu — BR1</span> để <strong>trống cột Công thức</strong> cho chỉ tiêu <span class="f">[01] Lợi nhuận trước thuế</span> (loại Chi tiết) và cho ba dòng tiêu đề nhóm loại Tổng hợp (I. · II. · III. · "2. Điều chỉnh cho các khoản"). Chiếu theo <span class="f">SCR_ThemMoi — BR4</span>, mọi chỉ tiêu Chi tiết hoặc Tổng hợp không có dòng công thức đều làm lượt Tải lại dừng với <span class="chip c-msg">MSG 303</span>. Tài liệu không quy định ngoại lệ cho chỉ tiêu tiêu đề hay cho <span class="f">[01]</span> — không tự đặt luật miễn trừ.</p>
+  </div>
+
+  <h3>Chỉ tiêu Tổng hợp chỉ ra số khi con của nó đã ra số</h3>
+  <p>Ràng buộc duy nhất tài liệu nêu về thứ tự giải là <span class="chip c-br">BR6 SCR_ThietLap_CongThuc</span>: cấm chu trình tham chiếu vòng tròn, chặn tại thời điểm lưu công thức bằng <span class="chip c-msg">MSG 312</span>. Thuật toán duyệt cụ thể (sắp xếp topo, nhiều lượt lặp…) <strong>chưa được BA quy định</strong> — trang này không vẽ thứ tự tự nghĩ ra.</p>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — Công thức mặc định</span>
+  <h2>Hoạt động kinh doanh: từ lợi nhuận trước thuế đến [20]</h2>
+  <p class="lede">Đây là phần làm nên tên gọi <em>gián tiếp</em>: không đếm tiền thu chi, mà lấy lợi nhuận kế toán rồi điều chỉnh ngược các khoản không sinh tiền và các biến động vốn lưu động.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A["<b>01</b> Lợi nhuận trước thuế"] --> H
+    B["<b>02..07</b> Điều chỉnh<br/>khấu hao · dự phòng · CLTG<br/>lãi lỗ đầu tư · chi phí đi vay"] --> H
+    H["<b>08</b> LN trước thay đổi vốn lưu động<br/>= 01 + 02 + 03 + 04 + 05 + 06 + 07"]
+    H --> T
+    C["<b>09..13</b> Biến động vốn lưu động<br/>phải thu · tồn kho · phải trả<br/>chi phí chờ phân bổ · CK kinh doanh"] --> T
+    D["<b>14..17</b> Tiền thực chi thực thu<br/>lãi vay đã trả · thuế TNDN đã nộp<br/>thu khác · chi khác"] --> T
+    T["<b>20</b> Lưu chuyển tiền thuần từ HĐKD<br/>= 08 + 09 + ... + 17"]
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class H,T ok;
+</pre>
+    </div>
+    <figcaption><b>Hai lớp cộng dồn, không phải một.</b> <span class="f">[08]</span> chốt phần điều chỉnh phi tiền tệ trước, rồi <span class="f">[20]</span> mới cộng tiếp phần vốn lưu động và tiền thực chi. Nhóm <span class="f">[05]</span> còn có tầng con riêng <span class="f">[05.1]…[05.5]</span>.</figcaption>
+  </figure>
+
+  <h3>Công thức mặc định nguyên văn</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Mã</th><th>Loại</th><th class="mono">Công thức mặc định</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">01</td><td>Chi tiết</td><td class="mono"><em>để trống trong bảng mặc định</em></td></tr>
+      <tr><td class="mono">02</td><td>Chi tiết</td><td class="mono">PhatsinhDU(64/214) + PhatsinhDU(62/214) + PhatsinhDU(632/214) + PhatsinhDU(811/214) + PhatsinhDU(154/214) - PhatsinhDU(214/64) - PhatsinhDU(214/62) - PhatsinhDU(214/632) - PhatsinhDU(214/811) - PhatsinhDU(214/154)</td></tr>
+      <tr><td class="mono">03</td><td>Chi tiết</td><td class="mono">DUCOCK(229) + DUCOCK(352) - DUCODK(229) - DUCODK(352)</td></tr>
+      <tr><td class="mono">04</td><td>Chi tiết</td><td class="mono">- PhatsinhDU_ChiTietDanhGiaLai_TKNgoaiTe(11/515) + PhatsinhDU_ChiTietDanhGiaLai_TKNgoaiTe(635/11)</td></tr>
+      <tr><td class="mono">05</td><td>Tổng hợp</td><td class="mono">[05.1] + [05.2] + [05.3] + [05.4] + [05.5]</td></tr>
+      <tr><td class="mono">05.1</td><td>Chi tiết</td><td class="mono">- PhatsinhCO_ChiTietThanhlyTSCD(711) + PhatsinhNO_ChiTietThanhlyTSCD(811) - PhatsinhCO_ChiTietThanhlyTSCD(811) + PhatsinhNO_ChiTietThanhlyTSCD(711) - PhatsinhCO_ChiTietBan_BDSDT(511) + PhatsinhNO_ChiTietBan_BDSDT(632) - PhatsinhCO_ChiTietBan_BDSDT(632) + PhatsinhNO_ChiTietBan_BDSDT(511)</td></tr>
+      <tr><td class="mono">05.2</td><td>Chi tiết</td><td class="mono">- PhatsinhCO_ChiTietDGLaiTSGVDT(711) + PhatsinhNO_ChiTietDGLaiTSGVDT(811)</td></tr>
+      <tr><td class="mono">05.3</td><td>Chi tiết</td><td class="mono">- PhatsinhCO_ChiTietChenhLechTyGia_Thanhtoan_DauTuTaiChinh(515) + PhatsinhNO_ChiTietChenhLechTyGia_Thanhtoan_DauTuTaiChinh(635)</td></tr>
+      <tr><td class="mono">05.4</td><td>Chi tiết</td><td class="mono">- PhatsinhCO_ChiTietBanThuHoiDTTC(515) + PhatsinhNO_ChiTietBanThuHoiDTTC(635)</td></tr>
+      <tr><td class="mono">05.5</td><td>Chi tiết</td><td class="mono">- PhatsinhCO_ChiTietLai(515)</td></tr>
+      <tr><td class="mono">06</td><td>Chi tiết</td><td class="mono">PhatsinhNO_ChiTietChiPhiLaiVayChiTraLaiVay(635) - PhatsinhDU_ChiTietChiPhiLaiVayChiTraLaiVay(335/635) - PhatsinhDU_ChiTietChiPhiLaiVayChiTraLaiVay(341/635)</td></tr>
+      <tr><td class="mono">07</td><td>Chi tiết</td><td class="mono">PhatsinhDU(632/356) + PhatsinhDU(64/356) + PhatsinhDU(632/357) + PhatsinhDU(64/357) - PhatsinhDU(356/632) - PhatsinhDU(356/64) - PhatsinhDU(357/632) - PhatsinhDU(357/64) + PhatsinhDU(632/241) + PhatsinhDU(64/341) + PhatsinhDU(64/128) + PhatsinhDU(811/128) + PhatsinhDU(64/411) + PhatsinhDU(811/411) - PhatsinhDU(353/64) + PhatsinhDU(811/3334) + PhatsinhDU(64/241) - PhatsinhDU(241/64) - PhatsinhDU(341/64) + PhatsinhDU(515/341) - PhatsinhDU(341/515) - PhatsinhDU(515/128) + PhatsinhDU(128/515) + PhatsinhDU(811/3411) + PhatsinhDU(3411/711)</td></tr>
+      <tr><td class="mono">08</td><td>Tổng hợp</td><td class="mono">[01] + [02] + [03] + [04] + [05] + [06] + [07]</td></tr>
+      <tr><td class="mono">09</td><td>Chi tiết</td><td class="mono">- DUNOCK_ChiTietTheoHD_SXKD_TKvaDT(131) - DUNOCK_ChiTietTheoHD_SXKD_TKvaDT(331) - DUNOCK_ChiTietTheoHD_SXKD_TK(138) - DUNOCK_ChiTietTheoHD_SXKD_TK(338) + DUNODK_ChiTietTheoHD_SXKD_TKvaDT(131) + DUNODK_ChiTietTheoHD_SXKD_TKvaDT(331) + DUNODK_ChiTietTheoHD_SXKD_TK(138) + DUNODK_ChiTietTheoHD_SXKD_TK(338) - DUNOCK_ChiTietTheoHD_SXKD_TK(1331) - DUNOCK_ChiTietTheoHD_SXKD_TK(136) - DUNOCK_ChiTietTheoHD_SXKD_TK(336) - DUNOCK_ChiTietTheoHD_SXKD_TKvaDT(141) - DUNOCK_ChiTietTheoHD_SXKD_TK(334) - DUNOCK_ChiTietTheoHD_SXKD_TK(333) - DUNOCK_ChiTietTheoHD_SXKD_TK(347) - DUNOCK_ChiTietTheoHD_SXKD_TK(337) - DUNOCK_ChiTietTheoHD_SXKD_TK(344) + DUNOCK_ChiTietTheoHD_SXKD_TK(3334) + DUNODK_ChiTietTheoHD_SXKD_TK(1331) + DUNODK_ChiTietTheoHD_SXKD_TK(136) + DUNODK_ChiTietTheoHD_SXKD_TK(336) + DUNODK_ChiTietTheoHD_SXKD_TKvaDT(141) + DUNODK_ChiTietTheoHD_SXKD_TK(333) + DUNODK_ChiTietTheoHD_SXKD_TK(334) + DUNODK_ChiTietTheoHD_SXKD_TK(347) + DUNODK_ChiTietTheoHD_SXKD_TK(337) + DUNODK_ChiTietTheoHD_SXKD_TK(344) - DUNODK_ChiTietTheoHD_SXKD_TK(3334) - DUNOCK_ChiTietTheoHD_SXKD_TK(244) + DUNODK_ChiTietTheoHD_SXKD_TK(244) - DUNOCK_ChiTietTheoTK(1332) + DUNODK_ChiTietTheoTK(1332)</td></tr>
+      <tr><td class="mono">10</td><td>Chi tiết</td><td class="mono">- DUNOCK_ChiTietTheoHD_SXKD(151) - DUNOCK_ChiTietTheoHD_SXKD(152) - DUNOCK_ChiTietTheoHD_SXKD(153) - DUNOCK_ChiTietTheoHD_SXKD(154) - DUNOCK_ChiTietTheoHD_SXKD(155) - DUNOCK_ChiTietTheoHD_SXKD(156) - DUNOCK_ChiTietTheoHD_SXKD(157) - DUNOCK_ChiTietTheoHD_SXKD(158) + DUNODK_ChiTietTheoHD_SXKD(151) + DUNODK_ChiTietTheoHD_SXKD(152) + DUNODK_ChiTietTheoHD_SXKD(153) + DUNODK_ChiTietTheoHD_SXKD(154) + DUNODK_ChiTietTheoHD_SXKD(155) + DUNODK_ChiTietTheoHD_SXKD(156) + DUNODK_ChiTietTheoHD_SXKD(157) + DUNODK_ChiTietTheoHD_SXKD(158)</td></tr>
+      <tr><td class="mono">11</td><td>Chi tiết</td><td class="mono">DUCOCK_ChiTietTheoHD_SXKD_TKvaDT(131) + DUCOCK_ChiTietTheoHD_SXKD_TKvaDT(331) + DUCOCK_ChiTietTheoHD_SXKD_TK(138) + DUCOCK_ChiTietTheoHD_SXKD_TK(335) + DUCOCK_ChiTietTheoHD_SXKD_TK(338) - DUCODK_ChiTietTheoHD_SXKD_TKvaDT(131) - DUCODK_ChiTietTheoHD_SXKD_TKvaDT(331) - DUCODK_ChiTietTheoHD_SXKD_TK(138) - DUCODK_ChiTietTheoHD_SXKD_TK(335) - DUCODK_ChiTietTheoHD_SXKD_TK(338) + DUCOCK_ChiTietTheoHD_SXKD_TK(1331) + DUCOCK_ChiTietTheoHD_SXKD_TK(136) + DUCOCK_ChiTietTheoHD_SXKD_TK(336) + DUCOCK_ChiTietTheoHD_SXKD_TK(333) + DUCOCK_ChiTietTheoHD_SXKD_TK(334) + DUCOCK_ChiTietTheoHD_SXKD_TK(347) + DUCOCK_ChiTietTheoHD_SXKD_TK(337) + DUCOCK_ChiTietTheoHD_SXKD_TKvaDT(141) - DUCOCK_ChiTietTheoHD_SXKD_TK(3334) - DUCODK_ChiTietTheoHD_SXKD_TK(1331) - DUCODK_ChiTietTheoHD_SXKD_TK(136) - DUCODK_ChiTietTheoHD_SXKD_TK(336) - DUCODK_ChiTietTheoHD_SXKD_TK(333) - DUCODK_ChiTietTheoHD_SXKD_TK(334) - DUCODK_ChiTietTheoHD_SXKD_TK(347) - DUCODK_ChiTietTheoHD_SXKD_TK(337) - DUCODK_ChiTietTheoHD_SXKD_TKvaDT(141) + DUCODK_ChiTietTheoHD_SXKD_TK(3334) + DUCOCK_ChiTietTheoHD_SXKD_TK(344) - DUCODK_ChiTietTheoHD_SXKD_TK(344) + DUCOCK_ChiTietTheoHD_SXKD_TK(244) - DUCODK_ChiTietTheoHD_SXKD_TK(244) + PhatsinhDU_ChiTietChiPhiLaiVayChiTraLaiVay(335/11) + PhatsinhDU_ChiTietChiPhiLaiVayChiTraLaiVay(335/635) - PhatsinhDU_ChiTietChiPhiLaiVayChiTraLaiVay(635/335) - DUCOCK_ChiTietTheoHD_SXKD_TK(3331) + DUCODK_ChiTietTheoHD_SXKD_TK(3331) + DUCOCK(3331) - DUCODK(3331)</td></tr>
+      <tr><td class="mono">12</td><td>Chi tiết</td><td class="mono">- DUNOCK_ChiTietTheoHD_SXKD(242) + DUNODK_ChiTietTheoHD_SXKD(242)</td></tr>
+      <tr><td class="mono">13</td><td>Chi tiết</td><td class="mono">- DUNOCK(121) + DUNODK(121)</td></tr>
+      <tr><td class="mono">14</td><td>Chi tiết</td><td class="mono">- PhatsinhDU_ChiTietChiPhiLaiVayChiTraLaiVay(635/11) - PhatsinhDU_ChiTietChiPhiLaiVayChiTraLaiVay(335/11) - PhatsinhDU_ChiTietChiPhiLaiVayChiTraLaiVay(341/11)</td></tr>
+      <tr><td class="mono">15</td><td>Chi tiết</td><td class="mono">- PhatsinhDU(3334/11) - PhatsinhDU(3334/341)</td></tr>
+      <tr><td class="mono">16</td><td>Chi tiết</td><td class="mono">PhatsinhDU(11/353) + PhatsinhDU(11/356) + PhatsinhDU(11/357) + PhatsinhDU(11/414) + PhatsinhDU(11/1332)</td></tr>
+      <tr><td class="mono">17</td><td>Chi tiết</td><td class="mono">- PhatsinhDU(353/11) - PhatsinhDU(356/11) - PhatsinhDU(357/11) - PhatsinhDU(414/11) - PhatsinhDU(418/11)</td></tr>
+      <tr><td class="mono">20</td><td>Tổng hợp</td><td class="mono">[08] + [09] + [10] + [11] + [12] + [13] + [14] + [15] + [16] + [17]</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><span class="chip c-warn">Lưu ý</span> Ba dòng tiêu đề nhóm (<em>I. Lưu chuyển tiền từ hoạt động kinh doanh</em>, <em>2. Điều chỉnh cho các khoản</em>) là chỉ tiêu loại Tổng hợp, không mã, công thức để trống — chúng chỉ đóng vai trò dòng tiêu đề in đậm trên báo cáo.</p>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — Công thức mặc định</span>
+  <h2>Đầu tư, tài chính và ba chỉ tiêu kết luồng</h2>
+  <p class="lede">Hai nhóm này quay lại lối trực tiếp: đếm phát sinh đối ứng với tài khoản tiền <span class="f">11</span>. Khác biệt nằm ở chỗ phần lớn dùng họ tham số <span class="f">…ChiTietTheoHD_DAUTU</span> — tức chỉ tính những bút toán mà kế toán đã tự tay gán hoạt động ở Bước 4.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    I1["<b>21..27</b> Chi mua TSCĐ · thu thanh lý<br/>cho vay · thu hồi cho vay<br/>góp vốn · thu hồi góp vốn · thu lãi"] --> I2["<b>30</b> LCT thuần từ HĐ đầu tư<br/>= 21 + 22 + ... + 27"]
+    F1["<b>31..36</b> Phát hành cổ phiếu<br/>trả vốn góp · đi vay · trả gốc vay<br/>trả gốc thuê TC · cổ tức đã trả"] --> F2["<b>40</b> LCT thuần từ HĐ tài chính<br/>= 31 + 32 + ... + 36"]
+    K1["<b>20</b> từ HĐ kinh doanh"] --> N["<b>50</b> LCT thuần trong kỳ<br/>= 20 + 30 + 40"]
+    I2 --> N
+    F2 --> N
+    N --> E["<b>70</b> Tiền và tương đương cuối kỳ<br/>= 50 + 60 + 61"]
+    D1["<b>60</b> Tiền đầu kỳ = DUNODK(11)"] --> E
+    D2["<b>61</b> Ảnh hưởng tỷ giá<br/>= 61.1 + 61.2"] --> E
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class N,E ok;
+</pre>
+    </div>
+    <figcaption><b>[70] là điểm đối chiếu duy nhất của cả báo cáo.</b> Nếu số dư tiền cuối kỳ theo công thức không khớp sổ quỹ / sổ ngân hàng thì lỗi nằm ở phân loại hoạt động, không nằm ở công thức — vì <span class="f">[60]</span> và <span class="f">[70]</span> chỉ đọc thẳng tài khoản đầu <span class="f">11</span>.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Phạm vi tài khoản tiền</span>
+    <p>Công thức mặc định của <span class="f">[60]</span> và <span class="f">[70]</span> chỉ gồm tài khoản tiền có mã bắt đầu bằng <span class="f">11</span> (111, 112, 113), <strong>không bao gồm tài khoản 128</strong> — ví dụ 1281 tiền gửi có kỳ hạn. Đây là mặc định hệ thống; người dùng được sửa lại tại màn Thiết lập công thức.</p>
+  </div>
+
+  <h3>Công thức mặc định nguyên văn</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Mã</th><th>Loại</th><th class="mono">Công thức mặc định</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">21</td><td>Tổng hợp</td><td class="mono">[21.1] + [21.2] + [21.3] + [21.4]</td></tr>
+      <tr><td class="mono">21.1</td><td>Chi tiết</td><td class="mono">- PhatsinhDU(21/11)</td></tr>
+      <tr><td class="mono">21.2</td><td>Chi tiết</td><td class="mono">- PhatsinhDUChiTietTheoHD_DAUTU(331/11) - PhatsinhDUChiTietTheoHD_DAUTU(331/341)</td></tr>
+      <tr><td class="mono">21.3</td><td>Chi tiết</td><td class="mono">- PhatsinhDU(241/11) + PhatsinhDU(11/241)</td></tr>
+      <tr><td class="mono">21.4</td><td>Chi tiết</td><td class="mono">- PhatsinhDUChiTietTheoHD_DAUTU(242/11) + PhatsinhDUChiTietTheoHD_DAUTU(11/242)</td></tr>
+      <tr><td class="mono">22</td><td>Tổng hợp</td><td class="mono">[22.1] - [22.2] + [22.3] + [22.4]</td></tr>
+      <tr><td class="mono">22.1</td><td>Chi tiết</td><td class="mono">PhatsinhDUChiTietTheoHD_DAUTU(11/711)</td></tr>
+      <tr><td class="mono">22.2</td><td>Chi tiết</td><td class="mono">PhatsinhDUChiTietTheoHD_DAUTU(811/11)</td></tr>
+      <tr><td class="mono">22.3</td><td>Chi tiết</td><td class="mono">PhatsinhDU(11/5117)</td></tr>
+      <tr><td class="mono">22.4</td><td>Chi tiết</td><td class="mono">PhatsinhDUChiTietTheoHD_DAUTU(11/131)</td></tr>
+      <tr><td class="mono">23</td><td>Tổng hợp</td><td class="mono">[23.1] + [23.2]</td></tr>
+      <tr><td class="mono">23.1</td><td>Chi tiết</td><td class="mono">- PhatsinhDU(1281/11) - PhatsinhDU(1282/11) - PhatsinhDU(171/11)</td></tr>
+      <tr><td class="mono">23.2</td><td>Chi tiết</td><td class="mono">- PhatsinhDU(1283/11) - PhatsinhDU(1288/11)</td></tr>
+      <tr><td class="mono">24</td><td>Tổng hợp</td><td class="mono">[24.1] + [24.2]</td></tr>
+      <tr><td class="mono">24.1</td><td>Chi tiết</td><td class="mono">PhatsinhDU(11/1281) + PhatsinhDU(11/1282) + PhatsinhDU(11/171)</td></tr>
+      <tr><td class="mono">24.2</td><td>Chi tiết</td><td class="mono">PhatsinhDU(11/1283) + PhatsinhDU(11/1288)</td></tr>
+      <tr><td class="mono">25</td><td>Tổng hợp</td><td class="mono">[25.1] + [25.2] + [25.3]</td></tr>
+      <tr><td class="mono">25.1</td><td>Chi tiết</td><td class="mono">- PhatsinhDU(221/11)</td></tr>
+      <tr><td class="mono">25.2</td><td>Chi tiết</td><td class="mono">- PhatsinhDU(222/11)</td></tr>
+      <tr><td class="mono">25.3</td><td>Chi tiết</td><td class="mono">- PhatsinhDU(228/11)</td></tr>
+      <tr><td class="mono">26</td><td>Tổng hợp</td><td class="mono">[26.1] + [26.2] + [26.3]</td></tr>
+      <tr><td class="mono">26.1</td><td>Chi tiết</td><td class="mono">PhatsinhDU(11/221)</td></tr>
+      <tr><td class="mono">26.2</td><td>Chi tiết</td><td class="mono">PhatsinhDU(11/222)</td></tr>
+      <tr><td class="mono">26.3</td><td>Chi tiết</td><td class="mono">PhatsinhDU(11/228)</td></tr>
+      <tr><td class="mono">27</td><td>Tổng hợp</td><td class="mono">[27.1]</td></tr>
+      <tr><td class="mono">27.1</td><td>Chi tiết</td><td class="mono">PhatsinhDU_ChiTietLai(11/515)</td></tr>
+      <tr><td class="mono">30</td><td>Tổng hợp</td><td class="mono">[21] + [22] + [23] + [24] + [25] + [26] + [27]</td></tr>
+      <tr><td class="mono">31</td><td>Tổng hợp</td><td class="mono">[31.1]</td></tr>
+      <tr><td class="mono">31.1</td><td>Chi tiết</td><td class="mono">PhatsinhDU(11/411) + PhatsinhDU(11/419)</td></tr>
+      <tr><td class="mono">32</td><td>Tổng hợp</td><td class="mono">[32.1] + [32.2]</td></tr>
+      <tr><td class="mono">32.1</td><td>Chi tiết</td><td class="mono">- PhatsinhDU(411/11)</td></tr>
+      <tr><td class="mono">32.2</td><td>Chi tiết</td><td class="mono">- PhatsinhDU(419/11)</td></tr>
+      <tr><td class="mono">33</td><td>Tổng hợp</td><td class="mono">[33.1] + [33.2]</td></tr>
+      <tr><td class="mono">33.1</td><td>Chi tiết</td><td class="mono">PhatsinhDU(11/3411) + PhatsinhDU(331/341) + PhatsinhDU(333/341) + PhatsinhDU(334/341) + PhatsinhDU(336/341) + PhatsinhDU(338/341)</td></tr>
+      <tr><td class="mono">33.2</td><td>Chi tiết</td><td class="mono">PhatsinhDU(11/343)</td></tr>
+      <tr><td class="mono">34</td><td>Tổng hợp</td><td class="mono">[34.1] + [34.2]</td></tr>
+      <tr><td class="mono">34.1</td><td>Chi tiết</td><td class="mono">- PhatsinhDU(3411/11)</td></tr>
+      <tr><td class="mono">34.2</td><td>Chi tiết</td><td class="mono">- PhatsinhDU(3413/11)</td></tr>
+      <tr><td class="mono">35</td><td>Chi tiết</td><td class="mono">- PhatsinhDU(3412/11)</td></tr>
+      <tr><td class="mono">36</td><td>Tổng hợp</td><td class="mono">[36.1]</td></tr>
+      <tr><td class="mono">36.1</td><td>Chi tiết</td><td class="mono">- PhatsinhDU(421/11) - PhatsinhDU(332/11)</td></tr>
+      <tr><td class="mono">40</td><td>Tổng hợp</td><td class="mono">[31] + [32] + [33] + [34] + [35] + [36]</td></tr>
+      <tr><td class="mono">50</td><td>Tổng hợp</td><td class="mono">[20] + [30] + [40]</td></tr>
+      <tr><td class="mono">60</td><td>Chi tiết</td><td class="mono">DUNODK(11)</td></tr>
+      <tr><td class="mono">61</td><td>Tổng hợp</td><td class="mono">[61.1] + [61.2]</td></tr>
+      <tr><td class="mono">61.1</td><td>Chi tiết</td><td class="mono">PhatsinhDU_ChiTietDanhGiaLai_TKNgoaiTe(11/515)</td></tr>
+      <tr><td class="mono">61.2</td><td>Chi tiết</td><td class="mono">- PhatsinhDU_ChiTietDanhGiaLai_TKNgoaiTe(635/11)</td></tr>
+      <tr><td class="mono">70</td><td>Tổng hợp</td><td class="mono">[50] + [60] + [61]</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — UC_ThemMoi · UC_Sua · UC_Xoa · UC_XemChiTiet</span>
+  <h2>Vòng đời bản ghi: lưu, sửa, xóa, xem</h2>
+  <p class="lede">Sau khi số liệu đã tính, phần còn lại rất mỏng: một chuỗi validate trường bắt buộc dùng chung cho cả thêm mới lẫn sửa, và một chốt trạng thái nộp CQT gác cả sửa lẫn xóa.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Màn thêm mới hoặc màn sửa"]) --> A0{"Vào màn sửa: đã nộp CQT?"}
+    A0 -- Có --> A1["Chặn — MSG 309"]:::err
+    A0 -- "Chưa nộp hoặc đang thêm mới" --> B["Form thông tin chung tự fill<br/>Tên báo cáo · Ngày lập · Người lập"]
+    B --> C["Lưới chi tiết đã có số<br/>người dùng còn sửa tay được<br/>hai cột SoNamNay · SoNamTruoc"]
+    C --> D{"Bấm gì?"}
+    D -- "Chọn tham số" --> D1["MSG 203 xác nhận lấy lại số<br/>rồi mở lại popup chọn kỳ"]:::warn
+    D -- "Tải lại" --> D2["Xem mục 07"]
+    D -- "Chọn loại hoạt động" --> D3["Xem mục 06"]
+    D -- "Hủy" --> D4["Đóng màn, về danh sách"]
+    D -- "Lưu" --> E{"Đủ trường bắt buộc?"}
+    E -- Không --> E1["Chặn — MSG 305<br/>focus vào ô còn trống"]:::err
+    E -- Có --> F["Ghi rpt_bao_cao_tai_chinh<br/>+ dòng chi tiết gián tiếp"]:::ok
+    F --> G["Báo MSG 003<br/>báo cáo hiện ở danh sách"]:::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Thêm mới và Sửa dùng chung y nguyên bộ trường và luật validate.</b> Khác nhau đúng ba chỗ: màn sửa không có nút <em>Chọn tham số</em>, có thêm chốt kiểm trạng thái nộp CQT ở lối vào, và ghi bằng update thay vì insert.</figcaption>
+  </figure>
+
+  <h3>Xóa — hai lối vào, một chuỗi kiểm</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A1(["Bấm Xóa ở màn danh sách"]) --> B
+    A2(["Đóng tab báo cáo khi đang sửa"]) --> B
+    B{"Có LapBCTC.Delete?"}
+    B -- Không --> B1["Chặn — MSG 301<br/>về màn danh sách"]:::err
+    B -- Có --> C{"Báo cáo đã nộp CQT?"}
+    C -- Có --> C1["Chặn — MSG 309"]:::err
+    C -- Chưa --> D{"Xác nhận MSG 201?"}
+    D -- Hủy --> D1["Không xóa gì<br/>về màn danh sách"]:::warn
+    D -- "Đồng ý" --> E["Xóa bản ghi báo cáo<br/>và toàn bộ dòng chi tiết"]:::ok
+    E --> F["Báo MSG 007<br/>báo cáo biến khỏi danh sách"]:::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Đóng tab báo cáo lúc đang sửa cũng là một lối xóa.</b> Luồng phụ 4 của UC_Xoa quy định lối này đi đúng chuỗi kiểm quyền và kiểm trạng thái như bấm Xóa từ danh sách — không phải đường tắt bỏ qua xác nhận.</figcaption>
+  </figure>
+
+  <h3>Xem chi tiết — read-only tuyệt đối</h3>
+  <p>Màn xem dùng lại nguyên bộ trường của màn thêm mới nhưng disable toàn bộ, gác bằng quyền riêng <span class="f">LapBCTC.View.Detail</span>. Chỉ còn ba nút: <em>Kết xuất</em>, <em>Sửa</em> (chặn khi đã nộp CQT), <em>Hủy / Đóng</em>. Không có Tải lại, không có Chọn loại hoạt động.</p>
+
+  <div class="note stop">
+    <span class="lbl">Chưa có quy định</span>
+    <p>Tài liệu nói xóa báo cáo là "xóa dữ liệu khỏi <span class="f">ENT_rpt_bao_cao_tai_chinh</span> và <span class="f">…_gian_tiep_chi_tiet</span>" mà <strong>không nói rõ xóa mềm hay xóa cứng</strong> — trong khi phần thiết lập chỉ tiêu lại nhắc "chưa bị xóa mềm" nhiều lần. Chính sách xóa chung ở <span class="chip c-br">BR29</span> vẫn áp; chi tiết cho báo cáo cần BA chốt lại.</p>
+  </div>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — SCR_ThemMoi BR10</span>
+  <h2>Kết xuất: Excel theo màn hình, XML theo entity</h2>
+  <p class="lede">Nút Kết xuất có mặt ở cả ba màn thêm mới, sửa và xem chi tiết, luôn hiển thị và luôn enable — quyền chỉ được kiểm tại thời điểm bấm.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Kết xuất"]) --> B{"Có LapBCTC.Export?"}
+    B -- Không --> B1["Chặn thao tác — MSG 304"]:::err
+    B -- Có --> C{"Chọn định dạng nào?"}
+    C -- "Excel" --> D1["Xuất đúng nội dung đang hiển thị<br/>theo BR39: cột đang hiện<br/>tiêu đề và tham số lọc ở đầu tệp"]
+    C -- "XML" --> D2["Dựng theo template Export_XML<br/>của epic PMKT-E-10373"]
+    D2 --> E{"Kỳ này lập báo cáo nào?"}
+    E -- "Gián tiếp" --> E1["Map từ bảng chi tiết gián tiếp"]
+    E -- "Trực tiếp" --> E2["Map từ bảng chi tiết trực tiếp<br/>epic PMKT-E-10007"]
+    D1 --> F["Báo MSG 001 — Xuất Excel thành công"]:::ok
+    E1 --> G["Tệp XML nộp cơ quan thuế"]:::ok
+    E2 --> G
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Mỗi kỳ doanh nghiệp chỉ lập một trong hai bản LCTT.</b> Khi kết xuất XML, báo cáo có dữ liệu ở entity nào thì hệ thống map từ entity đó — không có chuyện hai bản cùng tồn tại và phải chọn.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Ranh giới epic</span>
+    <p>Cấu trúc tệp XML <strong>không</strong> được định nghĩa trong epic này; nó tham chiếu <span class="f">Export_XML</span> của epic <span class="f">PMKT-E-10373 Báo cáo tình hình tài chính</span>. Trang này không vẽ nội dung template đó.</p>
+  </div>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — Đối chiếu PMKT-E-10007</span>
+  <h2>Khác gì bản phương pháp trực tiếp</h2>
+  <p class="lede">Hai epic cùng cho ra mẫu B 03-DN, cùng dùng chung <span class="f">rpt_bao_cao_tai_chinh</span>, cùng bộ quyền <span class="f">LapBCTC.*</span> — nhưng phần lõi tính toán thì gần như không chia sẻ gì.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trục so sánh</th><th>Trực tiếp — PMKT-E-10007</th><th>Gián tiếp — PMKT-E-10008</th></tr></thead>
+    <tbody>
+      <tr><td>Mã use case</td><td class="mono">PMKT-U-10068 … 10075</td><td class="mono">PMKT-U-10076 … 10083</td></tr>
+      <tr><td>Entity chi tiết</td><td class="mono">rpt_bao_cao_luu_chuyen_tien_te_truc_tiep_chi_tiet</td><td class="mono">rpt_bao_cao_luu_chuyen_tien_te_gian_tiep_chi_tiet</td></tr>
+      <tr><td>Điểm xuất phát báo cáo</td><td>Dòng tiền thu và chi thực tế trong kỳ</td><td>Lợi nhuận trước thuế <span class="f">[01]</span> rồi điều chỉnh ngược các khoản phi tiền tệ</td></tr>
+      <tr><td>Số mã tham số công thức</td><td><b>11</b> mã: <span class="f">DU_NO_DK · DU_CO_DK · DU_NO_CK · DU_CO_CK · PS_NO · PS_CO · PS_DU · PS_DU_KD · PS_DU_DT · PS_DU_TC · PS_DU_CLTG</span></td><td><b>48</b> mã, đặt tên theo họ <span class="f">DUNODK… · DUCOCK… · PhatsinhDU… · PhatsinhNO… · PhatsinhCO…</span> kèm hậu tố chi tiết hoạt động / nghiệp vụ</td></tr>
+      <tr><td>Phân loại hoạt động</td><td>Một màn danh sách chứng từ duy nhất</td><td>Wizard <b>4 bước</b> — hai bước cho số dư ban đầu, hai bước cho chứng từ</td></tr>
+      <tr><td>Phân loại số dư ban đầu</td><td>Không có</td><td>Bước 1 theo đối tượng công nợ, Bước 2 phân bổ tay ba cột tiền</td></tr>
+      <tr><td>Entity phân loại</td><td class="mono">rpt_hoat_dong_chung_tu</td><td class="mono">rpt_hoat_dong_chung_tu · rpt_hoat_dong_so_du_cong_no · rpt_hoat_dong_so_du_tai_khoan</td></tr>
+      <tr><td>Miền Loại hoạt động</td><td>Kinh doanh · Đầu tư · Tài chính · <b>Đánh giá chênh lệch tỷ giá</b> · Trắng. Mặc định = <b>Hoạt động kinh doanh</b></td><td>Trống · Kinh doanh · Đầu tư · Tài chính. Mặc định = <b>Trống</b>; chênh lệch tỷ giá xử lý qua Nghiệp vụ, không qua Hoạt động</td></tr>
+      <tr><td>Trường Nghiệp vụ</td><td>Không có</td><td>Có — 9 giá trị, chỉ ở Bước 3, miền giá trị tách hẳn khỏi Hoạt động</td></tr>
+      <tr><td>Thao tác hàng loạt</td><td>Không nêu trong tài liệu</td><td>Có ở Bước 1, 3, 4: chọn nhiều dòng rồi fill một giá trị</td></tr>
+      <tr><td>Kết xuất XML</td><td>Map từ bảng chi tiết trực tiếp</td><td>Map từ bảng chi tiết gián tiếp; mỗi kỳ chỉ lập một trong hai</td></tr>
+      <tr><td>Điểm giống duy nhất về khái niệm</td><td colspan="2">Bước 4 của bản gián tiếp ≈ màn chọn hoạt động cho chứng từ của bản trực tiếp — cùng gán hoạt động cho dòng bút toán đã ghi sổ trong kỳ.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 13 ============ -->
+<section id="s13">
+  <span class="snum">13 — Tra cứu</span>
+  <h2>Điều kiện chặn và thông báo tương ứng</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> và <em>hỏi</em> trong các sơ đồ trên. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-10008_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện</th><th class="mono">Mã</th><th>Loại</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="4">Chọn kỳ báo cáo</td><td>Từ ngày đến Đến ngày quá 15 tháng</td><td class="mono">307</td><td>Chặn</td></tr>
+      <tr><td>Quá 1 mốc ngày khác năm đã chọn</td><td class="mono">308</td><td>Chặn</td></tr>
+      <tr><td>Trùng khoảng thời gian báo cáo đã lập</td><td class="mono">204</td><td>Hỏi, vẫn cho tiếp</td></tr>
+      <tr><td>Chọn lại tham số ở màn báo cáo</td><td class="mono">203</td><td>Hỏi</td></tr>
+      <tr><td rowspan="2">Lưu báo cáo</td><td>Thiếu trường bắt buộc form thông tin chung</td><td class="mono">305</td><td>Chặn</td></tr>
+      <tr><td>Lưu thành công</td><td class="mono">003</td><td>Thành công</td></tr>
+      <tr><td rowspan="3">Tải lại</td><td>Hỏi có giữ cột kỳ trước không</td><td class="mono">202</td><td>Hỏi</td></tr>
+      <tr><td>Chỉ tiêu chưa có dòng công thức nào</td><td class="mono">303</td><td>Chặn, giữ nguyên số cũ</td></tr>
+      <tr><td>Tải lại thành công</td><td class="mono">005</td><td>Thành công</td></tr>
+      <tr><td rowspan="2">Sửa · Xóa báo cáo</td><td>Báo cáo đã nộp cơ quan thuế</td><td class="mono">309</td><td>Chặn</td></tr>
+      <tr><td>Xác nhận xóa · xóa xong</td><td class="mono">201 · 007</td><td>Hỏi · Thành công</td></tr>
+      <tr><td rowspan="2">Thiết lập chỉ tiêu</td><td>Mã chỉ tiêu khác rỗng bị trùng</td><td class="mono">310</td><td>Chặn</td></tr>
+      <tr><td>Xóa hoặc sửa mã đang bị công thức tham chiếu</td><td class="mono">311</td><td>Chặn</td></tr>
+      <tr><td rowspan="4">Thiết lập công thức</td><td>Công thức Tổng hợp tạo vòng lặp đệ quy</td><td class="mono">312</td><td>Chặn</td></tr>
+      <tr><td>Tiền tố tài khoản không khớp danh mục</td><td class="mono">313</td><td>Chặn</td></tr>
+      <tr><td>Lưu thiết lập thành công</td><td class="mono">004</td><td>Thành công</td></tr>
+      <tr><td>Khôi phục công thức mặc định</td><td class="mono">006</td><td>Thành công</td></tr>
+      <tr><td>Wizard Bước 2</td><td>Tổng phân bổ vượt Dư Nợ cộng Dư Có</td><td class="mono">314</td><td>Chặn đi tiếp</td></tr>
+      <tr><td rowspan="2">Kết xuất</td><td>Không có quyền kết xuất</td><td class="mono">304</td><td>Chặn</td></tr>
+      <tr><td>Xuất Excel thành công</td><td class="mono">001</td><td>Thành công</td></tr>
+      <tr><td>Mọi màn</td><td>Không có quyền truy cập chức năng</td><td class="mono">301</td><td>Chặn</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">LapBCTC.View</td><td>Vào màn danh sách báo cáo</td></tr>
+      <tr><td class="mono">LapBCTC.View.Detail</td><td>Màn xem chi tiết báo cáo</td></tr>
+      <tr><td class="mono">LapBCTC.Create</td><td>Nút Tạo mới · popup chọn kỳ · hành động Lưu ở màn thêm mới</td></tr>
+      <tr><td class="mono">LapBCTC.Edit</td><td>Nút Sửa · nút Thiết lập báo cáo · popup thiết lập công thức · wizard chọn hoạt động</td></tr>
+      <tr><td class="mono">LapBCTC.Delete</td><td>Nút Xóa báo cáo</td></tr>
+      <tr><td class="mono">LapBCTC.Export</td><td>Kết xuất Excel và XML ở cả ba màn thêm mới · sửa · xem</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>BR chung đã áp cho phạm vi này</h3>
+  <p><span class="chip c-br">BR1</span> phân trang 20 dòng · <span class="chip c-br">BR2</span> hiển thị và sắp xếp danh sách · <span class="chip c-br">BR3</span> popup · <span class="chip c-br">BR5</span> combogrid tài khoản và đối tượng · <span class="chip c-br">BR7</span> precision và làm tròn · <span class="chip c-br">BR8</span> khoảng thời gian · <span class="chip c-br">BR11</span> tìm kiếm và lọc · <span class="chip c-br">BR13</span> hiển thị nút thao tác · <span class="chip c-br">BR14.4</span> giới hạn 255 ký tự các trường tên · <span class="chip c-br">BR15</span> validation trường · <span class="chip c-br">BR21</span> bảng nhập liệu chi tiết con · <span class="chip c-br">BR25</span> phân quyền · <span class="chip c-br">BR26</span> toast · <span class="chip c-br">BR28</span> multi-tenant · <span class="chip c-br">BR29</span> chính sách xóa · <span class="chip c-br">BR36</span> chỉ nhặt chứng từ đã ghi sổ · <span class="chip c-br">BR39</span> xuất Excel · <span class="chip c-br">BR45</span> thao tác hàng loạt · <span class="chip c-br">BR46.4</span> phạm vi chi nhánh.</p>
+
+  <h3>Chỗ tài liệu chưa quy định — không vẽ, không suy diễn</h3>
+  <ul>
+    <li>Thuật toán duyệt thứ tự giải chỉ tiêu Tổng hợp; BA chỉ nêu ràng buộc chống vòng lặp <span class="chip c-msg">MSG 312</span>.</li>
+    <li>Ngoại lệ <span class="chip c-msg">MSG 303</span> cho chỉ tiêu tiêu đề nhóm và cho <span class="f">[01]</span> — hai nhóm này mặc định không có dòng công thức.</li>
+    <li>Xóa báo cáo là xóa mềm hay xóa cứng.</li>
+    <li>Mã quyền cho thao tác Đánh dấu / Bỏ đánh dấu đã nộp CQT.</li>
+    <li>Phân trang cho bốn lưới trong wizard chọn hoạt động.</li>
+    <li>Thiếu mã <span class="f">DUNODK_ChiTietTheoHD_SXKD_TK</span> trong bảng 48 tham số, và mã <span class="f">PhatsinhCO_ChiTietTheoHD_SXKD</span> nằm ở cả Bước 3 lẫn Bước 4 — xem mục 05.</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-10008 · Báo cáo lưu chuyển tiền tệ gián tiếp</span>
+  <span>Dựng từ 8 UC · 8 Activity Diagram · 8 màn hình · 7 ma trận ẩn hiện</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

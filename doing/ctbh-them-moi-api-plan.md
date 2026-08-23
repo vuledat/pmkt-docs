@@ -9,7 +9,7 @@
 | Use case | `PMKT-U-06397 / 06398 / 06399 / 06461 / 06982 — Thêm mới Chứng từ bán hàng` |
 | Màn hình | `SCR_CTBH_ThemMoi.md` (dùng chung cho `SCR_CTBH_CapNhat`) |
 | Tài liệu nguồn | `pmkt-docs/ba/PMKT-E-06194_ChungTuBanHang/` (`4.usecases/ThemMoi`, `5.screens/SCR_CTBH_ThemMoi.md`, `6.messages.md`) |
-| Module BE | `cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_ban_hang/` (**đã tồn tại — brownfield**) |
+| Module BE | `cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_ban_hang/` (**đã tồn tại — brownfield**) |
 | Bảng DB | `sal_chung_tu_ban_hang` (~70 cột, V75 → V349) · `sal_chi_tiet_chung_tu_ban_hang` (~50 cột) |
 | Migration mới | **`V354`** (V352 là số lớn nhất hiện tại; **V353 đã được `docs/doing/ghi-so-kho-kernel-plan.md` giữ chỗ**) |
 | Không đụng | `master_data/**` (vùng đóng băng) |
@@ -83,13 +83,13 @@
 ### 2.1 Code hiện có — **BROWNFIELD**
 
 ```bash
-find cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_ban_hang -name "*.java" | wc -l
+find cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_ban_hang -name "*.java" | wc -l
 # → 41 file
 ```
 
 ```bash
 grep -rl "inv_phieu_xuat_kho\|sal_hoa_don_ban_hang\|cb_phieu_thu" \
-  --include="*.java" cell-app/src/main/java/vn/dopai/pmkt/cell/
+  --include="*.java" cell-app/src/main/java/vn/vtt/pmkt/cell/
 # → chỉ 2 file, đều thuộc master_data (không liên quan)
 ```
 
@@ -406,7 +406,7 @@ Kế thừa nguyên từ `BaseChungTuController`, **không sửa**. Ba endpoint 
 ### 7.1 Bằng chứng
 
 ```bash
-grep -rn "truocKhiLuu" cell-app/src/main/java/vn/dopai/pmkt/cell/
+grep -rn "truocKhiLuu" cell-app/src/main/java/vn/vtt/pmkt/cell/
 ```
 
 ```

@@ -1,0 +1,1039 @@
+<title>Luồng Công cụ dụng cụ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-01707 · Phân hệ Công cụ dụng cụ</p>
+  <h1>Luồng xử lý ghi tăng Công cụ dụng cụ</h1>
+  <p>Toàn bộ vòng đời một bản ghi CCDC — từ danh sách, ghi tăng đơn và ghi tăng hàng loạt, lấy nguồn từ phiếu mua hàng / phiếu xuất kho, khai báo đơn vị quản lý và hệ số phân bổ, đến chỉnh sửa, xóa và xem chi tiết. Mỗi sơ đồ bám đúng Activity Diagram và BR trong bộ tài liệu BA.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 6 use case · 6 AD · 9 màn hình · 50 message</span>
+    <span><b>Entity gốc:</b> ccdc_cong_cu_dung_cu</span>
+    <span><b>Quyền:</b> GhiTangCCDC.*</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Bản đồ vòng đời</a></li>
+    <li><a href="#s1"><span>01</span>Xem danh sách</a></li>
+    <li><a href="#s2"><span>02</span>Thêm mới</a></li>
+    <li><a href="#s3"><span>03</span>Nguồn ghi tăng từ phiếu</a></li>
+    <li><a href="#s4"><span>04</span>CCDC đầu kỳ</a></li>
+    <li><a href="#s5"><span>05</span>Kiểu phân bổ</a></li>
+    <li><a href="#s6"><span>06</span>Đơn vị quản lý &amp; hệ số</a></li>
+    <li><a href="#s7"><span>07</span>Ghi tăng hàng loạt</a></li>
+    <li><a href="#s8"><span>08</span>Quan hệ dữ liệu</a></li>
+    <li><a href="#s9"><span>09</span>Chỉnh sửa</a></li>
+    <li><a href="#s10"><span>10</span>Xóa</a></li>
+    <li><a href="#s11"><span>11</span>Xem chi tiết</a></li>
+    <li><a href="#s12"><span>12</span>Trường dẫn xuất</a></li>
+    <li><a href="#s13"><span>13</span>Tra cứu chặn &amp; quyền</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Bản đồ vòng đời một bản ghi CCDC</h2>
+  <p class="lede">CCDC không có trạng thái ghi sổ như chứng từ thường. Thay vào đó, <strong>tiến độ phân bổ</strong> là trục treo mọi ràng buộc thao tác: sửa hẹp dần theo trạng thái, xóa chỉ mở đúng một trạng thái đầu tiên, và hai trạng thái cuối khóa toàn bộ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(( )) -- "Lưu ghi tăng — quyền Create" --> A
+    A["<b>CHƯA PHÂN BỔ</b><br/>Sửa mọi tab · Xóa được<br/>Chưa chạy kỳ phân bổ nào"]
+    B["<b>ĐANG PHÂN BỔ</b><br/>Đã chạy ít nhất 1 kỳ<br/>Khóa xóa"]
+    C["<b>TẠM DỪNG PHÂN BỔ</b><br/>Ngưng phân bổ tạm thời<br/>Vẫn sửa được Thiết lập PB"]
+    D["<b>HOÀN THÀNH PHÂN BỔ</b><br/>Hết kỳ · Giá trị còn lại = 0<br/>Khóa sửa · khóa xóa"]
+    E["<b>ĐÃ GHI GIẢM</b><br/>Số lượng còn lại = 0<br/>Khóa mọi nghiệp vụ"]
+    A -- "Chạy phân bổ lần đầu — tự động" --> B
+    B -- "Bấm Tạm dừng phân bổ" --> C
+    C -- "Bấm Tiếp tục phân bổ" --> B
+    C -- "Đến ngày tiếp tục — tự động" --> B
+    B -- "Chạy xong mọi kỳ — tự động" --> D
+    B -- "Ghi giảm hết số lượng" --> E
+
+    classDef st fill:#ffffff,stroke:#2f6f8f,color:#16202b;
+    classDef gone fill:#faf8f3,stroke:#cdc7b9,color:#6f6a61;
+    class A,B,C st;
+    class D,E gone;
+</pre>
+    </div>
+    <figcaption><b>Phân bổ là bản lề.</b> Nút Xóa chỉ hiện ở <em>Chưa phân bổ</em>; Sửa · Điều chỉnh · Điều chuyển · Ghi giảm mở tới <em>Tạm dừng phân bổ</em>; từ <em>Hoàn thành phân bổ</em> trở đi không còn thao tác nào ngoài xem.</figcaption>
+  </figure>
+
+  <h3>Năm trạng thái và điều kiện chuyển</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trạng thái</th><th>Ý nghĩa</th><th>Vào trạng thái khi</th><th>Cơ chế</th></tr></thead>
+    <tbody>
+      <tr><td>Chưa phân bổ</td><td>Bản ghi vừa được ghi tăng, chưa bắt đầu phân bổ</td><td>Lưu thành công form Thêm mới hoặc một bản ghi trong đợt Ghi tăng hàng loạt</td><td>Tự động</td></tr>
+      <tr><td>Đang phân bổ</td><td>Đã có ít nhất 1 kỳ chạy phân bổ</td><td>Chạy phân bổ lần đầu · hoặc bấm Tiếp tục phân bổ · hoặc đến ngày tiếp tục đã thiết lập</td><td>Tự động / Manual</td></tr>
+      <tr><td>Tạm dừng phân bổ</td><td>Người dùng chủ động ngưng phân bổ, có thể chạy lại sau</td><td>Bấm Tạm dừng phân bổ</td><td>Manual</td></tr>
+      <tr><td>Hoàn thành phân bổ</td><td>Đã chạy xong toàn bộ kỳ, <span class="f">GiaTriConLai = 0</span></td><td>Kỳ phân bổ cuối cùng chạy xong</td><td>Tự động</td></tr>
+      <tr><td>Đã ghi giảm</td><td>Số lượng CCDC giảm về 0, khóa mọi nghiệp vụ liên quan</td><td>Phiếu ghi giảm đưa số lượng còn lại về 0</td><td>Tự động</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ghi giảm không chắc chắn đổi trạng thái</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    G(["Bấm Ghi giảm trên dòng CCDC"]) --> G1["Nhập số lượng ghi giảm<br/>SL ghi giảm ≤ Số lượng hiện có"]
+    G1 --> G2["Số lượng mới = Số lượng cũ<br/>trừ Số lượng ghi giảm"]
+    G2 --> G3{"Số lượng mới = 0?"}
+    G3 -- Có --> G4["Trạng thái chuyển Đã ghi giảm<br/>Khóa mọi nghiệp vụ liên quan"]
+    G3 -- Không --> G5["Vẫn còn số lượng ≥ 1<br/>Giữ nguyên Đang phân bổ<br/>Tiếp tục nghiệp vụ khác được"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class G4 warn;
+    class G5 ok;
+</pre>
+    </div>
+    <figcaption><b>Ghi giảm là thao tác trên số lượng, không phải trên trạng thái.</b> Chỉ khi số lượng còn lại chạm 0 thì trạng thái mới chuyển sang <em>Đã ghi giảm</em>; ghi giảm một phần để nguyên trạng thái phân bổ đang chạy.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Tài liệu chưa quy định</span>
+    <p><strong>Ba khoảng trống trên bản đồ trạng thái.</strong> Thứ nhất, <span class="chip c-br">BR12</span> màn Danh sách cho nút <em>Tạm dừng phân bổ</em> hiện ở cả trạng thái <em>Chưa phân bổ</em>, nhưng bảng quy tắc chuyển trạng thái chỉ có nhánh <em>Đang phân bổ → Tạm dừng</em> — sơ đồ trên vẽ theo bảng chuyển trạng thái. Thứ hai, <em>Đã ghi giảm</em> không nằm trong bảng chuyển trạng thái chính, chỉ được mô tả riêng ở khối Ghi giảm CCDC, xuất phát từ <em>Đang phân bổ</em>. Thứ ba, đường từ <em>Hoàn thành phân bổ</em> sang <em>Đã ghi giảm</em> không có quy định — không vẽ.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — UC_CongCuDungCu_DanhSach</span>
+  <h2>Xem danh sách: bảng điều phối mọi thao tác</h2>
+  <p class="lede">Màn <span class="f">SCR_CongCuDungCu_DanhSach</span> là điểm vào duy nhất của epic. Mọi nút trên dòng đều gác bằng cặp điều kiện <strong>quyền × trạng thái CCDC</strong>, và bốn nhóm nút dùng bốn tập trạng thái khác nhau — đây là chỗ hay code sai nhất.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Mở menu Công cụ dụng cụ"]) --> B{"Có quyền GhiTangCCDC.View?"}
+    B -- Không --> B1["Chặn truy cập<br/>MSG_002"]
+    B -- Có --> C["Nạp ccdc_cong_cu_dung_cu<br/>Ngày CT gần nhất lên trước<br/>cùng ngày thì Số CT theo alphabet"]
+    C --> C1{"Có dòng thỏa bộ lọc?"}
+    C1 -- Không --> C2["Lưới trống · lưới Chi tiết trống<br/>MSG_001"]
+    C1 -- Có --> D["Lưới chính + lưới Chi tiết<br/>của dòng đang chọn"]
+
+    D --> G1{{"Gác theo quyền Create"}}
+    D --> G2{{"Gác theo trạng thái CCDC"}}
+    D --> G3{{"Không gác trạng thái"}}
+
+    G1 --> A1["Thêm mới · Ghi tăng hàng loạt"]
+    G2 -- "Chưa phân bổ" --> A2["Xóa"]
+    G2 -- "Chưa · Đang · Tạm dừng" --> A3["Sửa · Điều chỉnh giá trị<br/>Điều chuyển · Ghi giảm"]
+    G2 -- "Chưa · Đang phân bổ" --> A4["Tạm dừng phân bổ"]
+    G2 -- "Tạm dừng phân bổ" --> A5["Tiếp tục phân bổ"]
+    G3 --> A6["Xem chi tiết · Tìm kiếm · Lọc"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class B1 err;
+    class C2 warn;
+</pre>
+    </div>
+    <figcaption><b>Bốn tập trạng thái, không phải một.</b> Xóa chỉ đúng một trạng thái; Sửa và ba nghiệp vụ chứng từ dùng ba trạng thái đầu; Tạm dừng dùng hai; Tiếp tục dùng đúng trạng thái Tạm dừng. Ghép chung thành một điều kiện là sai.</figcaption>
+  </figure>
+
+  <h3>Luật gác nút theo BR11–BR16</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nút</th><th class="mono">Quyền</th><th>Trạng thái CCDC</th><th>Nguồn</th></tr></thead>
+    <tbody>
+      <tr><td>Thêm mới · Ghi tăng hàng loạt</td><td class="mono">GhiTangCCDC.Create</td><td>Không phụ thuộc</td><td><span class="chip c-br">BR16</span></td></tr>
+      <tr><td>Xem chi tiết</td><td class="mono">GhiTangCCDC.View.Detail</td><td>Không phụ thuộc</td><td>Chức năng màn danh sách</td></tr>
+      <tr><td>Chỉnh sửa</td><td class="mono">GhiTangCCDC.Edit</td><td>Chưa phân bổ · Đang phân bổ · Tạm dừng phân bổ<br>Disable ở Hoàn thành phân bổ · Đã ghi giảm</td><td><span class="chip c-br">BR14</span></td></tr>
+      <tr><td>Xóa</td><td class="mono">GhiTangCCDC.Delete</td><td>Chỉ Chưa phân bổ</td><td><span class="chip c-br">BR15</span></td></tr>
+      <tr><td>Điều chỉnh giá trị</td><td class="mono">DieuChinhCCDC.Create</td><td>Chưa · Đang · Tạm dừng phân bổ</td><td><span class="chip c-br">BR11</span></td></tr>
+      <tr><td>Điều chuyển</td><td class="mono">DieuChuyenCCDC.Create</td><td>Chưa · Đang · Tạm dừng phân bổ</td><td><span class="chip c-br">BR11</span></td></tr>
+      <tr><td>Ghi giảm</td><td class="mono">GhiGiamCCDC.Create</td><td>Chưa · Đang · Tạm dừng phân bổ</td><td><span class="chip c-br">BR11</span></td></tr>
+      <tr><td>Tạm dừng phân bổ</td><td class="mono">TamDungCCDC.Create</td><td>Chưa phân bổ · Đang phân bổ</td><td><span class="chip c-br">BR12</span></td></tr>
+      <tr><td>Tiếp tục phân bổ</td><td class="mono">GhiTangCCDC.Edit</td><td>Chỉ Tạm dừng phân bổ</td><td><span class="chip c-br">BR13</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Không có quyền thì <strong>ẩn nút</strong>, không disable — quy chuẩn dùng chung <span class="chip c-br">Common BR25</span>. Truy cập thẳng bằng URL khi thiếu quyền vẫn bị chặn bằng <span class="chip c-msg">MSG_002</span>.</p>
+
+  <h3>Lưới Chi tiết dưới lưới chính</h3>
+  <p>Ngay dưới bảng chính là lưới <strong>chỉ đọc</strong> của CCDC đang chọn — không có nút Thêm dòng / Xóa dòng. Mở màn lần đầu hệ thống tự chọn dòng đầu tiên và mở tab đầu; đổi dòng thì nội dung đổi theo nhưng <em>tab đang mở được giữ nguyên</em>. Không có quyền <span class="f">GhiTangCCDC.View.Detail</span> thì ẩn hẳn lưới này.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tab</th><th>Cột hiển thị</th><th>Dòng Tổng cộng</th><th class="mono">Nguồn</th></tr></thead>
+    <tbody>
+      <tr><td>Đơn vị quản lý</td><td>Tên đơn vị · Số lượng · Diễn giải</td><td>Cộng cột Số lượng</td><td class="mono">ccdc_don_vi_quan_ly_ccdc</td></tr>
+      <tr><td>Tham chiếu</td><td>Loại chứng từ · Số chứng từ · Ngày chứng từ · Diễn giải</td><td>Không có — toàn cột định danh</td><td class="mono">ccdc_tham_chieu_thu_cong_ccdc</td></tr>
+      <tr><td>Thiết lập phân bổ</td><td>Hệ số · TK chi phí · Số tiền · Đơn vị sử dụng · ĐT tập hợp CP · Vụ việc · Khoản mục CP · Diễn giải</td><td>Cộng cột Hệ số và Số tiền</td><td class="mono">ccdc_he_so_phan_bo_cong_cu_dung_cu</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Tab <em>Thiết lập phân bổ</em> hiển thị đầy đủ như màn Thiết lập phân bổ: phía trên là nhóm hệ số (<span class="f">Năm từ</span>, <span class="f">Tháng từ</span>), dưới là lưới hệ số; CCDC nhiều nhóm thì hiển thị lần lượt từng nhóm kèm lưới của nhóm đó. Dòng Tổng cộng tính trên <strong>toàn bộ dòng của CCDC đang chọn</strong>, không tính riêng theo từng nhóm — <span class="chip c-br">Common BR31</span>.</p>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — UC_CongCuDungCu_ThemMoi</span>
+  <h2>Thêm mới: một form, ba tab, ba bảng dữ liệu</h2>
+  <p class="lede">Form ghi tăng đơn có bốn khối quyết định hình dạng của chính nó: <strong>Nguồn ghi tăng</strong> khóa hay mở nhóm trường giá trị, <strong>Là CCDC đầu kỳ</strong> hiện hay ẩn nhóm số dư, <strong>Kiểu phân bổ</strong> đổi nhóm ngày/kỳ, và tab <strong>Đơn vị quản lý</strong> tự sinh dữ liệu cho tab Thiết lập phân bổ.</p>
+
+  <h3>Chuỗi nhập liệu</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Thêm mới trên màn Danh sách"]) --> B["Mở popup SCR_CongCuDungCu_ThemMoi<br/>Số chứng từ tự sinh · Ngày CT = hôm nay"]
+    B --> C{"Chọn Nguồn ghi tăng?"}
+    C -- "Không chọn — ghi tăng thủ công" --> C1["Nhập tay Mã · Tên · ĐVT · Loại CCDC<br/>Nguồn vốn · Lý do · Số lượng · Đơn giá<br/>Tổng giá trị BĐ tự tính và sửa được"]
+    C -- "Phiếu MH không qua kho / Phiếu XK" --> C2["Mở modal chọn vật tư — chọn 1 dòng<br/>Fill và KHÓA Tên · ĐVT · SL · Đơn giá<br/>Tổng giá trị ban đầu"]
+    C2 --> C3["Mã CCDC fill = Mã vật tư nhưng sửa được<br/>Ngày CT không lấy từ phiếu<br/>mặc định = hôm nay<br/>Tab Tham chiếu fill sẵn dòng phiếu nguồn"]
+
+    C1 --> D{"Tích Là CCDC đầu kỳ?"}
+    C3 --> D
+    D -- Có --> D1["Hiện Số kỳ PB còn lại<br/>Giá trị đã PB ban đầu · Giá trị PB còn lại"]
+    D -- Không --> D2["Ẩn cả 3 trường và xóa giá trị"]
+
+    D1 --> E{"Kiểu phân bổ?"}
+    D2 --> E
+    E -- "Theo tháng — mặc định" --> E1["Nhập Số kỳ phân bổ ≥ 1<br/>Ngày kết thúc hệ thống tự tính"]
+    E -- "Phân bổ 2 lần" --> E2["Số kỳ cố định = 2 không sửa<br/>Bắt buộc nhập Ngày kết thúc"]
+
+    E1 --> F["Chọn Tài khoản chờ phân bổ<br/>gợi ý theo TK ngầm định của vật tư"]
+    E2 --> F
+    F --> G["Tab Đơn vị quản lý: thêm dòng<br/>Tên đơn vị · Số lượng · Diễn giải"]
+    G --> H["Tab Thiết lập phân bổ tự đồng bộ<br/>từ Đơn vị quản lý — xem mục 06"]
+    H --> I["Tab Tham chiếu: thêm dòng thủ công<br/>dòng từ phiếu nguồn không xóa được"]
+    I --> J(["Bấm Lưu"])
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Nguồn ghi tăng quyết định trường nào còn nhập được.</b> Luồng thủ công mở toàn bộ; luồng phiếu khóa năm trường giá trị và chỉ chừa lại Mã CCDC cùng Ngày chứng từ — hai trường đúng là thứ cần sửa khi mã vật tư trùng hoặc ngày ghi tăng khác ngày phiếu.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Điểm dễ sai</span>
+    <p><strong>Đổi Nguồn ghi tăng là reset toàn bộ form.</strong> <span class="chip c-br">BR1</span> màn Thêm mới: khi người dùng chọn nguồn ghi tăng mới, hệ thống <em>xóa toàn bộ dữ liệu form hiện tại</em> rồi fill lại theo vật tư vừa chọn. Hành vi này ngược hoàn toàn với màn Ghi tăng hàng loạt, nơi chọn nguồn nhiều lần chỉ <em>bổ sung</em> bản ghi (xem <a href="#s7">mục 07</a>).</p>
+  </div>
+
+  <h3>Chuỗi lưu — mọi nhánh chặn</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"nodeSpacing":26,"rankSpacing":40,"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(["Bấm Lưu"]) --> P{"Có quyền GhiTangCCDC.Create?"}
+    P -- Không --> PE["Nút vốn đã bị ẩn<br/>Vào thẳng URL cũng chặn — MSG_002"]
+    P -- Có --> V1{"Tab Thông tin chung đủ và hợp lệ?"}
+    V1 -- "Trường bắt buộc trống" --> X1["MSG_103 Mã · MSG_105 Tên<br/>MSG_106 Số CT · MSG_107 Ngày CT<br/>MSG_119 TK chờ PB<br/>MSG_125 · MSG_126 ngày PB"]
+    V1 -- "Giá trị số sai" --> X2["MSG_108 Tổng GTBĐ ≤ 0<br/>MSG_113 Số lượng ≤ 0<br/>MSG_136 Số kỳ PB ≤ 0"]
+    V1 -- "Trùng dữ liệu" --> X3["MSG_104 Mã CCDC đã tồn tại<br/>MSG_123 Số chứng từ đã tồn tại"]
+    V1 -- "Kỳ khóa sổ" --> X4["MSG_142 Ngày CT ≤ ngày khóa sổ<br/>MSG_124 Ngày bắt đầu PB thuộc kỳ khóa"]
+    V1 -- "Ràng buộc đầu kỳ" --> X5["MSG_140 Giá trị đã PB ban đầu<br/>lớn hơn Tổng giá trị ban đầu<br/>MSG_141 Ngày bắt đầu PB đầu kỳ"]
+    V1 -- "TK không phân bổ nhiều kỳ" --> X6["MSG_144 TK nợ khác 242<br/>nhưng Số kỳ phân bổ lớn hơn 1"]
+    V1 -- Đạt --> V2{"Tab Đơn vị quản lý hợp lệ?"}
+    V2 -- Không --> X7["MSG_130 chưa có đơn vị nào<br/>MSG_131 tổng SL khác SL CCDC<br/>MSG_132 trùng đơn vị quản lý"]
+    V2 -- Có --> V3{"Tab Thiết lập phân bổ hợp lệ?"}
+    V3 -- Không --> X8["MSG_137 chưa có nhóm hệ số<br/>MSG_138 nhóm trùng khoảng thời gian<br/>MSG_118 Hệ số ≤ 0 · MSG_120 TK chi phí<br/>MSG_139 chưa chọn 1 trong 4 trường"]
+    V3 -- Có --> W(["Sang bước ghi dữ liệu"])
+
+    X1 --> R["Chặn lưu · giữ nguyên popup<br/>focus ô lỗi · KHÔNG lưu gì cả"]
+    X2 --> R
+    X3 --> R
+    X4 --> R
+    X5 --> R
+    X6 --> R
+    X7 --> R
+    X8 --> R
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class PE,X1,X2,X3,X4,X5,X6,X7,X8 err;
+    class R warn;
+    class W ok;
+</pre>
+    </div>
+    <figcaption><b>Ba tab đều chặn được lưu.</b> Sơ đồ gom nhánh theo tab vì AD của Thêm mới chỉ có một nút quyết định <em>Hợp lệ?</em> — tài liệu BA <strong>không quy định thứ tự</strong> kiểm giữa các nhóm; chỉ màn Ghi tăng hàng loạt mới có thứ tự tường minh.</figcaption>
+  </figure>
+
+  <h3>Ghi dữ liệu và kết thúc</h3>
+  <p>Qua được validate, hệ thống ghi lần lượt vào <span class="f">ccdc_cong_cu_dung_cu</span> (trạng thái <em>Chưa phân bổ</em>), <span class="f">ccdc_he_so_phan_bo_cong_cu_dung_cu</span> và <span class="f">ccdc_don_vi_quan_ly_ccdc</span>, hiển thị <span class="chip c-ok">MSG_101</span>, đóng popup rồi quay lại danh sách và làm mới dữ liệu. Lỗi hệ thống khi lưu thì <strong>giữ nguyên popup</strong> và báo <span class="chip c-msg">MSG_122</span> — không đóng form, không mất dữ liệu đã nhập. Bấm <em>Hủy</em> thì đóng popup và không lưu gì.</p>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — SCR_CongCuDungCu_PhieuMuaHang · PhieuXuatKho</span>
+  <h2>Nguồn ghi tăng từ phiếu: lọc, đếm, rồi fill</h2>
+  <p class="lede">Hai modal chọn vật tư dùng chung một bộ luật, chỉ khác nguồn dữ liệu và cách lấy đơn giá. Điểm cốt lõi không phải danh sách, mà là <strong>counter Số lượng chưa ghi tăng</strong> tính theo từng dòng chi tiết phiếu.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Chọn Nguồn ghi tăng"]) --> B{"Loại nguồn?"}
+    B -- "Phiếu mua hàng không qua kho" --> B1["pur_chung_tu_mua_hang<br/>Đã ghi sổ<br/>nghiệp vụ Mua hàng không qua kho<br/>Đơn giá nhân Tỷ giá nếu khác VNĐ"]
+    B -- "Phiếu xuất kho" --> B2["inv_phieu_xuat_kho<br/>Đã ghi sổ · nghiệp vụ Xuất sử dụng CCDC<br/>Đơn giá = Đơn giá xuất"]
+
+    B1 --> C["Lọc TK nợ đầu 242 · 641 · 642 · 627 · 623<br/>gồm cả tài khoản con"]
+    B2 --> C
+    C --> D["SL chưa ghi tăng = SL dòng phiếu<br/>trừ SL đã ghi tăng của chính dòng đó"]
+    D --> E{"SL chưa ghi tăng lớn hơn 0?"}
+    E -- Không --> E1["Ẩn dòng khỏi danh sách"]
+    E -- Có --> F["Hiển thị dòng<br/>Thành tiền = SL chưa ghi tăng nhân Đơn giá"]
+    F --> G{"Mở từ form nào?"}
+    G -- "Thêm mới CCDC" --> G1["Chỉ cho chọn 1 dòng"]
+    G -- "Ghi tăng hàng loạt" --> G2["Tích chọn nhiều dòng<br/>dòng đã dùng trong đợt bị disable"]
+    G1 --> H["Bấm Chọn — fill theo BR10"]
+    G2 --> H
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class E1 warn;
+    class H ok;
+</pre>
+    </div>
+    <figcaption><b>Counter ở cấp dòng chi tiết, không phải cấp phiếu.</b> Số lượng đã ghi tăng của một dòng là tổng Số lượng của các bản ghi CCDC đã lưu trỏ tới đúng dòng đó qua <span class="f">chung_tu_lien_quan.ChiTietChungTuLienQuanId</span>. Cùng một vật tư nằm trên nhiều dòng khác tài khoản nợ thì đếm riêng từng dòng.</figcaption>
+  </figure>
+
+  <h3>Bấm Chọn fill những gì</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường trên form CCDC</th><th>Giá trị lấy từ phiếu</th><th>Còn sửa được?</th></tr></thead>
+    <tbody>
+      <tr><td>Tên CCDC</td><td>Tên vật tư của dòng đã chọn</td><td>Khóa</td></tr>
+      <tr><td>Đơn vị tính</td><td>ĐVT của vật tư trên phiếu</td><td>Khóa</td></tr>
+      <tr><td>Số lượng</td><td>Số lượng <em>chưa ghi tăng</em> của dòng</td><td>Khóa</td></tr>
+      <tr><td>Đơn giá</td><td>Đơn giá của dòng (quy đổi tỷ giá nếu ngoại tệ)</td><td>Khóa</td></tr>
+      <tr><td>Tổng giá trị ban đầu</td><td>SL chưa ghi tăng × Đơn giá</td><td>Khóa</td></tr>
+      <tr><td>Mã CCDC</td><td>Mã vật tư</td><td><b>Sửa được</b> — để xử lý trùng mã</td></tr>
+      <tr><td>Ngày tính phân bổ</td><td>Ngày chứng từ của phiếu nguồn</td><td>Sửa được</td></tr>
+      <tr><td>Ngày chứng từ ghi tăng</td><td><b>Không lấy từ phiếu</b> — mặc định ngày hiện tại</td><td>Sửa được</td></tr>
+      <tr><td>Tab Tham chiếu</td><td>Một dòng trỏ về đúng dòng phiếu nguồn</td><td>Khóa toàn bộ, không xóa được</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Bộ lọc tài khoản</span>
+    <p>Cột <em>Tài khoản</em> hiển thị TK nợ của dòng phiếu. Bộ lọc dạng combogrid chọn nhiều, mặc định tích sẵn <span class="f">242 · 6422 · 6423 · 6232 · 6233 · 6412 · 6413 · 6271 · 6273</span> nếu hệ thống tài khoản có khai báo, và <strong>ghi nhớ lựa chọn theo session</strong> của người dùng cho lần mở sau. Chọn vật tư có TK nợ khác 242 thì tới lúc lưu, nếu Số kỳ phân bổ lớn hơn 1 sẽ bị chặn bằng <span class="chip c-msg">MSG_144</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — BR2 · BR12 · BR13 · BR29 màn Thêm mới</span>
+  <h2>CCDC đầu kỳ: ba trường xuất hiện, hai luật siết vào</h2>
+  <p class="lede">Checkbox <em>Là CCDC đầu kỳ</em> dùng để khai báo tài sản đã tồn tại <strong>trước</strong> mốc bắt đầu dữ liệu của tenant. Tích vào là mở thêm ba trường và kéo theo hai điều kiện chặn lưu mà luồng thường không có.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A{"Là CCDC đầu kỳ"} -- Uncheck --> A1["Ẩn 3 trường và XÓA giá trị<br/>Số kỳ PB còn lại · Giá trị đã PB ban đầu<br/>Giá trị PB còn lại"]
+    A -- Check --> B["Hiện 3 trường"]
+    B --> B1["Giá trị đã PB ban đầu — bắt buộc nhập<br/>tooltip nhắc nhập khi có số dư đầu kỳ"]
+    B --> B2["Giá trị PB còn lại — tự tính, khóa<br/>= Tổng GTBĐ trừ Giá trị đã PB ban đầu"]
+    B --> B3{"Kiểu phân bổ?"}
+    B3 -- "Theo tháng" --> B4["Số kỳ PB còn lại cho nhập số"]
+    B3 -- "2 lần" --> B5["Số kỳ PB còn lại khóa, cố định = 1"]
+
+    B1 --> C{"Giá trị đã PB ban đầu<br/>lớn hơn Tổng GTBĐ?"}
+    C -- Có --> C1["Chặn lưu — MSG_140"]
+    C -- Không --> D{"Ngày bắt đầu PB nhỏ hơn<br/>Ngày bắt đầu dữ liệu của tenant?"}
+    D -- Không --> D1["Chặn lưu — MSG_141"]
+    D -- Có --> E["Số tiền PB mỗi kỳ đổi công thức<br/>= Giá trị PB còn lại chia Số kỳ PB còn lại"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class C1,D1 err;
+    class E ok;
+</pre>
+    </div>
+    <figcaption><b>Đầu kỳ đổi cả công thức tính tiền mỗi kỳ.</b> Luồng thường chia Tổng giá trị ban đầu cho Số kỳ phân bổ; luồng đầu kỳ chia phần <em>còn lại</em> cho số kỳ <em>còn lại</em> — bỏ sót nhánh này là sai tiền ngay kỳ đầu.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Phạm vi áp dụng</span>
+    <p>Hai điều kiện <span class="chip c-msg">MSG_140</span> và <span class="chip c-msg">MSG_141</span> <strong>chỉ áp cho form Thêm mới đơn</strong>. Màn Ghi tăng hàng loạt không có tùy chọn <em>Là CCDC đầu kỳ</em>: mọi bản ghi trong đợt lưu với <span class="f">SoDuDauKy = false</span>, nên hai validate này không chạy ở đó. CCDC có số dư đầu kỳ phải nhập từng bản ghi qua form Thêm mới. Mốc <span class="f">Tenant.NgayBatDauDuLieu</span> lấy theo <span class="chip c-br">Common BR17.2</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — BR15 · BR16 · BR17 màn Thêm mới</span>
+  <h2>Hai kiểu phân bổ, hai cách sinh ngày và tiền</h2>
+  <p class="lede">Cùng bốn ô trên form — Số kỳ phân bổ, Số kỳ còn lại, Ngày bắt đầu, Ngày kết thúc — nhưng radio <em>Kiểu phân bổ</em> đảo ngược ô nào hệ thống tính và ô nào người dùng nhập.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    K{"Kiểu phân bổ"} -- "Phân bổ theo tháng — mặc định" --> M1["Người dùng nhập Số kỳ phân bổ ≥ 1"]
+    K -- "Phân bổ 2 lần" --> H1["Số kỳ = 2, khóa cứng"]
+
+    M1 --> M2["Ngày bắt đầu = Ngày chứng từ<br/>sửa Ngày CT thì Ngày bắt đầu đổi theo<br/>sửa Ngày bắt đầu thì Ngày CT giữ nguyên"]
+    M2 --> M3["Tháng chứa Ngày bắt đầu tính là kỳ 1<br/>kỳ đếm theo tháng dương lịch"]
+    M3 --> M4["Ngày kết thúc tự tính, khóa<br/>= ngày cuối cùng của tháng kỳ cuối"]
+    M4 --> M5["Số tiền mỗi kỳ<br/>= Tổng GTBĐ chia Số kỳ phân bổ"]
+
+    H1 --> H2["Ngày bắt đầu = Ngày chứng từ"]
+    H2 --> H3["Ngày kết thúc BẮT BUỘC nhập tay<br/>phải sau Ngày bắt đầu"]
+    H3 --> H4["Lần 1 ghi tại Ngày bắt đầu — 50 phần trăm<br/>Lần 2 ghi tại Ngày kết thúc — 50 phần trăm"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class M4,M5 ok;
+    class H3 warn;
+</pre>
+    </div>
+    <figcaption><b>Ngày kết thúc đổi vai.</b> Phân bổ theo tháng: hệ thống tính, người dùng không chạm được. Phân bổ 2 lần: người dùng bắt buộc nhập, và chính ngày đó là mốc ghi nhận nửa giá trị còn lại.</figcaption>
+  </figure>
+
+  <h3>Ví dụ tính kỳ theo BR15</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Đầu vào</th><th>Các kỳ</th><th>Ngày kết thúc</th></tr></thead>
+    <tbody>
+      <tr><td class="num">Ngày bắt đầu 15/02/2026 · 3 kỳ</td><td>Kỳ 1 tháng 02/2026 · Kỳ 2 tháng 03/2026 · Kỳ 3 tháng 04/2026</td><td class="num">30/04/2026 — ngày cuối tháng 04</td></tr>
+      <tr><td class="num">Phân bổ 2 lần · 15/02/2026 → 30/04/2026</td><td>Lần 1 ghi 15/02/2026 · Lần 2 ghi 30/04/2026</td><td class="num">30/04/2026 — do người dùng nhập</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><strong>Bản ghi từ nguồn phiếu đi đường khác.</strong> Ở màn Thêm mới đơn, Ngày bắt đầu phân bổ mặc định = Ngày chứng từ của <em>phiếu nguồn</em>. Ở màn Ghi tăng hàng loạt, bản ghi từ phiếu lấy Ngày CT của phiếu nguồn và <strong>độc lập</strong> với cột Ngày chứng từ trên lưới — sửa cột Ngày chứng từ không kéo theo; bản ghi thủ công thì vẫn bám theo.</p>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — SCR_CongCuDungCu_ThietLapPhanBo</span>
+  <h2>Đơn vị quản lý sinh ra hệ số phân bổ — một chiều</h2>
+  <p class="lede">Tab Đơn vị quản lý và tab Thiết lập phân bổ nối với nhau bằng một luật đồng bộ <strong>chỉ chạy theo một hướng và chỉ khi chưa bị chạm vào</strong>. Hiểu sai chiều này là nguồn của cả một lớp bug dữ liệu phân bổ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Tab Đơn vị quản lý<br/>Đơn vị A: SL 50 · Đơn vị B: SL 70"] --> B{"Tab Thiết lập phân bổ<br/>đã bị người dùng sửa?"}
+    B -- "Chưa sửa" --> C["Đồng bộ lại: mỗi dòng ĐVQL<br/>sinh 1 dòng Thiết lập phân bổ"]
+    B -- "Đã sửa bất kỳ trường nào" --> B1["KHÔNG đồng bộ<br/>giữ nguyên dữ liệu người dùng"]
+
+    C --> C1["Đơn vị sử dụng = Đơn vị quản lý"]
+    C --> C2["Hệ số = Số lượng rút gọn theo UCLN<br/>50 và 70 chia 10 thành 5 và 7"]
+    C --> C3["Năm từ · Tháng từ lấy theo<br/>năm và tháng của Ngày bắt đầu PB"]
+
+    C1 --> D["Số tiền của dòng<br/>= Số tiền PB mỗi kỳ nhân Hệ số<br/>chia Tổng hệ số"]
+    C2 --> D
+    C3 --> D
+    D --> E["Sửa trong Thiết lập phân bổ<br/>KHÔNG cập nhật ngược Đơn vị quản lý"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class B1 warn;
+    class E ok;
+</pre>
+    </div>
+    <figcaption><b>Đồng bộ một chiều và có điều kiện.</b> Đơn vị quản lý đẩy sang Thiết lập phân bổ chỉ khi tab đích còn nguyên trạng thái đồng bộ; hễ người dùng chạm vào một trường bất kỳ thì liên kết đứt vĩnh viễn, và chiều ngược lại thì không bao giờ chạy.</figcaption>
+  </figure>
+
+  <h3>Nhóm hệ số phân bổ theo khoảng thời gian</h3>
+  <p>Một CCDC có thể có <strong>nhiều nhóm hệ số</strong>, mỗi nhóm gắn một mốc <span class="f">Năm từ</span> + <span class="f">Tháng từ</span> và áp dụng cho các kỳ từ mốc đó trở đi. Ví dụ nhóm 1 (2026 · tháng 1) áp cho kỳ 1/2026 trở đi, nhóm 2 (2026 · tháng 7) áp từ kỳ 7/2026. Hai nhóm cùng mốc là trùng — chặn bằng <span class="chip c-msg">MSG_138</span>. Sau khi lưu, hệ thống sắp xếp các nhóm theo Năm từ, Tháng từ gần nhất lên trước. Options: <span class="f">Năm từ</span> = năm hiện tại −1 đến +5; <span class="f">Tháng từ</span> = 1…12.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Điều kiện chặn</th><th class="mono">Mã</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td>Phải có ít nhất 1 nhóm hệ số phân bổ</td><td class="mono">137</td><td>Nếu không thiết lập nhóm nào, dữ liệu mặc định là bản đồng bộ từ Đơn vị quản lý — chia tỷ lệ theo số lượng mỗi đơn vị</td></tr>
+      <tr><td>Các nhóm trùng hoặc giao khoảng thời gian</td><td class="mono">138</td><td>Trùng cặp Năm từ + Tháng từ</td></tr>
+      <tr><td>Chưa chọn 1 trong 4 trường tự do</td><td class="mono">139</td><td>Đơn vị sử dụng · ĐT tập hợp chi phí · Vụ việc · Khoản mục chi phí</td></tr>
+      <tr><td>Hệ số phải lớn hơn 0</td><td class="mono">118</td><td>Hệ số dùng để chia tiền giữa các dòng trong nhóm</td></tr>
+      <tr><td>TK chi phí không được để trống</td><td class="mono">120</td><td>Mặc định lấy TK ngầm định của vật tư, chọn lại được</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Tab Đơn vị quản lý — ba luật chặn</h3>
+  <p>Lưới có dòng <strong>Tổng cộng</strong> cột Số lượng (<span class="chip c-br">Common BR31</span>) để người dùng thấy ngay đã giao đủ chưa. Khi lưu: phải có ít nhất 1 đơn vị <span class="chip c-msg">MSG_130</span>; tổng Số lượng của các đơn vị phải <strong>bằng đúng</strong> Số lượng CCDC <span class="chip c-msg">MSG_131</span>; không được chọn trùng đơn vị trên nhiều dòng <span class="chip c-msg">MSG_132</span>. Cả ba đều kiểm <em>khi lưu</em>, không kiểm on-blur.</p>
+
+  <p>Sửa/xóa thiết lập phân bổ chỉ mở khi trạng thái CCDC là <em>Chưa phân bổ · Đang phân bổ · Tạm dừng phân bổ</em>; ở <em>Hoàn thành phân bổ</em> và <em>Đã ghi giảm</em> thì khóa hoàn toàn <span class="chip c-br">BR9</span>.</p>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — UC_CongCuDungCu_GhiTangHangLoat</span>
+  <h2>Ghi tăng hàng loạt: một đợt, tối đa 50 bản ghi</h2>
+  <p class="lede">Đợt ghi tăng là <strong>ngữ cảnh nhập liệu</strong>, không phải thực thể. Mỗi dòng trên lưới là một chứng từ ghi tăng đầy đủ với số chứng từ riêng, ba tab chi tiết riêng, và sau khi lưu thì sống độc lập như thể được tạo qua form Thêm mới.</p>
+
+  <h3>Đưa bản ghi vào đợt</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Mở form Ghi tăng hàng loạt"]) --> B{"Cách thêm bản ghi?"}
+
+    B -- "Bấm Thêm mới" --> C{"Đã đủ 50 bản ghi?"}
+    C -- Có --> C1["Nút Thêm mới và control Nguồn ghi tăng<br/>bị disable kèm tooltip giới hạn"]
+    C -- Chưa --> C2["Thêm 1 dòng trống vào cuối lưới<br/>tự chọn dòng đó · cấp Số CT liên tiếp"]
+
+    B -- "Chọn Nguồn ghi tăng ở đầu form" --> D["Mở modal chọn vật tư<br/>dòng đã dùng trong đợt bị disable"]
+    D --> E{"SL hiện có cộng SL tích chọn<br/>lớn hơn 50?"}
+    E -- Có --> E1["CHẶN TOÀN BỘ thao tác<br/>không thêm dòng nào · giữ nguyên modal<br/>MSG_147"]
+    E -- Không --> E2["Mỗi dòng vật tư sinh 1 bản ghi<br/>fill và khóa Tên · ĐVT · SL<br/>Đơn giá · Tổng GTBĐ<br/>Tab Tham chiếu trỏ đúng dòng phiếu nguồn"]
+    E2 --> E3{"Mã vật tư trùng mã trong đợt<br/>hoặc trong tenant?"}
+    E3 -- Có --> E4["Cảnh báo ngay · highlight cả nhóm trùng<br/>phải đổi Mã trước khi lưu"]
+    E3 -- Không --> F
+
+    C2 --> F["Nhập trên dòng: thông tin chung<br/>và phương thức phân bổ"]
+    E4 --> F
+    F --> G["Click chọn dòng — 3 tab chi tiết đổi theo<br/>Đơn vị quản lý · Thiết lập PB<br/>Tham chiếu<br/>dữ liệu giữ tạm trong bộ nhớ, chưa ghi DB"]
+    G --> H(["Bấm Lưu — xem sơ đồ dưới"])
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class E1 err;
+    class C1,E4 warn;
+</pre>
+    </div>
+    <figcaption><b>Giới hạn 50 chặn cả thao tác, không cắt một phần.</b> Tích 8 dòng trong khi đợt đã có 45 bản ghi thì không thêm được dòng nào — hệ thống giữ nguyên modal để người dùng bỏ bớt, chứ không lấy 5 dòng đầu.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Khác biệt then chốt so với Thêm mới đơn</span>
+    <p><strong>Nguồn ghi tăng ở đây là control cấp đợt và có thể dùng nhiều lần.</strong> Chọn Phiếu xuất kho rồi chọn tiếp Phiếu mua hàng thì hệ thống <em>bổ sung</em> bản ghi vào danh sách hiện có — không xóa bản ghi cũ, không hỏi confirm. Ở form Thêm mới đơn, chọn nguồn mới là reset sạch form. Ngoài ra màn này <strong>không hỗ trợ CCDC đầu kỳ</strong>: mọi bản ghi lưu với <span class="f">SoDuDauKy = false</span>, nên <span class="chip c-msg">MSG_140</span> và <span class="chip c-msg">MSG_141</span> không chạy.</p>
+  </div>
+
+  <h3>Chuỗi Lưu: hai vòng validate rồi một transaction</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"nodeSpacing":26,"rankSpacing":40,"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(["Bấm Lưu"]) --> V1{"Vòng 1 — validate cấp đợt"}
+    V1 -- "Danh sách trống" --> X1["MSG_148"]
+    V1 -- "Trùng Mã CCDC trong đợt" --> X2["MSG_149 · highlight cả nhóm trùng"]
+    V1 -- "Trùng Số CT trong đợt" --> X3["MSG_150 · highlight cả nhóm trùng"]
+    V1 -- Đạt --> V2{"Vòng 2 — từng bản ghi theo thứ tự STT"}
+
+    V2 -- "Lỗi trường bắt buộc và giá trị" --> Y1["MSG_103 · 105 · 106 · 107 · 108<br/>113 · 119 · 125 · 126 · 136"]
+    V2 -- "Trùng với dữ liệu đã lưu" --> Y2["MSG_104 Mã CCDC · MSG_123 Số CT"]
+    V2 -- "Kỳ khóa sổ" --> Y3["MSG_124 · MSG_142"]
+    V2 -- "TK nợ khác 242 và Số kỳ lớn hơn 1" --> Y4["MSG_144"]
+    V2 -- "Vượt SL chưa ghi tăng của dòng phiếu" --> Y5["MSG_151"]
+    V2 -- "Lỗi tab chi tiết" --> Y6["MSG_130 · 131 · 132<br/>MSG_137 · 138 · 139 · 118 · 120"]
+    V2 -- "Mọi bản ghi hợp lệ" --> W["Mở 1 transaction duy nhất"]
+
+    X1 --> R["Chặn lưu toàn đợt · highlight bản ghi lỗi<br/>focus bản ghi lỗi đầu tiên<br/>mở đúng tab chứa trường lỗi<br/>Lưu lại thì validate lại từ đầu"]
+    X2 --> R
+    X3 --> R
+    Y1 --> R
+    Y2 --> R
+    Y3 --> R
+    Y4 --> R
+    Y5 --> R
+    Y6 --> R
+
+    W --> W1["N dòng lưới sinh N dòng độc lập<br/>trong ccdc_cong_cu_dung_cu"]
+    W1 --> W2["Kèm hệ số phân bổ · đơn vị quản lý<br/>và tham chiếu chứng từ nguồn<br/>của từng bản ghi"]
+    W2 --> Z{"Lưu thành công?"}
+    Z -- Có --> Z1["MSG_145 · đóng form<br/>quay lại danh sách và làm mới"]
+    Z -- "Lỗi hệ thống" --> Z2["ROLLBACK toàn bộ · giữ nguyên form<br/>MSG_146"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class X1,X2,X3,Y1,Y2,Y3,Y4,Y5,Y6,Z2 err;
+    class R warn;
+    class Z1 ok;
+</pre>
+    </div>
+    <figcaption><b>Thứ tự hai vòng là bắt buộc.</b> Validate cấp đợt chạy trước và chạy hết; chỉ khi đợt sạch mới duyệt từng bản ghi theo STT. Bản ghi <em>không</em> được highlight nghĩa là hợp lệ — đây là hợp đồng hiển thị mà UI phải giữ.</figcaption>
+  </figure>
+
+  <h3>Đợt không phải là thực thể</h3>
+  <p>Hệ thống <strong>không lưu bất kỳ bảng "đợt" hay "lô ghi tăng" nào</strong>. Đợt N bản ghi tạo ra đúng N dòng CCDC riêng lẻ, không có liên kết nhóm giữa chúng. Xóa dòng / Xóa tất cả trước khi lưu chỉ tác động danh sách trên form (có confirm), và dòng phiếu nguồn tương ứng được mở khóa để chọn lại ở lần mở modal sau. Bấm <em>Đóng</em> khi còn bản ghi chưa lưu thì hiện confirm cảnh báo mất dữ liệu.</p>
+
+  <h3>Chống ghi tăng vượt số lượng phiếu</h3>
+  <p><span class="chip c-br">BR30</span> kiểm lại <em>tại thời điểm lưu</em>, trên dữ liệu DB thực tế, rằng Số lượng của mỗi bản ghi từ phiếu vẫn ≤ Số lượng chưa ghi tăng hiện tại của dòng phiếu nguồn. Đây là hàng rào cho tình huống người dùng khác đã ghi tăng cùng dòng phiếu trong lúc đợt này còn đang nhập liệu — vi phạm thì chặn <strong>toàn bộ đợt</strong> và highlight bản ghi vi phạm bằng <span class="chip c-msg">MSG_151</span>.</p>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — CRUD matrix · BR29 · BR4 modal</span>
+  <h2>Quan hệ dữ liệu: một CCDC chạm bốn bảng</h2>
+  <p class="lede">Ghi tăng CCDC không sinh bút toán. Thứ nó sinh ra là một cụm bản ghi quanh entity gốc, cộng với một sợi dây trỏ ngược về đúng dòng chi tiết phiếu nguồn — sợi dây đó chính là counter chống ghi tăng trùng.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    P1["pur_chung_tu_mua_hang_chi_tiet<br/>hoặc phiếu xuất kho chi tiết<br/>trạng thái Đã ghi sổ"] -- "sinh ra" --> A
+    A["<b>ccdc_cong_cu_dung_cu</b><br/>1 dòng = 1 chứng từ ghi tăng<br/>Trạng thái Chưa phân bổ"]
+    A --> B["ccdc_don_vi_quan_ly_ccdc<br/>Đơn vị · Số lượng · Diễn giải<br/>tổng SL phải bằng SL CCDC"]
+    A --> C["ccdc_nhom_he_so_phan_bo_ccdc<br/>Năm từ · Tháng từ"]
+    C --> D["ccdc_he_so_phan_bo_cong_cu_dung_cu<br/>Hệ số · TK chi phí · 4 trường tự do"]
+    A --> E["mst_chung_tu_lien_quan<br/>ChiTietChungTuLienQuanId<br/>trỏ về đúng dòng phiếu nguồn"]
+    E -- "làm căn cứ tính<br/>SL đã ghi tăng" --> P1
+    A --> F["ccdc_tham_chieu_thu_cong_ccdc<br/>dòng tham chiếu người dùng tự thêm"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class E warn;
+</pre>
+    </div>
+    <figcaption><b>Vòng khép kín ở cấp dòng.</b> Bản ghi CCDC trỏ về dòng phiếu, và chính tổng các bản ghi trỏ về dòng đó quyết định lần sau dòng phiếu còn hiện trong modal hay không. Trỏ vào header phiếu thay vì dòng chi tiết là làm hỏng counter.</figcaption>
+  </figure>
+
+  <h3>Bảng nào bị đụng ở use case nào</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Entity</th><th>Danh sách</th><th>Chi tiết</th><th>Thêm mới</th><th>Hàng loạt</th><th>Sửa</th><th>Xóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">ccdc_cong_cu_dung_cu</td><td>R</td><td>R</td><td>C</td><td>C</td><td>U R</td><td>D</td></tr>
+      <tr><td class="mono">ccdc_he_so_phan_bo_cong_cu_dung_cu</td><td>—</td><td>R</td><td>C</td><td>C</td><td>U R</td><td>D</td></tr>
+      <tr><td class="mono">ccdc_don_vi_quan_ly_ccdc</td><td>R</td><td>R</td><td>C</td><td>C</td><td>U R</td><td>D</td></tr>
+      <tr><td class="mono">mst_chung_tu_lien_quan</td><td>—</td><td>R</td><td>C</td><td>C</td><td>U R</td><td>D</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Điểm cần BA chốt</span>
+    <p><strong>Tab Tham chiếu được gọi bằng hai tên bảng khác nhau.</strong> Lưới Chi tiết của màn Danh sách ghi nguồn là <span class="f">ENT_ccdc_tham_chieu_thu_cong_ccdc</span>, còn UC · AD · CRUD matrix của Thêm mới và Ghi tăng hàng loạt ghi <span class="f">ENT_mst_chung_tu_lien_quan</span>. Sơ đồ trên vẽ cả hai theo đúng nguồn từng tài liệu — dòng tự fill từ phiếu đi vào bảng chứng từ liên quan (vì phải mang <span class="f">ChiTietChungTuLienQuanId</span>), dòng thủ công đi vào bảng tham chiếu thủ công — nhưng tài liệu <em>không nói rõ</em> đây là hai bảng hay một.</p>
+  </div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — UC_CongCuDungCu_ChinhSua</span>
+  <h2>Chỉnh sửa: quyền mở cửa, trạng thái quyết định cửa nào</h2>
+  <p class="lede">Vào được màn Chỉnh sửa mới là bước đầu. Bên trong, phạm vi sửa hẹp dần theo hai trục độc lập: <strong>trạng thái CCDC</strong> và <strong>đã phát sinh chứng từ liên quan hay chưa</strong>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Sửa trên dòng CCDC"]) --> B{"Có quyền GhiTangCCDC.Edit?"}
+    B -- Không --> B1["Ẩn nút · vào URL cũng chặn<br/>MSG_002"]
+    B -- Có --> C{"Tìm thấy bản ghi?"}
+    C -- Không --> C1["MSG_111"]
+    C -- Có --> D{"Trạng thái CCDC?"}
+    D -- "Hoàn thành phân bổ · Đã ghi giảm" --> D1["Chặn mở và chặn lưu<br/>MSG_143"]
+    D -- "Chưa phân bổ" --> E["Mở popup · sửa được TẤT CẢ tab"]
+    D -- "Đang · Tạm dừng phân bổ" --> F["Chỉ sửa tab Thiết lập phân bổ<br/>và Mã CCDC · Tên CCDC · TK chờ PB"]
+
+    E --> G{"Đã phát sinh chứng từ liên quan?<br/>đã tính phân bổ · Điều chỉnh<br/>Điều chuyển · Ghi giảm · Tạm dừng"}
+    G -- Chưa --> G1["Mọi trường mở bình thường"]
+    G -- Rồi --> G2["Disable Ngày CT · Số kỳ PB · Số lượng<br/>Đơn giá · Tổng GTBĐ · Ngày bắt đầu PB<br/>TK chờ PB · tab Đơn vị quản lý<br/>Giá trị đã phân bổ"]
+    G2 --> G3["Hiện text cảnh báo dưới nhóm thông tin<br/>Xóa hết chứng từ liên quan thì enable lại"]
+
+    G1 --> H(["Bấm Lưu — validate như Thêm mới"])
+    G3 --> H
+    F --> H
+    H --> I["Cập nhật ccdc_cong_cu_dung_cu<br/>và hệ số phân bổ · MSG_102<br/>Trạng thái giữ nguyên"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class B1,C1,D1 err;
+    class G2,G3 warn;
+    class I ok;
+</pre>
+    </div>
+    <figcaption><b>Sửa không đổi trạng thái.</b> Lưu thành công thì bản ghi giữ nguyên trạng thái hiện tại và danh sách chỉ làm mới dữ liệu — không có nhánh nào của Chỉnh sửa đẩy CCDC sang trạng thái khác.</figcaption>
+  </figure>
+
+  <h3>Ma trận ba tổ hợp thực tế</h3>
+  <p>Tổ hợp <em>Đang/Tạm dừng phân bổ × chưa có phát sinh</em> không đạt tới được: đang phân bổ nghĩa là đã chạy ít nhất một kỳ, tạm dừng nghĩa là đã có nghiệp vụ tạm dừng — cả hai đều là trigger của luật khóa trường. Còn đúng ba cột.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường / khối</th><th>Chưa PB · chưa phát sinh</th><th>Chưa PB · đã phát sinh</th><th>Đang / Tạm dừng PB</th></tr></thead>
+    <tbody>
+      <tr><td>Mã CCDC · Tên CCDC</td><td>Sửa</td><td>Sửa</td><td>Sửa</td></tr>
+      <tr><td>Nguồn ghi tăng · Lý do · Số CT · Loại CCDC · Nguồn vốn · Là CCDC đầu kỳ</td><td>Sửa</td><td>Sửa</td><td>Khóa</td></tr>
+      <tr><td>Ngày chứng từ · Ngày bắt đầu PB</td><td>Sửa</td><td>Khóa</td><td>Khóa</td></tr>
+      <tr><td>Số lượng · Đơn giá · Tổng giá trị ban đầu · Số kỳ phân bổ</td><td>Sửa</td><td>Khóa</td><td>Khóa</td></tr>
+      <tr><td>Tài khoản chờ phân bổ</td><td>Sửa</td><td>Khóa</td><td>Sửa <span class="chip c-warn">cần chốt</span></td></tr>
+      <tr><td>Tab Đơn vị quản lý</td><td>Sửa</td><td>Khóa</td><td>Khóa</td></tr>
+      <tr><td>Tab Tham chiếu</td><td>Sửa</td><td>Sửa</td><td>Khóa</td></tr>
+      <tr><td>Tab Thiết lập phân bổ</td><td>Sửa</td><td>Sửa</td><td>Sửa</td></tr>
+      <tr><td>Text cảnh báo chứng từ liên quan</td><td>Ẩn</td><td>Hiện</td><td>Hiện</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Hai mâu thuẫn tài liệu chưa gỡ</span>
+    <p><strong>Một — Tài khoản chờ phân bổ ở cột 3.</strong> <span class="chip c-br">BR1</span> màn Chỉnh sửa cho phép sửa TK chờ phân bổ khi Đang/Tạm dừng phân bổ, nhưng <span class="chip c-br">BR2</span> khóa chính trường đó khi đã có phát sinh — mà Đang/Tạm dừng luôn kèm phát sinh. Ma trận BA tạm chọn theo BR1 và đánh dấu là ô suy luận.<br>
+    <strong>Hai — danh sách trường bị khóa.</strong> UC Chỉnh sửa liệt kê khóa 5 trường (Ngày CT, Số kỳ PB, Số lượng, Đơn giá, Tổng GTBĐ) và nói rõ Mã · Tên · TK chờ PB · TK CCDC · TK chi phí vẫn sửa được; còn <span class="chip c-br">BR2</span> màn SCR khóa 9 trường, thêm Ngày bắt đầu PB · TK chờ PB · tab Đơn vị quản lý · Giá trị đã phân bổ. Bảng trên lấy theo SCR vì đó là bản chi tiết hơn.</p>
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — UC_CongCuDungCu_Xoa</span>
+  <h2>Xóa: ba lớp chặn trước khi hỏi</h2>
+  <p class="lede">Nút Xóa đã hẹp sẵn — chỉ hiện ở trạng thái <em>Chưa phân bổ</em>. Nhưng ngay cả khi nút hiện, còn hai lớp kiểm dữ liệu liên quan chạy trước khi bản ghi thực sự biến mất.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Xóa trên dòng CCDC"]) --> B{"Có quyền GhiTangCCDC.Delete?"}
+    B -- Không --> B1["Ẩn nút · thao tác thẳng cũng chặn<br/>MSG_002"]
+    B -- Có --> C{"Tìm thấy bản ghi?"}
+    C -- Không --> C1["MSG_111"]
+    C -- Có --> D{"Trạng thái = Chưa phân bổ?"}
+    D -- Không --> D1["CCDC đã được phân bổ, không được xóa<br/>MSG_133"]
+    D -- Có --> E{"Có chứng từ liên quan?<br/>Điều chỉnh · Điều chuyển · Ghi giảm"}
+    E -- Có --> E1["MSG_134"]
+    E -- Không --> F{"Kỳ phân bổ đã có bút toán?"}
+    F -- Có --> F1["Xóa bút toán trước đã<br/>MSG_135"]
+    F -- Không --> G["Popup xác nhận<br/>Bạn có chắc chắn muốn xóa CCDC<br/>tên và mã của bản ghi"]
+    G -- "Hủy" --> G1["Đóng popup · giữ nguyên bản ghi"]
+    G -- "Xác nhận" --> H["Xóa hệ số phân bổ trước<br/>rồi xóa bản ghi CCDC"]
+    H --> I{"Xóa thành công?"}
+    I -- Có --> I1["MSG_116 · đóng popup · làm mới danh sách"]
+    I -- Không --> I2["Giữ nguyên popup xác nhận<br/>MSG_003"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class B1,C1,D1,E1,F1,I2 err;
+    class G1 warn;
+    class I1 ok;
+</pre>
+    </div>
+    <figcaption><b>Thứ tự chặn theo AD.</b> Kiểm trạng thái trước, rồi mới tới chứng từ liên quan và bút toán — mỗi lớp có mã thông báo riêng, không gộp chung một message.</figcaption>
+  </figure>
+
+  <p>Xóa hệ số phân bổ phải đi <strong>trước</strong> xóa bản ghi CCDC, theo đúng thứ tự bước 5–6 của use case. Epic không quy định riêng về cơ chế xóa, nên áp <span class="chip c-br">Common BR29.1</span>: chỉ <strong>xóa mềm</strong>, không xóa vật lý, để giữ khả năng đối chiếu và truy vết. Sau khi xóa, danh sách giữ nguyên vị trí trang hiện tại theo <span class="chip c-br">Common BR29.4</span>.</p>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — UC_CongCuDungCu_XemChiTiet</span>
+  <h2>Xem chi tiết: tám tab, tám nguồn dữ liệu</h2>
+  <p class="lede">Popup xem chi tiết có bố cục như form Thêm mới nhưng toàn bộ read-only, và bổ sung bốn tab lịch sử lấy dữ liệu từ các phân hệ nghiệp vụ khác của CCDC.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Bấm Xem chi tiết<br/>hoặc bấm Số chứng từ trên lưới"]) --> B{"Quyền View.Detail?"}
+    B -- Không --> B1["MSG_002"]
+    B -- Có --> C{"Tìm thấy bản ghi?"}
+    C -- Không --> C1["MSG_111"]
+    C -- Có --> D["Mở popup read-only"]
+    D --> T1["Thông tin chung<br/>ccdc_cong_cu_dung_cu"]
+    D --> T2["Đơn vị quản lý<br/>ccdc_don_vi_quan_ly_ccdc"]
+    D --> T3["Thiết lập phân bổ<br/>ccdc_he_so_phan_bo_ccdc"]
+    D --> T4["Phân bổ — lịch sử<br/>phieu_phan_bo_ccdc"]
+    D --> T5["Điều chỉnh — lịch sử<br/>phieu_dieu_chinh_ccdc"]
+    D --> T6["Điều chuyển — lịch sử<br/>phieu_dieu_chuyen_ccdc"]
+    D --> T7["Ghi giảm<br/>phieu_ghi_giam_ccdc"]
+    D --> T8["Tham chiếu<br/>mst_chung_tu_lien_quan"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class B1,C1 err;
+</pre>
+    </div>
+    <figcaption><b>Cột Số chứng từ trên lưới là hyperlink vào chính popup này</b> <span class="chip c-br">BR2</span> màn Danh sách — không phải một màn xem riêng. Popup chỉ có duy nhất nút Đóng, không có validate, không có rule.</figcaption>
+  </figure>
+
+  <h3>Trạng thái trên tab Phân bổ</h3>
+  <p>Tab Phân bổ hiển thị Năm · Kỳ · Ngày hạch toán · Số tiền phân bổ · Trạng thái. Cột Trạng thái chỉ nhận ba giá trị: <em>Hoàn thành kỳ phân bổ</em> khi đã phân bổ hết tiền và hết số kỳ; <em>Đã tạm dừng phân bổ</em> khi đã tạm dừng và chưa tiếp tục; ngoài hai trường hợp đó thì <strong>để trống</strong>.</p>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — Trường dẫn xuất</span>
+  <h2>Mọi con số hệ thống tự tính</h2>
+  <p class="lede">Không trường nào dưới đây được người dùng nhập trực tiếp — nhầm một công thức là sai tiền phân bổ suốt vòng đời tài sản.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th>Công thức</th><th>Tính lại khi</th><th>Nguồn</th></tr></thead>
+    <tbody>
+      <tr><td>Tổng giá trị ban đầu</td><td>Số lượng × Đơn giá. Nhập ngược từ Tổng giá trị thì Đơn giá = Tổng giá trị / Số lượng; Số lượng bằng 0 hoặc rỗng thì không chia, báo <span class="chip c-msg">MSG_113</span></td><td>Đổi Số lượng hoặc Đơn giá; khóa hẳn nếu bản ghi từ phiếu</td><td><span class="chip c-br">BR11</span> ThemMoi</td></tr>
+      <tr><td>Giá trị PB còn lại</td><td>Tổng giá trị ban đầu − Giá trị đã PB ban đầu</td><td>Chỉ tồn tại khi tích Là CCDC đầu kỳ</td><td><span class="chip c-br">BR13</span> ThemMoi</td></tr>
+      <tr><td>Ngày kết thúc phân bổ</td><td>Ngày cuối cùng của tháng kết thúc kỳ; tháng chứa Ngày bắt đầu là kỳ 1</td><td>Đổi Ngày bắt đầu hoặc Số kỳ — chỉ ở kiểu Theo tháng</td><td><span class="chip c-br">BR15</span> ThemMoi</td></tr>
+      <tr><td>Số tiền phân bổ mỗi kỳ</td><td>Theo tháng: Tổng GTBĐ / Số kỳ PB.<br>Đầu kỳ: Giá trị PB còn lại / Số kỳ PB còn lại.<br>2 lần: 50% Tổng GTBĐ mỗi lần</td><td>Realtime khi trường nguồn đổi</td><td><span class="chip c-br">BR17</span> ThemMoi</td></tr>
+      <tr><td>Số tiền của dòng phân bổ</td><td>Số tiền PB mỗi kỳ × (Hệ số dòng / Tổng hệ số)</td><td>Đổi hệ số bất kỳ dòng nào trong nhóm</td><td><span class="chip c-br">BR4</span> ThietLapPhanBo</td></tr>
+      <tr><td>Tổng hệ số</td><td>Tổng Hệ số của mọi dòng trong nhóm</td><td>Thêm/xóa/sửa dòng hệ số</td><td><span class="chip c-br">BR4</span> ThietLapPhanBo</td></tr>
+      <tr><td>Hệ số đồng bộ</td><td>Số lượng ở tab Đơn vị quản lý, rút gọn theo ước chung lớn nhất, không làm tròn thập phân</td><td>Chỉ khi tab Thiết lập phân bổ chưa bị sửa</td><td><span class="chip c-br">BR10</span> ThietLapPhanBo</td></tr>
+      <tr><td>Đã phân bổ <em>(cột danh sách)</em></td><td>Giá trị phân bổ ban đầu + tổng giá trị đã phân bổ ở mọi chứng từ phân bổ có trạng thái <b>Đã ghi sổ</b></td><td>Ghi sổ / bỏ ghi sổ chứng từ phân bổ</td><td><span class="chip c-br">BR7</span> DanhSach</td></tr>
+      <tr><td>Còn lại <em>(cột danh sách)</em></td><td>Tổng giá trị ban đầu − Đã phân bổ. Bằng 0 là điều kiện chuyển sang <em>Hoàn thành phân bổ</em></td><td>Theo cột Đã phân bổ</td><td><span class="chip c-br">BR8</span> DanhSach</td></tr>
+      <tr><td>Số lượng chưa ghi tăng <em>(modal phiếu)</em></td><td>Số lượng dòng phiếu − tổng Số lượng các bản ghi CCDC đã lưu trỏ tới đúng dòng đó</td><td>Mỗi lần lưu/xóa bản ghi CCDC có tham chiếu; bằng 0 thì ẩn dòng khỏi modal</td><td><span class="chip c-br">BR4</span> modal phiếu</td></tr>
+      <tr><td>Đơn vị quản lý <em>(cột danh sách)</em></td><td>Nhiều đơn vị nối bằng dấu chấm phẩy: Đơn vị 1; Đơn vị 2; Đơn vị 3</td><td>Sửa tab Đơn vị quản lý</td><td><span class="chip c-br">BR10</span> DanhSach</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Quy chuẩn dùng chung vẫn áp</span>
+    <p>Epic không nhắc lại nhưng vẫn phải theo: phân trang <span class="chip c-br">Common BR1</span>; hiển thị và sắp xếp danh sách <span class="chip c-br">BR2</span> (màn này có ngoại lệ sắp xếp mặc định riêng); tìm kiếm và lọc <span class="chip c-br">BR11</span>; popup <span class="chip c-br">BR3</span>; nút thao tác <span class="chip c-br">BR13</span>; form nhập liệu <span class="chip c-br">BR14</span>; validation trường <span class="chip c-br">BR15</span>; kỳ kế toán và ngày bắt đầu dữ liệu <span class="chip c-br">BR17</span>; kiểm tra trùng <span class="chip c-br">BR19</span>; số chứng từ và mã danh mục <span class="chip c-br">BR20</span>; lưới chi tiết con <span class="chip c-br">BR21</span>; phân quyền <span class="chip c-br">BR25</span>; toast <span class="chip c-br">BR26</span>; đa thuê <span class="chip c-br">BR28</span>; chính sách xóa <span class="chip c-br">BR29</span>; dòng tổng cộng <span class="chip c-br">BR31</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 13 ============ -->
+<section id="s13">
+  <span class="snum">13 — Tra cứu</span>
+  <h2>Điều kiện chặn, mã thông báo và quyền</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> trong các sơ đồ trên, theo thao tác. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-01707_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện chặn</th><th class="mono">Mã</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="10">Lưu — Thêm mới &amp; Chỉnh sửa</td><td>Mã CCDC trống · Tên trống · Số CT trống · Ngày CT trống</td><td class="mono">103 · 105 · 106 · 107</td></tr>
+      <tr><td>Mã CCDC đã tồn tại trong tenant · Số chứng từ đã tồn tại</td><td class="mono">104 · 123</td></tr>
+      <tr><td>Tổng giá trị ban đầu ≤ 0 · Số lượng ≤ 0 · Số kỳ phân bổ ≤ 0</td><td class="mono">108 · 113 · 136</td></tr>
+      <tr><td>TK chờ phân bổ trống · Ngày bắt đầu trống · Ngày kết thúc trống</td><td class="mono">119 · 125 · 126</td></tr>
+      <tr><td>Ngày bắt đầu PB thuộc kỳ khóa sổ · Ngày CT ≤ ngày khóa sổ loại chứng từ</td><td class="mono">124 · 142</td></tr>
+      <tr><td>Giá trị đã PB ban đầu vượt Tổng GTBĐ <em>(chỉ Thêm mới)</em></td><td class="mono">140</td></tr>
+      <tr><td>CCDC đầu kỳ có Ngày bắt đầu PB ≥ Ngày bắt đầu dữ liệu <em>(chỉ Thêm mới)</em></td><td class="mono">141</td></tr>
+      <tr><td>TK chờ phân bổ có TK nợ khác 242 nhưng Số kỳ phân bổ lớn hơn 1</td><td class="mono">144</td></tr>
+      <tr><td>Tab Đơn vị quản lý: chưa có đơn vị · tổng SL lệch · trùng đơn vị</td><td class="mono">130 · 131 · 132</td></tr>
+      <tr><td>Tab Thiết lập phân bổ: chưa có nhóm · nhóm trùng thời gian · chưa chọn 1 trong 4 trường · Hệ số ≤ 0 · TK chi phí trống</td><td class="mono">137 · 138 · 139 · 118 · 120</td></tr>
+      <tr><td rowspan="5">Ghi tăng hàng loạt</td><td>Danh sách trống khi bấm Lưu</td><td class="mono">148</td></tr>
+      <tr><td>Trùng Mã CCDC trong cùng đợt</td><td class="mono">149</td></tr>
+      <tr><td>Trùng Số chứng từ trong cùng đợt</td><td class="mono">150</td></tr>
+      <tr><td>Thao tác thêm làm vượt giới hạn 50 bản ghi</td><td class="mono">147</td></tr>
+      <tr><td>Số lượng vượt SL chưa ghi tăng của dòng phiếu nguồn</td><td class="mono">151</td></tr>
+      <tr><td>Chỉnh sửa</td><td>CCDC ở trạng thái Hoàn thành phân bổ hoặc Đã ghi giảm</td><td class="mono">143</td></tr>
+      <tr><td rowspan="3">Xóa</td><td>CCDC đã được phân bổ — trạng thái khác Chưa phân bổ</td><td class="mono">133</td></tr>
+      <tr><td>CCDC đã có chứng từ liên quan</td><td class="mono">134</td></tr>
+      <tr><td>Kỳ phân bổ đã có bút toán</td><td class="mono">135</td></tr>
+      <tr><td>Mọi màn</td><td>Không có quyền truy cập chức năng</td><td class="mono">002</td></tr>
+      <tr><td>Chi tiết · Sửa · Xóa</td><td>Không tìm thấy bản ghi CCDC</td><td class="mono">111</td></tr>
+      <tr><td>Danh sách</td><td>Không có dữ liệu hoặc tìm kiếm không ra kết quả</td><td class="mono">001</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Thông báo thành công và lỗi hệ thống</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th class="mono">Thành công</th><th class="mono">Lỗi hệ thống</th><th>Hành vi khi lỗi</th></tr></thead>
+    <tbody>
+      <tr><td>Thêm mới CCDC</td><td class="mono">101</td><td class="mono">122</td><td>Giữ nguyên popup, không mất dữ liệu đã nhập</td></tr>
+      <tr><td>Ghi tăng hàng loạt</td><td class="mono">145</td><td class="mono">146</td><td>Rollback toàn bộ transaction, giữ nguyên form</td></tr>
+      <tr><td>Chỉnh sửa CCDC</td><td class="mono">102</td><td class="mono">003</td><td>Giữ nguyên popup chỉnh sửa</td></tr>
+      <tr><td>Xóa CCDC</td><td class="mono">116</td><td class="mono">003</td><td>Giữ nguyên popup xác nhận</td></tr>
+      <tr><td>Tải danh sách · xem chi tiết</td><td>—</td><td class="mono">003</td><td>Hiển thị thông báo lỗi hệ thống</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">GhiTangCCDC.View</td><td>Vào màn danh sách CCDC</td></tr>
+      <tr><td class="mono">GhiTangCCDC.View.Detail</td><td>Nút Xem chi tiết · hyperlink Số chứng từ · lưới Chi tiết dưới lưới chính</td></tr>
+      <tr><td class="mono">GhiTangCCDC.Create</td><td>Nút Thêm mới · nút Ghi tăng hàng loạt · hành động Lưu ở cả hai form</td></tr>
+      <tr><td class="mono">GhiTangCCDC.Edit</td><td>Nút Sửa · nút Tiếp tục phân bổ</td></tr>
+      <tr><td class="mono">GhiTangCCDC.Delete</td><td>Nút Xóa</td></tr>
+      <tr><td class="mono">DieuChinhCCDC.Create</td><td>Nút Điều chỉnh giá trị <em>(epic PMKT-E-01718)</em></td></tr>
+      <tr><td class="mono">DieuChuyenCCDC.Create</td><td>Nút Điều chuyển <em>(epic PMKT-E-01735)</em></td></tr>
+      <tr><td class="mono">TamDungCCDC.Create</td><td>Nút Tạm dừng phân bổ <em>(epic PMKT-E-01742)</em></td></tr>
+      <tr><td class="mono">GhiGiamCCDC.Create</td><td>Nút Ghi giảm <em>(epic PMKT-E-01751)</em></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Message chưa gắn được vào nhánh nào</span>
+    <p>Sáu mã có trong <span class="f">6.messages.md</span> nhưng không xuất hiện ở bảng validate của bất kỳ UC hay SCR nào trong epic, nên không vẽ được vào sơ đồ: <span class="chip c-msg">109</span> Đơn vị quản lý phải được chọn · <span class="chip c-msg">114</span> Xuất file danh sách CCDC thành công (màn Danh sách không mô tả nút Xuất Excel) · <span class="chip c-msg">121</span> Kỳ kết thúc phải ≥ Kỳ bắt đầu · <span class="chip c-msg">128</span> Năm kết thúc phải ≥ năm bắt đầu · <span class="chip c-msg">129</span> Kỳ phân bổ đã có bút toán khi điều chỉnh thiết lập · <span class="chip c-msg">127</span> Trùng dữ liệu thiết lập hệ số phân bổ theo kỳ (chỉ xuất hiện ở bảng Thông báo của màn Thiết lập phân bổ, trùng nghĩa với <span class="chip c-msg">138</span>).</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-01707 · Công cụ dụng cụ</span>
+  <span>Dựng từ 6 UC · 6 Activity Diagram · 9 màn hình · 7 ma trận ẩn/hiện</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

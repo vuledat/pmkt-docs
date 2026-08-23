@@ -1,0 +1,830 @@
+<title>Luồng Tính giá thành hệ số, tỷ lệ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-08671 · Giá thành Hệ số, Tỷ lệ · Bước 7/8</p>
+  <h1>Luồng xử lý Tính giá thành hệ số, tỷ lệ</h1>
+  <p>Bước áp chót của chuỗi tính giá thành theo phương pháp hệ số, tỷ lệ: gom chi phí <em>theo phân xưởng</em>, tính giá trị dở dang cuối kỳ, ra tổng giá thành của phân xưởng rồi mới chia xuống từng sản phẩm bằng tỷ lệ phân bổ đã chốt ở bước 6. Mỗi sơ đồ bám đúng Activity Diagram và BR1–BR12 của bộ tài liệu BA.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 2 use case · 2 AD · 1 màn hình · BR1–BR12</span>
+    <span><b>Entity gốc:</b> cost_gia_thanh_san_pham</span>
+    <span><b>Quyền:</b> GTHeSoTyLe.AllPermission</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Vị trí bước 7 &amp; trạng thái kỳ</a></li>
+    <li><a href="#s1"><span>01</span>Xem danh sách kết quả</a></li>
+    <li><a href="#s2"><span>02</span>Hai nút, hai card</a></li>
+    <li><a href="#s3"><span>03</span>Chuỗi kiểm trước khi tính</a></li>
+    <li><a href="#s4"><span>04</span>Đối tượng tính giá thành</a></li>
+    <li><a href="#s5"><span>05</span>Chi phí phát sinh trong kỳ</a></li>
+    <li><a href="#s6"><span>06</span>Dở dang cuối kỳ · ba phương pháp</a></li>
+    <li><a href="#s7"><span>07</span>Sáu bước của công thức</a></li>
+    <li><a href="#s8"><span>08</span>Tỷ lệ phân bổ &amp; khớp n−1</a></li>
+    <li><a href="#s9"><span>09</span>Giá thành đơn vị</a></li>
+    <li><a href="#s10"><span>10</span>Ghi kết quả &amp; thông báo</a></li>
+    <li><a href="#s11"><span>11</span>Khác gì chuỗi thường</a></li>
+    <li><a href="#s12"><span>12</span>Tra cứu chặn &amp; quyền</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Bước 7 đứng ở đâu và kỳ giá thành đổi trạng thái ra sao</h2>
+  <p class="lede">Chuỗi hệ số, tỷ lệ có <strong>tám bước</strong> — nhiều hơn chuỗi giá thành trực tiếp đúng một bước: <em>Xác định hệ số, tỷ lệ</em>. Bước 7 không đi lấy chứng từ gốc; nó đọc kết quả đã chốt của sáu bước trước cộng với Sổ cái, chạy công thức, rồi ghi ngược hai bảng. Bước 8 — Kết chuyển chi phí — là thứ khóa kỳ lại.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    B1["<b>1</b> Dở dang<br/>đầu kỳ"] --> B2["<b>2</b> Hạch toán<br/>chi phí"]
+    B2 --> B3["<b>3</b> Nhập kho<br/>thành phẩm"]
+    B3 --> B4["<b>4</b> Dở dang<br/>cuối kỳ"]
+    B4 --> B5["<b>5</b> Phân bổ<br/>chi phí"]
+    B5 --> B6["<b>6</b> Xác định<br/>hệ số, tỷ lệ"]
+    B6 --> B7["<b>7 TÍNH GIÁ THÀNH</b><br/>bước đang mô tả"]
+    B7 --> B8["<b>8</b> Kết chuyển<br/>chi phí"]
+    B8 -. "Ghi sổ ⇒ khóa Tính lại" .-> B7
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class B7 ok;
+</pre>
+    </div>
+    <figcaption><b>Điều hướng bước theo <span class="chip c-br">BR10</span>.</b> Người dùng nhấn thẳng vào biểu tượng bước trên giao diện Master để chuyển bước; bước nào đã có dữ liệu được đánh dấu bằng dấu chấm xanh. Mũi tên đứt từ bước 8 ngược về bước 7 là ràng buộc duy nhất đi ngược chiều trong chuỗi.</figcaption>
+  </figure>
+
+  <h3>Bản đồ trạng thái kỳ tính giá thành</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(( )) --> T1
+    T1["<b>CHƯA THỰC HIỆN</b><br/>ThoiDiemTinhGanNhat = null<br/>Hiện nút Tính giá thành"]
+    T2["<b>ĐANG THỰC HIỆN</b><br/>Đã tính ít nhất 1 lần<br/>Hiện nút Tính lại"]
+    T3["<b>ĐÃ HOÀN THÀNH</b><br/>Chứng từ kết chuyển đã ghi sổ<br/>Khóa tính và tính lại"]
+    T1 -- "Tính lần đầu thành công" --> T2
+    T2 -- "Tính lại — ghi đè kết quả" --> T2
+    T2 -- "Bước 8 ghi sổ kết chuyển" --> T3
+    T3 -- "Bỏ ghi sổ chứng từ kết chuyển" --> T2
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class T2 ok;
+    class T3 warn;
+</pre>
+    </div>
+    <figcaption><b>Chỉ hai trạng thái đầu cho phép tính.</b> Tiền điều kiện của UC ghi rõ kỳ phải ở <em>Chưa thực hiện</em> hoặc <em>Đang thực hiện</em>. Sang <em>Đã hoàn thành</em> thì mọi thao tác tính đều bị từ chối bằng <span class="chip c-msg">MSG_305</span>; muốn mở lại phải quay về bước 8 bỏ ghi sổ chứng từ kết chuyển trước <span class="chip c-br">BR42</span>.</figcaption>
+  </figure>
+
+  <h3>Sáu bước tiền đề cấp gì cho bước 7</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Bước tiền đề</th><th class="mono">Nguồn đọc</th><th>Đại lượng cấp cho công thức</th></tr></thead>
+    <tbody>
+      <tr><td>1 · Cập nhật dở dang đầu kỳ</td><td class="mono">cost_do_dang_dau_ky</td><td class="mono">GiaTriDoDangDauKy_NVL / NC / SXC<br>theo phân xưởng</td></tr>
+      <tr><td>2 · Hạch toán chi phí</td><td class="mono">SoCai</td><td class="mono">Chi phí trực tiếp theo yếu tố</td></tr>
+      <tr><td>3 · Nhập kho thành phẩm</td><td class="mono">inv_phieu_nhap_kho</td><td class="mono">SoLuongNhapKho theo sản phẩm</td></tr>
+      <tr><td>4 · Cập nhật dở dang cuối kỳ</td><td class="mono">cost_do_dang_cuoi_ky<br>+ chi tiết</td><td class="mono">SoLuongDoDangCuoiKy · TyLeHoanThanh<br>DinhMucNVL · DinhMucNhanCong · DinhMucSXChung</td></tr>
+      <tr><td>5 · Phân bổ chi phí</td><td class="mono">cost_phan_bo_chi_phi<br>+ _chi_tiet</td><td class="mono">Chi phí phân bổ cho phân xưởng</td></tr>
+      <tr><td>6 · Xác định hệ số, tỷ lệ</td><td class="mono">cost_thiet_lap_he_so_ty_le</td><td class="mono">Tỷ lệ phân bổ giá thành từng sản phẩm</td></tr>
+      <tr><td>Cấu hình giá thành</td><td class="mono">CauHinhGiaThanh</td><td class="mono">TaiKhoanKetChuyenId · TK tập hợp theo yếu tố</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Chỉ hai bảng bị bước 7 <strong>ghi</strong>: <span class="f">cost_gia_thanh_san_pham</span> (tạo mới hoặc cập nhật đè) và <span class="f">cost_do_dang_cuoi_ky</span> (cập nhật giá trị bằng tiền). Mọi bảng còn lại chỉ đọc.</p>
+
+  <div class="note stop">
+    <span class="lbl">Ranh giới hệ thống</span>
+    <p>Bước 7 <strong>không sinh bút toán</strong>. Nó chỉ tập hợp, tính toán và lưu kết quả; việc hạch toán bút toán kết chuyển tài khoản chi phí thuộc epic <span class="f">PMKT-E-08674 — Kết chuyển chi phí</span>. Vì thế <span class="chip c-br">BR36</span> ghi nhận bút toán vào Sổ cái <em>không</em> áp cho epic này, và trong ma trận CRUD không có thao tác nào chạm <span class="f">SoCai</span> ngoài đọc.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — UC PMKT-U-08829</span>
+  <h2>Xem danh sách: lưới là ảnh chụp, không phải số sống</h2>
+  <p class="lede">Màn <span class="f">SCR_TinhGiaThanh_DanhSach</span> chỉ đọc <span class="f">cost_gia_thanh_san_pham</span> của kỳ đang chọn, nhóm theo đối tượng tập hợp chi phí. Toàn bộ cột giá trị là số đã chốt tại lần bấm nút gần nhất — tiền đề đổi <em>không</em> làm số trên lưới đổi theo.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Menu Hệ số, tỷ lệ · Bước 7"]) --> B{"Có quyền GTHeSoTyLe?"}
+    B -- Không --> B1["MSG_002 · chặn truy cập"]:::err
+    B -- Có --> C["Mở SCR_TinhGiaThanh_DanhSach<br/>theo kỳ đang chọn"]
+    C --> D["Đọc cost_gia_thanh_san_pham<br/>lọc theo kỳ · nhóm theo đối tượng"]
+    D --> E{"Có bản ghi kết quả?"}
+    E -- Không --> E1["Card TB1 Info · MSG_004<br/>kèm nút Tính giá thành"]:::warn
+    E -- Có --> F["Lưới kết quả · phân trang 20 dòng<br/>BR1 · BR2 · BR11"]
+    F --> G{"Dry-run thấy tiền đề đổi?"}
+    G -- Có --> G1["Card TB2 Warning · MSG_005<br/>kèm nút Tính lại giá thành"]:::warn
+    G -- Không --> H["Lưới giữ ảnh chụp lần tính trước"]
+    F --> I["Ô Tìm kiếm chung · 255 ký tự<br/>Mã sản phẩm · Tên sản phẩm"]
+    I --> J{"Khớp bản ghi nào?"}
+    J -- Không --> J1["MSG_001 tại vùng lưới"]:::warn
+    J -- Có --> J2["Hiển thị kết quả lọc"]:::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hai card loại trừ nhau về dữ liệu.</b> TB1 chỉ hiện khi kỳ chưa có bản ghi kết quả nào, TB2 chỉ hiện khi đã có bản ghi <em>và</em> dry-run thấy lệch — nên mỗi lần vào màn chỉ thấy tối đa một card.</figcaption>
+  </figure>
+
+  <h3>Cột lưới, nguồn dữ liệu và phạm vi tìm kiếm</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột</th><th class="mono">Nguồn — BR11</th><th>Tìm kiếm</th><th>Sắp xếp</th></tr></thead>
+    <tbody>
+      <tr><td>Mã đối tượng <span class="chip c-perm">dòng group</span></td><td class="mono">GiaThanhSanPham.DoiTuongTapHopChiPhiId</td><td>N</td><td>N</td></tr>
+      <tr><td>Tên đối tượng <span class="chip c-perm">dòng group</span></td><td>Theo đối tượng chứa sản phẩm</td><td>N</td><td>N</td></tr>
+      <tr><td>Mã sản phẩm</td><td class="mono">GiaThanhSanPham.VatTuId</td><td><b>Y</b></td><td><b>Y</b></td></tr>
+      <tr><td>Tên sản phẩm</td><td>Theo sản phẩm của dòng</td><td><b>Y</b></td><td><b>Y</b></td></tr>
+      <tr><td>Đơn vị tính</td><td>Theo sản phẩm của dòng</td><td>N</td><td>N</td></tr>
+      <tr><td>Chi phí NVL</td><td class="mono">GiaThanhSanPham.ChiPhiNVL</td><td>N</td><td>N</td></tr>
+      <tr><td>Chi phí nhân công</td><td class="mono">GiaThanhSanPham.ChiPhiNhanCong</td><td>N</td><td>N</td></tr>
+      <tr><td>Chi phí SX chung</td><td class="mono">GiaThanhSanPham.ChiPhiSXChung</td><td>N</td><td>N</td></tr>
+      <tr><td>Tổng giá thành</td><td class="mono">GiaThanhSanPham.TongChiPhi</td><td>N</td><td>N</td></tr>
+      <tr><td>Số lượng nhập kho trong kỳ</td><td class="mono">GiaThanhSanPham.SoLuongNhapKho</td><td>N</td><td>N</td></tr>
+      <tr><td>Giá thành đơn vị</td><td class="mono">GiaThanhSanPham.GiaThanh</td><td>N</td><td>N</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Đặc thù so với danh sách chứng từ</span>
+    <p>Lưới <strong>không có cột Hành động</strong>, <strong>không có bộ lọc thời gian</strong> và <strong>không sửa được ô nào</strong> — phạm vi dữ liệu do kỳ tính giá thành đang chọn quyết định, không do khoảng ngày. Toàn bộ trường là dữ liệu máy tự tính nên epic <em>không có</em> ma trận Ẩn/Hiện/Disable cấp form. Cột STT, checkbox chọn dòng, thứ tự mặc định theo <span class="chip c-br">BR2</span>, phân trang theo <span class="chip c-br">BR1</span>, cơ chế tìm nhanh theo <span class="chip c-br">BR11</span> chung, làm tròn hiển thị theo <span class="chip c-br">BR7</span> chung.</p>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — BR7 · BR8</span>
+  <h2>Hai nút loại trừ nhau, gác bằng một trường duy nhất</h2>
+  <p class="lede">Không bao giờ có cả <em>Tính giá thành</em> lẫn <em>Tính lại</em> cùng lúc. Trường quyết định là <span class="f">KyTinhGiaThanh.ThoiDiemTinhGanNhat</span>; điều kiện khóa nằm ở bước 8.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    P{"Quyền GTHeSoTyLe?"} -- Không --> P0["Ẩn chức năng tính<br/>Gọi API vẫn chặn MSG_002"]:::err
+    P -- Có --> Q{"ThoiDiemTinhGanNhat"}
+    Q -- "= null" --> N1["Nút <b>Tính giá thành</b>"]:::ok
+    Q -- "khác null" --> R{"Chứng từ kết chuyển<br/>đã ghi sổ?"}
+    R -- Rồi --> N0["Ẩn hoặc disable Tính lại<br/>API từ chối MSG_305"]:::err
+    R -- Chưa --> N2["Nút <b>Tính lại</b>"]:::ok
+    N1 --> C1["Card TB1 Info · MSG_004"]:::warn
+    N2 --> C2{"Dry-run so TongChiPhi<br/>và GiaThanh với snapshot"}
+    C2 -- Lệch --> C3["Card TB2 Warning · MSG_005"]:::warn
+    C2 -- Khớp --> C4["Không hiện card cảnh báo"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Dry-run chạy ngay khi tiền đề đổi.</b> TB2 quy định hệ thống kích hoạt so sánh <em>ngay lập tức</em> mỗi khi một input thay đổi — không chờ refresh, không chờ mở lại màn. So sánh chỉ chạy trên hai trường giá trị <span class="f">TongChiPhi</span> và <span class="f">GiaThanh</span>, và <strong>chỉ để cảnh báo</strong>: không ghi đè lưới, không ghi đè DB.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Chặn hai lớp</span>
+    <p>Điều kiện khóa <em>Tính lại</em> phải cài ở <strong>cả UI lẫn API</strong> <span class="chip c-br">BR8</span>. Ẩn nút ở UI là chưa đủ: người dùng gọi thẳng API vẫn phải nhận <span class="chip c-msg">MSG_305</span> kèm hướng dẫn bỏ ghi sổ chứng từ kết chuyển trước. Không có quyền thì <em>ẩn</em> nút chứ không disable, theo <span class="chip c-br">BR25</span> chung.</p>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — UC PMKT-U-08833 bước 4</span>
+  <h2>Chuỗi kiểm chặn trước khi chạm vào công thức</h2>
+  <p class="lede">Bấm nút chưa phải là tính. Hệ thống chạy hết chuỗi kiểm điều kiện tiền đề; hỏng ở bất kỳ mắt nào thì dừng ngay, không sinh bản ghi tạm nào và không đụng vào kết quả cũ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Bấm Tính giá thành / Tính lại"]) --> V0{"Còn quyền GTHeSoTyLe?"}
+    V0 -- Không --> X0["MSG_002 · ẩn chức năng<br/>API vẫn chặn"]:::err
+    V0 -- Có --> V1{"Đã có cấu hình giá thành?<br/>TK tập hợp · yếu tố chi phí"}
+    V1 -- Chưa --> X1["MSG_203 · chưa cấu hình"]:::err
+    V1 -- Rồi --> V2{"Trạng thái kỳ hợp lệ?<br/>Chưa hoặc Đang thực hiện"}
+    V2 -- "Đã hoàn thành" --> X2["MSG_305 · kết chuyển đã ghi sổ"]:::err
+    V2 -- Hợp lệ --> V3{"Có nhập kho thành phẩm<br/>HOẶC có dở dang cuối kỳ?"}
+    V3 -- "Không có cả hai" --> X3["MSG_204 · không có sản phẩm<br/>trong kỳ"]:::err
+    V3 -- "Có ít nhất một" --> OK(["Sang chuỗi tính BR1 → BR5"]):::ok
+    X0 --> Z["Không thay đổi dữ liệu<br/>giữ nguyên kết quả lần trước"]
+    X1 --> Z
+    X2 --> Z
+    X3 --> Z
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Ba điều kiện chặn, không hơn.</b> UC liệt kê đúng ba nhánh dừng trước khi tính: thiếu cấu hình <span class="chip c-msg">MSG_203</span>, kỳ đã hoàn thành <span class="chip c-msg">MSG_305</span>, và không có cả nhập kho lẫn dở dang cuối kỳ <span class="chip c-msg">MSG_204</span>. Các bước tiền đề khác chỉ là <em>tiền điều kiện nghiệp vụ</em> — thiếu thì kết quả bằng 0 chứ không sinh lỗi chặn.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Trong lúc tính</span>
+    <p>Thao tác chạy <strong>đồng bộ trên máy chủ</strong>: giao diện bật Loading Mask "Đang tính toán giá thành…" chặn toàn bộ tương tác đến khi xong. Kết quả cuối cùng là toast theo <span class="chip c-br">BR26</span> chung — Success <span class="chip c-msg">MSG_201</span> / <span class="chip c-msg">MSG_301</span> hoặc Error tương ứng.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — BR1</span>
+  <h2>Đối tượng tính giá thành: phân xưởng trước, sản phẩm sau</h2>
+  <p class="lede">Ở phương pháp hệ số, tỷ lệ có <strong>hai tầng đối tượng</strong>. Tầng trên là phân xưởng / quy trình sản xuất / nhóm sản phẩm — nơi chi phí được tập hợp. Tầng dưới là sản phẩm — chỉ lên được lưới nếu <em>có phát sinh nhập kho thành phẩm</em> trong kỳ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Dòng chi tiết Phiếu nhập kho<br/>trong kỳ đang chọn"] --> B{"Trạng thái = Đã ghi sổ?"}
+    B -- Không --> X0["Loại khỏi sản lượng"]:::err
+    B -- Có --> C{"TinhChatNghiepVu<br/>= Nhập thành phẩm?"}
+    C -- Không --> X1["Loại khỏi sản lượng"]:::err
+    C -- Có --> D{"TaiKhoanCoId<br/>= TaiKhoanKetChuyenId?"}
+    D -- Không --> X2["Loại phiếu · hạch toán sai"]:::err
+    D -- Có --> E{"Khớp đối tượng tập hợp<br/>và khớp mã vật tư?"}
+    E -- Không --> X3["Không thuộc phân xưởng<br/>đang tính"]:::err
+    E -- Có --> F["Cộng vào SoLuongNhapKho<br/>của sản phẩm"]:::ok
+    F --> G["Sản phẩm là đối tượng tính giá<br/>và lên lưới kết quả"]:::ok
+    H["Sản phẩm chỉ có dở dang cuối kỳ"] --> I{"Có nhập kho trong kỳ?"}
+    I -- Có --> G
+    I -- Không --> J["Vẫn tính giá trị dở dang<br/>KHÔNG lên lưới · không có<br/>giá thành đơn vị"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Tập tính ngầm rộng hơn tập hiển thị.</b> Hệ thống chạy công thức cho hợp của hai nguồn — nhập kho thành phẩm <em>và</em> dở dang cuối kỳ — nhưng chỉ nhánh có nhập kho mới sinh bản ghi giá thành lên lưới, vì không có thành phẩm hoàn thành thì không có gì để chia.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Điều kiện tài khoản Có — dễ bỏ sót nhất</span>
+    <p>Bỏ điều kiện <span class="f">ChiTietPhieuNhapKho.TaiKhoanCoId = CauHinhGiaThanh.TaiKhoanKetChuyenId</span> thì phiếu hạch toán sai vẫn được cộng vào <span class="f">SoLuongNhapKho</span>. Hệ quả dây chuyền: mẫu số lớn hơn thực tế ⇒ <strong>giá thành đơn vị sai</strong>, và bước 8 Kết chuyển chi phí lệch giữa sản lượng với giá trị kết chuyển. Bộ lọc đi theo <em>tính chất nghiệp vụ của lý do nhập</em>, không theo tên định khoản.</p>
+  </div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nguồn sản phẩm</th><th>Tham gia tính ngầm</th><th>Lên lưới kết quả</th><th>Có giá thành đơn vị</th></tr></thead>
+    <tbody>
+      <tr><td>Có nhập kho thành phẩm</td><td>Có</td><td>Có</td><td>Có</td></tr>
+      <tr><td>Có nhập kho <b>và</b> có dở dang cuối kỳ</td><td>Có</td><td>Có</td><td>Có</td></tr>
+      <tr><td>Chỉ có dở dang cuối kỳ</td><td>Có</td><td><b>Không</b></td><td><b>Không</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Nhận biết kỳ có đánh giá dở dang cuối kỳ qua <span class="f">KyTinhGiaThanh.PhuongPhapDanhGiaDoDang</span> = <em>Sản phẩm hoàn thành tương đương</em>, <em>Nguyên vật liệu trực tiếp</em> hoặc <em>Định mức giá thành</em>. Danh sách phân xưởng đưa vào tính cũng lấy từ các đối tượng <strong>có phát sinh nhập kho thành phẩm</strong>.</p>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — BR2</span>
+  <h2>Chi phí phát sinh: gom theo phân xưởng, không gom theo sản phẩm</h2>
+  <p class="lede">Đây là điểm rẽ lớn nhất của phương pháp hệ số, tỷ lệ. Chi phí ba yếu tố — NVL, Nhân công, SX chung — được gom về <strong>phân xưởng / quy trình sản xuất / nhóm sản phẩm</strong>, từ đúng hai nguồn: phần trực tiếp trên Sổ cái và phần đã chia sẵn ở bước 5.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Entity SoCai<br/>chỉ chứa bút toán đã ghi sổ"] --> B["Loại bút toán có<br/>LoaiChungTu.Code = PKG"]
+    B --> C["NgayHachToan thuộc kỳ đang chọn"]
+    C --> D["SoCai.ChiNhanhID<br/>= KyTinhGiaThanh.ChiNhanhId"]
+    D --> E["SoCai.TKID = TK tập hợp<br/>của yếu tố chi phí"]
+    E --> F["SoCai.DoiTuongTapHopChiPhiID<br/>= phân xưởng đang tính"]
+    F --> G["Chi phí trực tiếp<br/>= Σ PSNoQuyDoi − Σ PSCoQuyDoi"]:::ok
+    P["cost_phan_bo_chi_phi từ bước 5<br/>lọc kỳ · lọc đối tượng"] --> Q["Chi phí phân bổ"]:::ok
+    G --> R["Chi phí phát sinh trong kỳ<br/>= trực tiếp + phân bổ"]:::ok
+    Q --> R
+    P -.-> W["KHÔNG nhặt lại bút toán gốc<br/>của chi phí này trên Sổ cái"]:::warn
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Loại trừ chính chứng từ của bước 8.</b> Bút toán kết chuyển chi phí giá thành (<span class="f">LoaiChungTu.Code = PKG</span>) bị loại khỏi tập hợp — nếu không, kết quả kết chuyển của kỳ trước lại quay vào làm chi phí phát sinh của kỳ này. Điều kiện "đã ghi sổ" là hệ quả tự nhiên của việc chọn nguồn là <span class="f">SoCai</span>.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Điều kiện lọc — BR2</th><th>Giá trị</th></tr></thead>
+    <tbody>
+      <tr><td>Nguồn dữ liệu</td><td>Tất cả bút toán trên <span class="f">SoCai</span>, trạng thái Đã ghi sổ</td></tr>
+      <tr><td>Loại trừ</td><td class="mono">LoaiChungTu.Code = PKG — kết chuyển chi phí</td></tr>
+      <tr><td>Ngày hạch toán</td><td>Thuộc kỳ tính giá thành đang chọn</td></tr>
+      <tr><td>Chi nhánh</td><td class="mono">SoCai.ChiNhanhID = KyTinhGiaThanh.ChiNhanhId</td></tr>
+      <tr><td>Tài khoản phát sinh</td><td>TK tập hợp chi phí theo yếu tố — ví dụ 621 · 622 · 627</td></tr>
+      <tr><td>Gắn với</td><td class="mono">SoCai.DoiTuongTapHopChiPhiID = phân xưởng đang tính</td></tr>
+      <tr><td>Giá trị</td><td class="mono">Σ PSNoQuyDoi − Σ PSCoQuyDoi</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Bẫy tính trùng</span>
+    <p>Chi phí chung đã đi qua bước 5 và nằm sẵn ở <span class="f">cost_phan_bo_chi_phi</span>. Nếu bước 7 nhặt thêm chính bút toán gốc của nó trên Sổ cái thì <strong>một đồng chi phí bị tính hai lần</strong> <span class="chip c-br">BR2</span>. Một yếu tố chi phí có thể gắn <strong>nhiều tài khoản tập hợp</strong> — toàn bộ được cộng gộp rồi mới tham gia công thức, không tách riêng theo từng tài khoản.</p>
+  </div>
+
+  <h3>Ví dụ BR2 — kỳ 03/2026</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Đối tượng</th><th class="num">Chi phí NVL (621)</th><th class="num">Chi phí NC (622)</th><th class="num">Chi phí SXC (627)</th></tr></thead>
+    <tbody>
+      <tr><td>PX-A · trực tiếp</td><td class="num">120.000.000</td><td class="num">90.000.000 − 10.000.000</td><td class="num">50.000.000</td></tr>
+      <tr><td>PX-A · phân bổ từ bước 5</td><td class="num">30.000.000</td><td class="num">0</td><td class="num">0</td></tr>
+      <tr><td><b>PX-A · tổng phát sinh</b></td><td class="num"><b>150.000.000</b></td><td class="num"><b>80.000.000</b></td><td class="num"><b>50.000.000</b></td></tr>
+      <tr><td><b>PX-B · tổng phát sinh</b></td><td class="num"><b>80.000.000</b></td><td class="num"><b>0</b></td><td class="num"><b>0</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Phát sinh Có lớn hơn phát sinh Nợ cho ra <strong>chi phí âm</strong> — đó là điều chỉnh giảm hợp lệ, không phải lỗi dữ liệu; công thức lấy đúng hiệu số như ví dụ dòng PX-A · nhân công.</p>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — BR3 mục 3</span>
+  <h2>Giá trị dở dang cuối kỳ: ba phương pháp, ba công thức</h2>
+  <p class="lede">Dở dang cuối kỳ ở đây là <strong>của cả phân xưởng</strong>, bằng tổng dở dang của các sản phẩm thuộc phân xưởng đó. Công thức nào được dùng là do <span class="f">KyTinhGiaThanh.PhuongPhapDanhGiaDoDang</span> quyết định, và mỗi yếu tố chi phí chạy độc lập một lần.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    M{"PhuongPhapDanhGiaDoDang"} -- "Sản phẩm hoàn thành tương đương" --> A1["SL tương đương<br/>= SL dở dang × tỷ lệ hoàn thành<br/>Hệ số đơn vị = (DDĐK + PS)<br/>chia (Σ SL tương đương<br/>+ Σ SL nhập kho)<br/>DDCK = Σ SL tương đương × hệ số<br/>áp cho cả ba yếu tố"]
+    M -- "Nguyên vật liệu trực tiếp" --> A2["Chỉ tính DDCK cho yếu tố NVL<br/>dùng SL dở dang KHÔNG quy đổi<br/>Nhân công và SX chung: DDCK = 0"]
+    M -- "Định mức giá thành" --> A3["DDCK yếu tố = Σ (SL dở dang<br/>× định mức yếu tố của sản phẩm)<br/>không dùng hệ số đơn vị"]
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class A1,A2,A3 ok;
+</pre>
+    </div>
+    <figcaption><b>Định mức lấy theo từng sản phẩm.</b> <span class="f">ChiTietDoDangCuoiKy.DinhMucNVL</span>, <span class="f">DinhMucNhanCong</span>, <span class="f">DinhMucSXChung</span> đọc từ khai báo dở dang cuối kỳ của đúng sản phẩm đang tính — không phải hằng số toàn hệ thống. Toàn bộ chi phí phát sinh của một yếu tố đều tham gia tính dở dang cuối kỳ của chính yếu tố đó.</figcaption>
+  </figure>
+
+  <h3>Mẫu số bằng 0 — nơi công thức có thể vỡ</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A{"Mẫu số phân bổ<br/>Σ SL tương đương + Σ SL nhập kho"} -- "Lớn hơn 0" --> D["Chạy công thức chuẩn BR3"]:::ok
+    A -- "Bằng 0" --> B["DỪNG tiến trình tính<br/>MSG_303 · giữ nguyên kết quả cũ"]:::err
+    D --> E{"Sản phẩm có SL nhập kho = 0<br/>nhưng SL dở dang lớn hơn 0?"}
+    E -- Có --> F["Tỷ lệ phân bổ = 0<br/>Bỏ qua giá thành đơn vị<br/>Toàn bộ chi phí dồn vào DDCK<br/>Không lên lưới kết quả"]:::warn
+    E -- Không --> G["Sản phẩm lên lưới đầy đủ"]:::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Mẫu số bằng 0 là lỗi chặn, không phải bỏ qua.</b> BR3 nói thẳng: mẫu số của công thức phân bổ bằng 0 thì hệ thống <em>dừng tiến trình tính toán</em> và bật <span class="chip c-msg">MSG_303</span>. Còn sản phẩm riêng lẻ không có nhập kho thì chỉ bị loại khỏi lưới, không làm hỏng cả lần chạy.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — BR3 · BR4 · BR5</span>
+  <h2>Sáu bước của công thức, chạy đúng theo thứ tự này</h2>
+  <p class="lede">Xương sống của epic, lấy nguyên trình tự từ Activity Diagram. Điểm khác biệt của phương pháp hệ số, tỷ lệ nằm ở bước 3 và bước 4: <strong>tổng giá thành ra ở cấp phân xưởng trước</strong>, rồi mới nhân với tỷ lệ phân bổ để xuống từng sản phẩm.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S1["<b>Bước 1</b> Tập hợp chi phí phát sinh<br/>theo yếu tố · theo phân xưởng<br/>BR2"] --> S2["<b>Bước 2</b> Tính giá trị<br/>dở dang cuối kỳ theo yếu tố<br/>BR3 mục 3"]
+    S2 --> S3["<b>Bước 3</b> Tổng giá thành phân xưởng<br/>= DDĐK + Phát sinh − DDCK<br/>tính riêng từng yếu tố"]
+    S3 --> S4["<b>Bước 4</b> Tỷ lệ phân bổ giá thành<br/>của từng sản phẩm — bước 6 cấp"]
+    S4 --> S5["<b>Bước 5</b> Tổng giá thành sản phẩm<br/>= tổng giá thành phân xưởng<br/>× tỷ lệ phân bổ · BR4"]
+    S5 --> S6["<b>Bước 6</b> Giá thành đơn vị<br/>= tổng giá thành sản phẩm<br/>chia SL nhập kho · BR5"]:::ok
+    S3 -.-> N1["Ba yếu tố NVL · NC · SXC<br/>chạy độc lập, cùng công thức"]
+    S5 -.-> N2["Chi phí từng yếu tố của sản phẩm<br/>cũng nhân cùng tỷ lệ phân bổ"]
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Một tỷ lệ dùng cho cả bốn con số.</b> Tỷ lệ phân bổ của sản phẩm được nhân vào <em>từng yếu tố</em> — <span class="f">ChiPhiNVL</span>, <span class="f">ChiPhiNhanCong</span>, <span class="f">ChiPhiSXChung</span> — chứ không chỉ nhân vào tổng, nhờ vậy cộng ngược ba yếu tố của sản phẩm luôn ra <span class="f">TongChiPhi</span> của chính nó.</figcaption>
+  </figure>
+
+  <h3>Ví dụ BR3 — Phân xưởng A, kỳ có ba sản phẩm</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Bước</th><th>Phép tính</th><th class="num">Kết quả</th></tr></thead>
+    <tbody>
+      <tr><td>Tổng SL dở dang tương đương</td><td class="mono">80×50% + 60×40% + 60×60%</td><td class="num">100</td></tr>
+      <tr><td>Tổng SL nhập kho</td><td class="mono">500 + 300 + 200</td><td class="num">1.000</td></tr>
+      <tr><td>Hệ số đơn vị NVL</td><td class="mono">(30 + 150) / 1.100</td><td class="num">0,1636</td></tr>
+      <tr><td>Hệ số đơn vị NC</td><td class="mono">(20 + 80) / 1.100</td><td class="num">0,0909</td></tr>
+      <tr><td>Hệ số đơn vị SXC</td><td class="mono">(20 + 50) / 1.100</td><td class="num">0,0636</td></tr>
+      <tr><td>DDCK ba yếu tố</td><td class="mono">100 × hệ số đơn vị</td><td class="num">16,36 · 9,09 · 6,36 tr</td></tr>
+      <tr><td>Tổng giá thành PX theo yếu tố</td><td class="mono">DDĐK + PS − DDCK</td><td class="num">163,64 · 90,91 · 63,64 tr</td></tr>
+      <tr><td><b>Tổng giá thành phân xưởng</b></td><td class="mono">163,64 + 90,91 + 63,64</td><td class="num"><b>318,19 tr</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Số liệu trung gian <strong>giữ đầy đủ không làm tròn</strong> trong DB; chỉ làm tròn khi hiển thị, theo cấu hình chung hoặc mặc định Commercial Rounding 2 chữ số <span class="chip c-br">BR7</span>.</p>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — BR3 mục 4</span>
+  <h2>Tỷ lệ phân bổ giá thành và quy tắc khớp n−1</h2>
+  <p class="lede">Bước 7 <strong>không tự nghĩ ra tỷ lệ</strong>. Cả phương pháp hệ số lẫn phương pháp tỷ lệ đều lấy tỷ lệ phân bổ đã chốt ở bước 6 — Xác định hệ số, tỷ lệ (epic PMKT-E-08667) — rồi nhân xuống. Phần lẻ do làm tròn được xử lý bằng công thức khớp, không để trôi.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    K["Bước 6 · Xác định hệ số, tỷ lệ<br/>cost_thiet_lap_he_so_ty_le"] --> M{"Phương pháp của kỳ"}
+    M -- "Hệ số" --> H["Tỷ lệ phân bổ theo hệ số<br/>công thức tại BR3 của<br/>PMKT-E-08667"]
+    M -- "Tỷ lệ" --> T["Tỷ lệ phân bổ theo tỷ lệ<br/>công thức tại BR4 của<br/>PMKT-E-08667"]
+    H --> U["Bước 7 chỉ tiêu thụ tỷ lệ<br/>không tính lại tỷ lệ"]:::ok
+    T --> U
+    U --> V["Tổng giá thành sản phẩm<br/>= tổng giá thành phân xưởng<br/>× tỷ lệ phân bổ"]:::ok
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Hai phương pháp chỉ khác nhau ở nguồn tỷ lệ.</b> Từ lúc có tỷ lệ trở đi, chuỗi tính của phương pháp hệ số và phương pháp tỷ lệ là <em>một</em>: cùng nhân vào tổng giá thành phân xưởng, cùng nhân vào từng yếu tố chi phí, cùng chịu quy tắc khớp n−1.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Nhóm n sản phẩm của một phân xưởng"] --> B["Sắp xếp cố định<br/>DoiTuongTapHopChiPhi.Code tăng dần<br/>rồi VatTu.Code tăng dần"]
+    B --> C["n−1 sản phẩm đầu:<br/>dùng công thức tỷ lệ phân bổ"]
+    C --> D["Sản phẩm thứ n:<br/>= tổng cả nhóm − tổng n−1 đã tính"]:::ok
+    D --> E{"Cộng ngược có khớp<br/>tổng của phân xưởng?"}
+    E -- Khớp --> F["Không còn sai số làm tròn"]:::ok
+    E -- "Không khớp" --> G["Sai thứ tự sắp xếp<br/>hoặc sai vòng làm tròn"]:::err
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Thứ tự sắp xếp là một phần của công thức.</b> Đổi thứ tự thì sản phẩm thứ n đổi theo, số của từng sản phẩm cũng đổi — và lần Tính lại sẽ ra kết quả khác lần trước, làm dry-run ở mục 02 báo lệch giả. BA chốt cứng: mã đối tượng tập hợp chi phí trước, mã vật tư sau, cùng tăng dần theo alphabet.</figcaption>
+  </figure>
+
+  <h3>Ví dụ phương pháp hệ số — cùng bộ số của mục 07</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Sản phẩm</th><th class="num">SL nhập kho</th><th class="num">Hệ số</th><th class="num">SL × hệ số</th><th class="num">Tỷ lệ phân bổ</th><th class="num">Tổng giá thành</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">SP001</td><td class="num">500</td><td class="num">1,0</td><td class="num">500</td><td class="num">45,05%</td><td class="num">143,34 tr</td></tr>
+      <tr><td class="mono">SP002</td><td class="num">300</td><td class="num">1,5</td><td class="num">450</td><td class="num">40,54%</td><td class="num">129,00 tr</td></tr>
+      <tr><td class="mono">SP003 <span class="chip c-warn">thứ n</span></td><td class="num">200</td><td class="num">0,8</td><td class="num">160</td><td class="num">14,41%</td><td class="num">45,85 tr</td></tr>
+      <tr><td><b>Cộng</b></td><td class="num"><b>1.000</b></td><td class="num">—</td><td class="num"><b>1.110</b></td><td class="num"><b>100%</b></td><td class="num"><b>318,19 tr</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>SP003 là đối tượng thứ n: cả <em>tỷ lệ</em> lẫn <em>tổng giá thành</em> lẫn <em>từng yếu tố chi phí</em> của nó đều lấy bằng hiệu — ví dụ chi phí NVL của SP003 = 163,64 − (73,72 + 66,34) = 23,58 triệu.</p>
+
+  <div class="note">
+    <span class="lbl">Điểm tài liệu chưa thống nhất</span>
+    <p>BR3 nói tỷ lệ phân bổ <strong>lấy từ bước 6</strong>, nhưng ví dụ minh họa lại tự tính lại tỷ lệ ngay trong bước 7 theo <span class="f">SL nhập kho × hệ số / Σ</span>. Trang này giữ nguyên cả hai như tài liệu, không tự chọn: khi triển khai cần BA chốt bước 7 đọc tỷ lệ đã lưu hay tính lại tại chỗ.</p>
+  </div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — BR5</span>
+  <h2>Giá thành đơn vị: phép chia cuối cùng</h2>
+  <p class="lede">Chỉ sản phẩm thật sự có nhập kho mới có giá thành đơn vị. Sản phẩm còn lại vẫn được tính chi phí nhưng toàn bộ đi vào dở dang cuối kỳ và biến mất khỏi lưới.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Tổng giá thành của sản phẩm"] --> B{"SoLuongNhapKho = 0?"}
+    B -- Có --> B1["Bỏ qua giá thành đơn vị<br/>chi phí dồn vào dở dang cuối kỳ<br/>sản phẩm không lên lưới"]:::warn
+    B -- Không --> C["GiaThanh = TongChiPhi<br/>chia SoLuongNhapKho"]:::ok
+    C --> D["Lưu đầy đủ vào DB<br/>làm tròn khi hiển thị · BR7"]:::ok
+    D --> E["Ví dụ: 143,34 tr / 500<br/>= 286.680 đồng"]
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Bốn trường tiền của một dòng lưới.</b> <span class="f">ChiPhiNVL</span>, <span class="f">ChiPhiNhanCong</span>, <span class="f">ChiPhiSXChung</span> cộng lại đúng bằng <span class="f">TongChiPhi</span> <span class="chip c-br">BR4</span>; <span class="f">GiaThanh</span> là <span class="f">TongChiPhi</span> chia sản lượng <span class="chip c-br">BR5</span>. Cộng dọc cả nhóm sản phẩm phải khớp lại số của phân xưởng <span class="chip c-br">BR6</span>.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — UC PMKT-U-08833 hậu điều kiện</span>
+  <h2>Kết quả ghi xuống đâu và thông báo nào bật lên</h2>
+  <p class="lede">Một lần tính thành công chạm vào ba bảng trong <strong>một giao dịch duy nhất</strong>. Hỏng ở bất kỳ đâu thì không bảng nào đổi — người dùng vẫn thấy đúng kết quả của lần chạy thành công gần nhất.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Chạy hết sáu bước công thức"] --> B{"Có lỗi không?"}
+    B -- "Lỗi công thức · dữ liệu" --> E1["MSG_303 · dừng<br/>không áp dụng kết quả mới"]:::err
+    B -- "Lỗi hệ thống" --> E2["MSG_202 khi tính<br/>MSG_302 khi tính lại"]:::err
+    B -- Sạch --> C["Một giao dịch database duy nhất"]
+    C --> D1["cost_gia_thanh_san_pham<br/>Tính lần đầu: tạo mới<br/>Tính lại: cập nhật đè"]:::ok
+    C --> D2["cost_do_dang_cuoi_ky<br/>cập nhật giá trị theo yếu tố<br/>và theo đối tượng tập hợp"]:::ok
+    C --> D3["cost_ky_tinh_gia_thanh<br/>ThoiDiemTinhGanNhat<br/>Chưa thực hiện → Đang thực hiện"]:::ok
+    D1 --> M{"Bấm nút nào?"}
+    M -- "Tính giá thành" --> M1["MSG_201 · thành công"]:::ok
+    M -- "Tính lại" --> M2["MSG_301 · thành công"]:::ok
+    M1 --> R["Refresh lưới kết quả"]
+    M2 --> R
+    E1 --> K["Giữ nguyên kết quả và dở dang<br/>của lần chạy thành công gần nhất"]:::warn
+    E2 --> K
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Tất cả hoặc không gì cả.</b> Acceptance criteria ghi rõ: mọi thao tác tính toán phải thành công, hoặc dữ liệu hiện có không thay đổi. Trạng thái kỳ chỉ nhảy sang <em>Đang thực hiện</em> khi lần tính đầu tiên thành công.</figcaption>
+  </figure>
+
+  <h3>Nội dung cập nhật xuống dở dang cuối kỳ</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th>Giá trị cập nhật</th></tr></thead>
+    <tbody>
+      <tr><td>Yếu tố chi phí</td><td>NVL · Nhân công · SX chung</td></tr>
+      <tr><td>Đối tượng tập hợp chi phí</td><td>Phân xưởng / Quy trình sản xuất / Nhóm sản phẩm</td></tr>
+      <tr><td>Giá trị dở dang cuối kỳ</td><td>Giá trị đã tính ở bước 2 của công thức, theo từng yếu tố</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Entity bị chạm theo use case</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Entity</th><th>Xem danh sách</th><th>Tính giá thành</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">cost_gia_thanh_san_pham</td><td>R</td><td>R · C · U</td></tr>
+      <tr><td class="mono">cost_do_dang_dau_ky</td><td>—</td><td>R</td></tr>
+      <tr><td class="mono">cost_phan_bo_chi_phi</td><td>—</td><td>R</td></tr>
+      <tr><td class="mono">cost_phan_bo_chi_phi_chi_tiet</td><td>—</td><td>R</td></tr>
+      <tr><td class="mono">cost_thiet_lap_he_so_ty_le</td><td>—</td><td>R</td></tr>
+      <tr><td class="mono">cost_do_dang_cuoi_ky</td><td>—</td><td>U</td></tr>
+      <tr><td class="mono">cost_ky_tinh_gia_thanh</td><td>R</td><td>R · U</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Không có thao tác <strong>D</strong> nào trong epic: tính lại là <em>cập nhật đè</em>, không xóa rồi tạo lại — nên <span class="chip c-br">BR29</span> chính sách xóa dữ liệu không phát sinh nghĩa vụ nào ở đây. Cũng không có nút Thêm · Sửa · Xóa thủ công trên lưới; mọi bản ghi đều do máy sinh.</p>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — Đối chiếu</span>
+  <h2>Khác gì chuỗi tính giá thành thường</h2>
+  <p class="lede">Chuỗi giá thành trực tiếp (<span class="f">PMKT-E-05938</span>) gom chi phí thẳng về từng sản phẩm. Chuỗi hệ số, tỷ lệ chèn thêm một tầng: chi phí về phân xưởng trước, xuống sản phẩm sau — và chính tầng đó kéo theo mọi khác biệt còn lại.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Điểm</th><th>Chuỗi giá thành trực tiếp</th><th>Chuỗi hệ số, tỷ lệ — epic này</th></tr></thead>
+    <tbody>
+      <tr><td>Số bước</td><td>7 bước</td><td><b>8 bước</b> — thêm bước 6 Xác định hệ số, tỷ lệ</td></tr>
+      <tr><td>Vị trí bước tính</td><td>Bước 6/7</td><td><b>Bước 7/8</b></td></tr>
+      <tr><td>Cấp tập hợp chi phí</td><td class="mono">DoiTuongTapHopChiPhiID<br>= sản phẩm</td><td class="mono">DoiTuongTapHopChiPhiID<br>= phân xưởng · quy trình SX · nhóm SP</td></tr>
+      <tr><td>Cấp tính dở dang cuối kỳ</td><td>Theo sản phẩm</td><td>Theo <b>phân xưởng</b>, bằng tổng dở dang các sản phẩm thuộc phân xưởng</td></tr>
+      <tr><td>Đường xuống sản phẩm</td><td>Không cần — công thức đã ra thẳng số của sản phẩm</td><td><b>Nhân tỷ lệ phân bổ giá thành</b> lấy từ bước 6</td></tr>
+      <tr><td>Xử lý sai số làm tròn</td><td>Dồn dư vào sản phẩm có sản lượng lớn nhất</td><td><b>Công thức khớp n−1</b> với thứ tự sắp xếp chốt cứng</td></tr>
+      <tr><td>Mẫu số phân bổ bằng 0</td><td>Phân nhánh theo việc còn chi phí hay không</td><td><b>Dừng tiến trình</b> · <span class="chip c-msg">MSG_303</span> trong mọi trường hợp</td></tr>
+      <tr><td>Thông báo thành công</td><td>Ba mã theo dữ liệu của kỳ</td><td>Hai mã theo nút bấm: <span class="chip c-msg">201</span> tính · <span class="chip c-msg">301</span> tính lại</td></tr>
+      <tr><td>Mã quyền</td><td class="mono">GTTT.AllPermission</td><td class="mono">GTHeSoTyLe.AllPermission</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Hệ quả khi code</span>
+    <p>Vì chi phí gom ở cấp phân xưởng, mọi phép chia trong epic này đều có mẫu số <strong>cộng dồn toàn phân xưởng</strong> — tổng số lượng dở dang tương đương và tổng sản lượng nhập kho của <em>tất cả</em> sản phẩm thuộc phân xưởng, không phải của riêng sản phẩm đang xét. Đây là lỗi hay gặp nhất khi bê công thức từ chuỗi trực tiếp sang.</p>
+  </div>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — Tra cứu</span>
+  <h2>Điều kiện chặn, thông báo tương ứng và quyền</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> và <em>cảnh báo</em> trong các sơ đồ trên. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-08671_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện</th><th class="mono">Mã</th><th>Loại</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="4">Tính giá thành<br>và Tính lại</td><td>Chưa có cấu hình giá thành — TK tập hợp, yếu tố chi phí</td><td class="mono">203</td><td>Error</td></tr>
+      <tr><td>Không có nhập kho thành phẩm <b>và</b> không có dở dang cuối kỳ</td><td class="mono">204</td><td>Error</td></tr>
+      <tr><td>Kỳ tính giá thành đã hoàn thành — kết chuyển đã ghi sổ</td><td class="mono">305</td><td>Error</td></tr>
+      <tr><td>Lỗi công thức — mẫu số bằng 0, dữ liệu đầu vào không hợp lệ</td><td class="mono">303</td><td>Error</td></tr>
+      <tr><td>Tính giá thành</td><td>Lỗi hệ thống không xác định nguyên nhân</td><td class="mono">202</td><td>Error</td></tr>
+      <tr><td rowspan="2">Tính lại</td><td>Lỗi khi tính lại</td><td class="mono">302</td><td>Error</td></tr>
+      <tr><td>Dữ liệu tiền đề thay đổi sau lần tính gần nhất — card TB2</td><td class="mono">005</td><td>Warning</td></tr>
+      <tr><td rowspan="3">Xem danh sách</td><td>Chưa tính giá thành lần nào cho kỳ — card TB1</td><td class="mono">004</td><td>Info</td></tr>
+      <tr><td>Danh sách trống hoặc tìm kiếm không ra kết quả</td><td class="mono">001</td><td>Info</td></tr>
+      <tr><td>Không có quyền truy cập</td><td class="mono">002</td><td>Error</td></tr>
+      <tr><td rowspan="2">Thành công</td><td>Tính giá thành lần đầu</td><td class="mono">201</td><td>Success</td></tr>
+      <tr><td>Tính lại giá thành</td><td class="mono">301</td><td>Success</td></tr>
+      <tr><td>Mọi màn</td><td>Lỗi hệ thống chung</td><td class="mono">003</td><td>Error</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p><span class="chip c-msg">303</span> dùng khi <b>xác định được</b> nguyên nhân từ công thức; <span class="chip c-msg">202</span> dùng khi không xác định được — lỗi database, timeout, exception không lường trước.</p>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Vai trò</th><th>Mở khóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">GTHeSoTyLe.AllPermission</td><td>Người dùng</td><td>Vào màn danh sách kết quả tính giá thành</td></tr>
+      <tr><td class="mono">GTHeSoTyLe.AllPermission</td><td>Kế toán giá thành<br><span class="f">UC_KT_GIATHANH</span></td><td>Nút Tính giá thành · nút Tính lại</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Epic dùng <strong>một mã quyền duy nhất</strong> cho cả xem lẫn tính — không tách View / Create / Edit như các epic chứng từ. Không có quyền thì <em>ẩn</em> chức năng theo <span class="chip c-br">BR25</span>, và API vẫn phải chặn độc lập với <span class="chip c-msg">MSG_002</span>.</p>
+
+  <div class="note">
+    <span class="lbl">Điểm tài liệu BA chưa quy định</span>
+    <p>Bốn chỗ trang này cố ý <strong>không vẽ</strong> vì BA chưa nói rõ: cách xử lý khi hai người dùng cùng tính trên một kỳ (epic không có mã MSG cho tình huống này); cách hiển thị danh sách sản phẩm bị lỗi kèm <span class="chip c-msg">MSG_303</span>; công thức tính tỷ lệ phân bổ của phương pháp hệ số và phương pháp tỷ lệ (nằm ở epic PMKT-E-08667, chỉ được tham chiếu chứ không nhắc lại); và mâu thuẫn giữa BR3 với ví dụ về việc bước 7 đọc tỷ lệ đã lưu hay tính lại tại chỗ — xem mục 08.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-08671 · Tính giá thành hệ số, tỷ lệ</span>
+  <span>Dựng từ 2 UC · 2 Activity Diagram · 1 màn hình · BR1–BR12</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

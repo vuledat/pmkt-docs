@@ -1,0 +1,904 @@
+<title>Luồng Kiểm kê TSCĐ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-02588 · Phân hệ Tài sản cố định</p>
+  <h1>Luồng xử lý Kiểm kê TSCĐ</h1>
+  <p>Toàn bộ vòng đời một biên bản kiểm kê tài sản cố định — từ lập phiếu và sinh số phiếu, nạp danh sách TSCĐ theo bộ lọc đơn vị, nhập kết quả kiểm đếm thực tế, đối chiếu chênh lệch, xử lý tài sản bị Mất bằng chức năng Ghi giảm, cho tới chỉnh sửa và xóa mềm. Mỗi sơ đồ bám đúng Activity Diagram và BR trong bộ tài liệu BA.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 4 use case · 4 AD · 5 màn hình · 30 mã MSG</span>
+    <span><b>Entity gốc:</b> fa_kiem_ke_tai_san_co_dinh</span>
+    <span><b>Quyền:</b> KiemKeTSCD.*</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Bản đồ vòng đời</a></li>
+    <li><a href="#s1"><span>01</span>Xem danh sách</a></li>
+    <li><a href="#s2"><span>02</span>Bảng chi tiết dưới lưới</a></li>
+    <li><a href="#s3"><span>03</span>Thêm mới — nhập liệu</a></li>
+    <li><a href="#s4"><span>04</span>Nạp tài sản theo bộ lọc</a></li>
+    <li><a href="#s5"><span>05</span>Nhập số thực tế</a></li>
+    <li><a href="#s6"><span>06</span>Chuỗi validate khi lưu</a></li>
+    <li><a href="#s7"><span>07</span>Chuỗi ghi dữ liệu</a></li>
+    <li><a href="#s8"><span>08</span>Xử lý chênh lệch</a></li>
+    <li><a href="#s9"><span>09</span>Chỉnh sửa</a></li>
+    <li><a href="#s10"><span>10</span>Xóa</a></li>
+    <li><a href="#s11"><span>11</span>Xem chi tiết &amp; ba mode</a></li>
+    <li><a href="#s12"><span>12</span>Quan hệ dữ liệu</a></li>
+    <li><a href="#s13"><span>13</span>Tra cứu &amp; khoảng trống</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Bản đồ vòng đời một biên bản kiểm kê</h2>
+  <p class="lede">Biên bản kiểm kê <strong>không có trạng thái ghi sổ</strong> — tài liệu BA không khai báo trường trạng thái chứng từ nào cho entity này. Thứ gác thao tác không phải trạng thái, mà là <em>quyền</em> và <em>tuổi của bản ghi tính từ ngày lập</em>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(( )) -- "Thêm mới — quyền Create" --> A
+    A["<b>ĐANG LẬP</b><br/>Popup Thêm mới<br/>Chưa có bản ghi trong DB"]
+    B["<b>ĐÃ LƯU</b><br/>3 bảng đã có bản ghi<br/>Xem · Sửa · Xóa đều mở"]
+    C["<b>QUÁ 10 NGÀY KỂ TỪ NGÀY LẬP</b><br/>Vẫn xem và sửa được<br/>Khóa xóa — MSG_116"]
+    D["<b>ĐÃ XÓA MỀM</b><br/>DaXoa = true<br/>Ẩn khỏi mọi danh sách"]
+    X["Đóng popup<br/>Không ghi bản ghi nào"]
+    A -- "Lưu hợp lệ — MSG_012" --> B
+    A -- "Hủy khi form dirty — BR3" --> X
+    B -- "Cập nhật — MSG_015" --> B
+    B -- "Đủ 10 ngày kể từ ngày lập" --> C
+    B -- "Xóa · đã xác nhận — MSG_003" --> D
+    C -. "không còn đường sang Đã xóa" .-> D
+
+    classDef st fill:#ffffff,stroke:#2f6f8f,color:#16202b;
+    classDef gone fill:#faf8f3,stroke:#cdc7b9,color:#6f6a61;
+    class A,B,C st;
+    class D,X gone;
+</pre>
+    </div>
+    <figcaption><b>Cửa sổ 10 ngày là bản lề duy nhất.</b> BR-KK01 tại <span class="f">SCR_DanhSachBienBanKiemKe</span> chặn xóa biên bản đã lập quá 10 ngày; tài liệu <em>không</em> đặt giới hạn thời gian tương tự cho thao tác Sửa, nên biên bản cũ vẫn sửa được.</figcaption>
+  </figure>
+
+  <h3>Ba entity của một biên bản</h3>
+  <p>Một biên bản kiểm kê luôn là bộ ba bản ghi. Ma trận CRUD cho thấy cả ba chịu chung một vòng đời: cùng C ở Thêm mới, cùng U ở Chỉnh sửa, cùng D ở Xóa.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Entity</th><th>Vai trò</th><th>Xem DS</th><th>Thêm</th><th>Sửa</th><th>Xóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">fa_kiem_ke_tai_san_co_dinh</td><td>Đầu biên bản: số phiếu, ngày, lý do, đơn vị QL</td><td>R</td><td>C</td><td>U</td><td>D</td></tr>
+      <tr><td class="mono">fa_kiem_ke_tai_san_co_dinh<br>_chi_tiet</td><td>Từng tài sản được kiểm: kiểm đếm, tình trạng</td><td>R</td><td>C</td><td>U</td><td>D</td></tr>
+      <tr><td class="mono">fa_thanh_vien_kiem_ke<br>_tai_san_co_dinh</td><td>Thành viên ban kiểm kê</td><td>R</td><td>C</td><td>U</td><td>D</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Vì sao không có mục Ghi sổ</span>
+    <p>Kiểm kê là nghiệp vụ <strong>ghi nhận hiện trạng</strong>, không phát sinh bút toán. Không UC, AD hay màn hình nào trong epic nhắc tới ghi sổ, bút toán hay sổ cái — nên <span class="chip c-br">BR12</span> <span class="chip c-br">BR33</span> <span class="chip c-br">BR36</span> <span class="chip c-br">BR42</span> không áp cho epic này. Việc điều chỉnh sổ sách được đẩy sang epic khác qua nút <em>Lưu và ghi giảm</em> — xem <a href="#s8">mục 08</a>.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — PMKT-U-02589</span>
+  <h2>Xem danh sách: hai lớp quyền trên cùng một lưới</h2>
+  <p class="lede">Màn <span class="f">SCR_DanhSachBienBanKiemKe</span> tách <strong>quyền vào màn</strong> và <strong>quyền xem chi tiết</strong> thành hai cổng riêng: <span class="f">KiemKeTSCD.View</span> mở lưới, còn <span class="f">KiemKeTSCD.View.Detail</span> mới mở được bảng thông tin chi tiết bên dưới.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A([Chọn menu Kiểm kê TSCĐ]) --> B{"Có quyền<br/>KiemKeTSCD.View?"}
+    B -- Không --> B1["MSG_007<br/>Quay về trang chủ"]:::err
+    B -- Có --> C["Đọc fa_kiem_ke_tai_san_co_dinh<br/>lọc DaXoa = false — BR29.1"]
+    C --> D{Có bản ghi nào?}
+    D -- Không --> D1["MSG_008 · MSG_010<br/>Danh sách trống"]:::warn
+    D -- Có --> E["Lưới 11 cột · mặc định 20 dòng<br/>BR1 phân trang · BR2 sắp xếp"]
+    E --> F1["Tìm kiếm: số phiếu<br/>đơn vị QL · người tạo — BR11"]
+    E --> F2["Cột Số phiếu là link<br/>mở màn Chi tiết"]
+    E --> F3["Cột Chức năng:<br/>Sửa · Xóa · Xem chi tiết"]
+    E --> F4["Click thân dòng<br/>mở bảng thông tin chi tiết"]
+    E --> F5["Thống kê đầu màn:<br/>tổng số · đã chọn<br/>có bất thường — MSG_011"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Không có nút Ghi sổ, không có gác theo trạng thái.</b> Bảng "Chức năng trên lưới" của màn danh sách ghi thẳng <em>"Chưa được mô tả trong tài liệu gốc"</em> cho điều kiện hiển thị và enable của cả ba nút Sửa · Xóa · Xem chi tiết — chỗ này phải chốt với PO/BA trước khi code.</figcaption>
+  </figure>
+
+  <h3>Mười một cột của lưới</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột</th><th>Nguồn / công thức</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td>STT</td><td>Đánh số liên tục qua các trang</td><td><span class="chip c-br">BR2</span></td></tr>
+      <tr><td>Số phiếu</td><td class="mono">SoPhieu</td><td>Text-hyperlink mở màn Chi tiết</td></tr>
+      <tr><td>Ngày kiểm kê</td><td class="mono">NgayKiemKe</td><td>Định dạng dd/mm/yyyy</td></tr>
+      <tr><td>Người tạo</td><td class="mono">NguoiTaoId</td><td>Trường hệ thống <span class="chip c-br">BR46</span></td></tr>
+      <tr><td>Đơn vị QL</td><td class="mono">TenPhongBan</td><td>Snapshot tên đơn vị đã lưu</td></tr>
+      <tr><td>Số TS kiểm kê</td><td>Tổng số tài sản theo sổ sách</td><td>Đếm dòng chi tiết</td></tr>
+      <tr><td>Còn</td><td>Số tài sản kiểm kê được</td><td>Đếm dòng có Kiểm đếm = Còn</td></tr>
+      <tr><td>Tốt · Kém · Hỏng · Không XĐ</td><td>Đếm theo <span class="f">TinhTrang</span></td><td>4 cột số riêng biệt</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Các cột số ở trên là dữ liệu số lượng nên lưới phải có dòng tổng cộng <span class="chip c-br">BR31</span>; các cột Đơn vị QL và người tạo là văn bản dài nên áp quy tắc cắt 2 dòng kèm tooltip <span class="chip c-br">BR44</span>.</p>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — SCR_DanhSachBienBanKiemKe</span>
+  <h2>Bảng thông tin chi tiết dưới lưới: click ở đâu thì được gì</h2>
+  <p class="lede">Cùng một dòng lưới có <strong>ba vùng click cho ba hành vi khác nhau</strong>. Nhầm vùng là lỗi hay gặp nhất khi dựng màn này, vì cột Số phiếu và cột Chức năng đều nằm trong dòng nhưng không bật bảng chi tiết.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A([Người dùng click trong một dòng lưới]) --> B{Vùng click nào?}
+    B -- "Cột Số phiếu" --> B1["Điều hướng màn Chi tiết<br/>KHÔNG bật/tắt bảng chi tiết"]
+    B -- "Icon Xem ở cột Chức năng" --> B1
+    B -- "Icon Sửa · Xóa" --> B2["Chỉ chạy đúng chức năng đó<br/>Biên bản đang chọn giữ nguyên"]
+    B -- "Phần thân dòng còn lại" --> C{"Có quyền<br/>KiemKeTSCD.View.Detail?"}
+    C -- Không --> C1["Không chọn dòng<br/>Không tải dữ liệu chi tiết<br/>MSG_007"]:::err
+    C -- Có --> D["Đánh dấu dòng được chọn<br/>Mở bảng thông tin chi tiết"]
+    D --> E1["Tab Tài sản kiểm kê<br/>9 cột · chỉ xem"]
+    D --> E2["Tab Thành viên ban kiểm kê<br/>5 cột · chỉ xem"]
+    D --> E3["Tab Đính kèm — chỉ xem<br/>không hiện thao tác thêm/xóa file"]
+    E1 --> F["Dòng tổng: Nguyên giá · GTCL<br/>và HMLK — BR31<br/>Phân trang riêng 20 dòng — BR1"]
+    D --> G["Góc phải hiện Số phiếu<br/>của biên bản đang chọn"]
+    D -.-> H["Chọn dòng khác<br/>bảng tải lại theo biên bản mới"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Mặc định bảng chi tiết không hiển thị.</b> Khi chưa chọn bản ghi nào, vùng dưới lưới trống; chỉ thao tác click vào thân dòng — kèm quyền <span class="f">View.Detail</span> — mới mở bảng. Thiếu quyền thì hệ thống <em>không</em> chọn dòng, chứ không phải chọn rồi báo lỗi.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — PMKT-U-02590</span>
+  <h2>Thêm mới: chuỗi nhập liệu và cổng sinh số phiếu</h2>
+  <p class="lede">Popup <span class="f">SCR_ThemMoiBienBanKiemKe</span> mở ra là hệ thống đã sinh sẵn Số phiếu. Ô này enable hay disable <strong>không do màn quyết định</strong>, mà do cấu hình đánh số của loại chứng từ Kiểm kê TSCĐ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A([Bấm Thêm mới trên màn Danh sách]) --> B{"Có quyền<br/>KiemKeTSCD.Create?"}
+    B -- Không --> B1["Nút Thêm mới bị ẩn — BR25.2<br/>Vào bằng URL thì MSG_007"]:::err
+    B -- Có --> C["Mở popup Thêm mới biên bản kiểm kê"]
+    C --> D["Tra cfg_quy_tac_danh_so theo<br/>LoaiChungTuId = Kiểm kê TSCĐ<br/>Sinh SoPhieu — BR-KK00"]
+    D --> D1{"ChoPhepSuaSo = true?"}
+    D1 -- Có --> D2["Ô Số phiếu enable<br/>tối đa 50 ký tự — BR20"]
+    D1 -- Không --> D3["Ô Số phiếu disable<br/>giữ số hệ thống cấp"]
+    D2 --> E
+    D3 --> E["Nhập thông tin chung:<br/>Ngày KK · Lý do · Đơn vị QL · Nội dung"]
+    E --> F["Bảng 1 — Danh sách tài sản<br/>chọn Mã TS qua combogrid"]
+    F --> G["Đặt Kiểm đếm và Tình trạng<br/>cho từng dòng tài sản"]
+    G --> H["Bảng 2 — Ban kiểm kê<br/>bấm Thêm thành viên để chèn dòng"]
+    H --> I([Bấm Lưu hoặc Lưu và ghi giảm])
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Không hard-code tiền tố số phiếu.</b> BR-KK00 quy định thành phần ngày và mốc reset bộ đếm lấy theo <em>Ngày kiểm kê</em>, không phải ngày hệ thống — đổi Ngày kiểm kê có thể đổi cả nhóm reset của số phiếu.</figcaption>
+  </figure>
+
+  <h3>Năm trường thông tin chung</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th>Control</th><th>Max</th><th>Bắt buộc</th><th class="mono">Field</th></tr></thead>
+    <tbody>
+      <tr><td>Số phiếu</td><td>TextField</td><td class="num">50</td><td>Có</td><td class="mono">SoPhieu</td></tr>
+      <tr><td>Ngày kiểm kê</td><td>DatePicker</td><td>—</td><td>Có</td><td class="mono">NgayKiemKe</td></tr>
+      <tr><td>Lý do kiểm kê</td><td>TextArea</td><td class="num">500</td><td>Có — tối thiểu 10 ký tự</td><td class="mono">NoiDungKiemKe</td></tr>
+      <tr><td>Đơn vị QL</td><td>MultiSelectSearch</td><td>—</td><td>Có — ít nhất 1 đơn vị</td><td class="mono">PhongBanId</td></tr>
+      <tr><td>Nội dung kiểm kê</td><td>TextArea</td><td class="num">500</td><td>Không</td><td class="mono">DienGiai</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Ô nhập chặn cứng tại maxLength, dán quá thì cắt phần dư và <em>không</em> báo lỗi <span class="chip c-br">BR14.4</span>; khoảng trắng đầu/cuối bị trim trước khi validate bắt buộc và trước khi so trùng số phiếu <span class="chip c-br">BR43</span>.</p>
+
+  <div class="note stop">
+    <span class="lbl">Tài liệu chưa quy định</span>
+    <p>Bảng <em>Chức năng</em> của cả hai popup Thêm mới và Chỉnh sửa chỉ liệt kê <span class="f">Thêm thành viên · Lưu · Lưu và ghi giảm</span> — <strong>không có nút Hủy/Đóng</strong>, trong khi UC và AD đều mô tả nhánh "Click Hủy" kèm popup xác nhận dirty. Trang này vẽ theo UC/AD; tài liệu màn hình cần bổ sung nút cho khớp <span class="chip c-br">BR3</span> <span class="chip c-br">BR13.2</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — BR-KK02 · BR-KK03 · BR-KK05 · BR-KK11</span>
+  <h2>Nạp tài sản: bộ lọc đơn vị đồng bộ hai chiều với lưới</h2>
+  <p class="lede">Trường <em>Đơn vị QL</em> vừa là dữ liệu của biên bản vừa là bộ lọc của combogrid chọn tài sản. Quan hệ này <strong>hai chiều</strong>: thêm tài sản lạ đơn vị thì trường tự nở ra, xóa hết tài sản của một đơn vị thì trường tự co lại.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Trường Đơn vị QL<br/>nguồn mst_don_vi"] --> A1["Chỉ liệt kê đơn vị người dùng<br/>được phép truy cập — BR25.1"]
+    A1 --> B["Combogrid Mã TS chỉ nạp<br/>tài sản thuộc đơn vị đã chọn<br/>BR-KK02"]
+    B --> B1["Ẩn tài sản đã ghi giảm<br/>BR-KK11"]
+    B1 --> C([Chọn một tài sản])
+    C --> D{Tài sản đã có trong lưới?}
+    D -- Có --> D1["Chặn thêm trùng — BR-KK03"]:::err
+    D -- Không --> E{"Tài sản đã ghi giảm mà vẫn<br/>gửi lên bằng đường khác?"}
+    E -- Có --> E1["Chặn thêm và chặn lưu<br/>MSG_115"]:::err
+    E -- Không --> F["Chèn dòng · JOIN lấy read-only:<br/>Tên TS · Đơn vị QL · Nguyên giá<br/>HMLK · Giá trị còn lại"]
+    F --> G{"Đơn vị của tài sản có sẵn<br/>trong trường Đơn vị QL?"}
+    G -- Có --> H([Dòng sẵn sàng nhập kiểm đếm])
+    G -- Không --> G1["Tự thêm đơn vị đó vào<br/>trường Đơn vị QL — BR-KK05"]:::warn
+    G1 --> H
+    H -.-> I["Xóa hết tài sản của một đơn vị<br/>tự gỡ đơn vị khỏi trường<br/>BR-KK05"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Chỉ lưu khóa, không lưu lặp.</b> Dòng chi tiết chỉ ghi <span class="f">TaiSanCoDinhId</span>; Tên tài sản, Đơn vị QL, Nguyên giá, HMLK và Giá trị còn lại luôn đọc qua JOIN sang <span class="f">fa_tai_san_co_dinh</span> tại thời điểm hiển thị.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Khác biệt giữa hai chiều đồng bộ</span>
+    <p>Chiều <em>nở ra</em> (thêm tài sản lạ đơn vị thì thêm đơn vị vào trường) được cả <span class="f">SCR_ThemMoiBienBanKiemKe</span> và <span class="f">SCR_ChinhSuaBienBanKiemKe</span> quy định. Chiều <em>co lại</em> (bỏ đơn vị khi không còn tài sản nào) chỉ được ghi ở màn Thêm mới; màn Chỉnh sửa không nhắc lại. Cần BA xác nhận có áp cho màn Chỉnh sửa hay không.</p>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — Bảng 1: Danh sách tài sản</span>
+  <h2>Nhập số thực tế và đối chiếu chênh lệch</h2>
+  <p class="lede">Toàn bộ "kết quả kiểm kê" nằm ở hai ô bắt buộc trên mỗi dòng: <strong>Kiểm đếm</strong> trả lời tài sản còn hay mất, <strong>Tình trạng</strong> trả lời tài sản còn nhưng ở mức nào. Thanh thống kê và các cột số trên màn danh sách đều là kết quả đếm lại từ hai ô này.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A["Một dòng tài sản trong biên bản"] --> B["Kiểm đếm — bắt buộc<br/>Còn · Mất"]
+    A --> C["Tình trạng — bắt buộc<br/>Tốt · Kém · Hỏng · Không XĐ"]
+    A --> D["Ghi chú — tùy chọn<br/>tối đa 500 ký tự"]
+    B --> E["Thanh thống kê trên popup"]
+    C --> E
+    E --> E1["Tổng · Còn · Mất"]
+    E --> E2["Tốt · Kém · Hỏng<br/>Không xác định"]
+    B --> F["Cột số trên màn Danh sách"]
+    C --> F
+    F --> F1["Số TS kiểm kê =<br/>số dòng chi tiết"]
+    F --> F2["Còn = số dòng<br/>có Kiểm đếm là Còn"]
+    F --> F3["Tốt · Kém · Hỏng · Không XĐ<br/>đếm theo Tình trạng"]
+    B --> G["Dòng Kiểm đếm = Mất<br/>là đầu vào của Ghi giảm"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Chênh lệch không có cột riêng.</b> Tài liệu không định nghĩa trường "số chênh lệch" nào — chênh lệch được biểu diễn gián tiếp bằng số dòng Kiểm đếm = Mất và bằng phân bố Tình trạng, rồi xử lý bằng chức năng Ghi giảm ở <a href="#s8">mục 08</a>.</figcaption>
+  </figure>
+
+  <h3>Cột nào nhập được, cột nào chỉ đọc</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột</th><th>Control</th><th>Nhập được</th><th>Nguồn</th></tr></thead>
+    <tbody>
+      <tr><td>Mã TS</td><td>CombogridSearchFlatGrid</td><td><span class="chip c-ok">Có</span></td><td>Lưu <span class="f">TaiSanCoDinhId</span> — tìm được theo cả mã và tên</td></tr>
+      <tr><td>Tên tài sản · Đơn vị QL</td><td>TextField · Select</td><td><span class="chip c-perm">Không</span></td><td>JOIN <span class="f">fa_tai_san_co_dinh</span></td></tr>
+      <tr><td>Nguyên giá</td><td>InputNumber</td><td><span class="chip c-perm">Không</span></td><td class="mono">NguyenGia</td></tr>
+      <tr><td>HMLK</td><td>InputNumber</td><td><span class="chip c-perm">Không</span></td><td>Tổng <span class="f">SoTienKhauHao</span> đã ghi sổ</td></tr>
+      <tr><td>Giá trị còn lại</td><td>InputNumber</td><td><span class="chip c-perm">Không</span></td><td>Dẫn xuất từ nguyên giá và khấu hao</td></tr>
+      <tr><td>Kiểm đếm</td><td>Select</td><td><span class="chip c-ok">Có</span></td><td class="mono">KiemDem</td></tr>
+      <tr><td>Tình trạng</td><td>Select</td><td><span class="chip c-ok">Có</span></td><td class="mono">TinhTrang: Tot · Kem · Hong · KhongXacDinh</td></tr>
+      <tr><td>Ghi chú</td><td>TextArea 500</td><td><span class="chip c-ok">Có</span></td><td class="mono">DienGiai</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Ba cột tiền — Nguyên giá, HMLK, Giá trị còn lại — là tiền VND nên lưu <span class="f">decimal(18,2)</span> và làm tròn ở bước hiển thị <span class="chip c-br">BR7</span>. Lưới chi tiết con áp <span class="chip c-br">BR21</span> cho việc chèn dòng, đánh lại STT và focus ô nhập đầu tiên của dòng mới.</p>
+
+  <div class="note stop">
+    <span class="lbl">Mâu thuẫn thuật ngữ chưa chốt</span>
+    <p>Hai popup Thêm mới / Chỉnh sửa dùng Select với giá trị <strong>Còn · Mất</strong>, còn <span class="f">SCR_ChiTietBienBanKiemKe</span> dùng CheckBox với giá trị <strong>Có · Không có</strong> và thêm chỉ số thống kê <em>Chưa kiểm tra</em>. Bộ giá trị của <span class="f">KiemDem</span> vì thế chưa thống nhất — file ma trận ẩn/hiện đã nêu đúng điểm này và yêu cầu BA chốt.</p>
+  </div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — Validate</span>
+  <h2>Chuỗi kiểm tra khi bấm Lưu</h2>
+  <p class="lede">Cả hai nút <em>Lưu</em> và <em>Lưu và ghi giảm</em> chạy chung một chuỗi validate; nút Lưu <strong>không</strong> được nới lỏng bước nào. Chuỗi tách làm hai chặng: thông tin chung trước, rồi tới hai lưới và số phiếu.</p>
+
+  <h3>Chặng 1 — thông tin chung</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S([Bấm Lưu · Lưu và ghi giảm]) --> T["Trim đầu và cuối mọi ô văn bản<br/>trước khi validate — BR43"]
+    T --> V1{Ngày kiểm kê có giá trị?}
+    V1 -- Không --> X1[MSG_101]:::err
+    V1 -- Có --> V2{Ngày kiểm kê là ngày tương lai?}
+    V2 -- Có --> X2[MSG_102]:::err
+    V2 -- Không --> V3{Lý do kiểm kê rỗng?}
+    V3 -- Có --> X3[MSG_103]:::err
+    V3 -- Không --> V4{Lý do đủ 10 ký tự?}
+    V4 -- Không --> X4[MSG_104]:::err
+    V4 -- Có --> V5{Đơn vị QL đã chọn?}
+    V5 -- Không --> X5[MSG_105]:::err
+    V5 -- Có --> OK([Sang chặng 2]):::ok
+    X1 --> R["Giữ nguyên form · border đỏ<br/>focus ô lỗi đầu tiên<br/>tự chuyển tab chứa lỗi — BR15.4"]:::warn
+    X2 --> R
+    X3 --> R
+    X4 --> R
+    X5 --> R
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>MSG_104 chỉ có ở một nơi.</b> Ràng buộc "lý do tối thiểu 10 ký tự" nằm trong BR-FIELD-003 của cả hai popup và trong bảng Validate của màn Chi tiết, nhưng <em>không</em> có trong bảng Validate của popup Thêm mới — dễ bị bỏ khi code theo bảng.</figcaption>
+  </figure>
+
+  <h3>Chặng 2 — hai lưới và số phiếu</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S([Thông tin chung đã qua]) --> V6{Lưới tài sản có dòng nào?}
+    V6 -- Không --> X6[MSG_106]:::err
+    V6 -- Có --> V7{Mọi dòng đã có Kiểm đếm?}
+    V7 -- Không --> X7["MSG_107 — kèm số dòng còn thiếu"]:::err
+    V7 -- Có --> V8{"Thành viên đủ họ tên<br/>chức vụ · vai trò?"}
+    V8 -- Không --> X8["MSG_110 · MSG_111 · MSG_112"]:::err
+    V8 -- Có --> V9{"Số phiếu trùng trong loại<br/>Kiểm kê TSCĐ và đơn vị?"}
+    V9 -- Có --> X9["MSG_109 — BR19.1"]:::err
+    V9 -- Không --> V10{"Có dòng tài sản đã ghi giảm?"}
+    V10 -- Có --> X10["MSG_115 — BR-KK11"]:::err
+    V10 -- Không --> OK([Sang chuỗi ghi dữ liệu]):::ok
+    X6 --> R["Giữ nguyên form để sửa tiếp<br/>KHÔNG ghi bản ghi nào"]:::warn
+    X7 --> R
+    X8 --> R
+    X9 --> R
+    X10 --> R
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Kiểm trùng số phiếu có phạm vi hẹp hơn BR19.1.</b> BR chung so trùng theo loại chứng từ trong một tenant; BR-KK00 của epic này siết thêm chiều đơn vị — trùng được xét trong <em>loại Kiểm kê TSCĐ và đơn vị</em>. So trùng chạy trên giá trị đã trim <span class="chip c-br">BR43</span>.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Ba mã thành viên chỉ có ở UC</span>
+    <p><span class="chip c-msg">MSG_110</span> <span class="chip c-msg">MSG_111</span> <span class="chip c-msg">MSG_112</span> được UC Thêm mới và UC Chỉnh sửa liệt kê trong dải "101 đến 105, 110 đến 114", nhưng bảng Validate của cả ba màn hình đều không có. Thêm nữa <span class="f">6.messages.md</span> có mã <em>"Thành viên {n} chưa chọn vai trò"</em> trong khi bảng thành viên không có cột Vai trò — cột gần nhất là <em>Đại diện</em>. Cần BA chốt tên trường.</p>
+  </div>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — AD_ThemMoiBienBanKiemKe</span>
+  <h2>Chuỗi ghi dữ liệu: ba INSERT trong một giao dịch</h2>
+  <p class="lede">Validate qua rồi, hệ thống ghi lần lượt đầu biên bản, chi tiết tài sản và thành viên. Lỗi ở bất kỳ bước nào đều rơi về cùng một mã và cùng một hành vi: <strong>giữ nguyên form, không để lại bản ghi dở dang</strong>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A([Validate đã qua]) --> B["Chốt Số phiếu · cập nhật bộ đếm<br/>của quy tắc đánh số — BR-KK00"]
+    B --> C["Ghi fa_kiem_ke_tai_san_co_dinh<br/>SoPhieu · NgayKiemKe · NoiDungKiemKe<br/>PhongBanId kèm snapshot TenPhongBan"]
+    C --> D["Ghi ..._chi_tiet cho từng dòng<br/>TaiSanCoDinhId · KiemDem<br/>TinhTrang · DienGiai"]
+    D --> E["Ghi fa_thanh_vien_kiem_ke...<br/>HoTen · ChucDanh · DaiDien · DienGiai"]
+    E --> F["Gán trường hệ thống trên cả 3 bảng<br/>DaXoa = false · NguoiTaoId · NgayTao<br/>BR46"]
+    F --> G{Người dùng bấm nút nào?}
+    G -- "Lưu" --> G1["MSG_012 · đóng popup<br/>làm mới danh sách"]:::ok
+    G -- "Lưu và ghi giảm" --> G2["MSG_012 rồi điều hướng<br/>sang màn Ghi giảm TSCĐ"]:::ok
+    C -.-> Z["Lỗi ở bất kỳ bước nào: MSG_013<br/>giữ nguyên form để người dùng sửa"]:::err
+    D -.-> Z
+    E -.-> Z
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Không lưu lặp dữ liệu master.</b> Bảng chi tiết chỉ giữ khóa tài sản; ngược lại đầu biên bản <em>có</em> giữ snapshot tên đơn vị <span class="f">TenPhongBan</span> — đây là ngoại lệ duy nhất được tài liệu cho phép, và tuyệt đối không lưu mã đơn vị.</figcaption>
+  </figure>
+
+  <h3>Bản ghi mới xuất hiện ở đâu</h3>
+  <p>Sau khi Thêm mới thành công, bản ghi vừa tạo hiển thị ở <strong>vị trí đầu tiên</strong> của danh sách; khi người dùng sắp xếp, tìm kiếm hay tải lại thì nó trở về đúng thứ tự chung <span class="chip c-br">BR2</span>. Toast thành công hiện ở góc phải trên và tự ẩn sau 3–5 giây <span class="chip c-br">BR26</span>.</p>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — BR-KK07</span>
+  <h2>Xử lý chênh lệch: Lưu và ghi giảm</h2>
+  <p class="lede">Đây là cầu nối duy nhất từ epic Kiểm kê sang nghiệp vụ điều chỉnh sổ sách. Nút <em>luôn hiển thị</em> — điều kiện "phải có tài sản bị Mất" là <strong>validate lúc bấm</strong>, không phải điều kiện ẩn/disable nút.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A([Bấm Lưu và ghi giảm]) --> B{"Có dòng nào Kiểm đếm = Mất?"}
+    B -- Không --> B1["MSG_108<br/>Không mở màn Ghi giảm"]:::err
+    B -- Có --> C["Chạy đủ chuỗi validate<br/>y hệt nút Lưu"]
+    C --> C1{Validate đạt?}
+    C1 -- Không --> C2["Dừng · hiện mã lỗi tương ứng<br/>không lưu · không điều hướng"]:::err
+    C1 -- Có --> D["Lưu biên bản kiểm kê<br/>đủ 3 bảng"]
+    D --> E["Điều hướng màn Ghi giảm TSCĐ"]
+    E --> F["Tự fill các tài sản bị đánh Mất<br/>vào form Thêm mới Ghi giảm"]
+    F --> G([Người dùng hoàn tất phiếu Ghi giảm])
+    D -.-> H["Biên bản đã lưu vẫn còn<br/>kể cả khi bỏ dở phiếu Ghi giảm"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Lưu trước, điều hướng sau.</b> Hai UC đều mô tả thứ tự này: hệ thống <em>thực hiện lưu biên bản</em> rồi mới điều hướng — nên bỏ dở phiếu Ghi giảm không làm mất biên bản kiểm kê.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Lệch giữa UC và màn hình</span>
+    <p>UC Chỉnh sửa mô tả nhánh <em>"Lưu và Ghi tăng hoặc Lưu và Ghi giảm"</em> và điều hướng sang <em>"màn hình Ghi tăng / Ghi giảm TSCĐ"</em>, nhưng cả <span class="f">SCR_ChinhSuaBienBanKiemKe</span>, <span class="f">SCR_ChiTietBienBanKiemKe</span> lẫn ma trận ẩn/hiện đều chỉ có nút <strong>Lưu và ghi giảm</strong>. Ngoài ra UC ghi "tự động fill các tài sản được đánh trạng thái Mất" cho <em>cả</em> Ghi tăng — không có quy định tài sản nào được fill sang Ghi tăng. Trang này chỉ vẽ nhánh Ghi giảm; nhánh Ghi tăng chờ BA chốt.</p>
+  </div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — PMKT-U-02591</span>
+  <h2>Chỉnh sửa: tải lại đủ ba bảng, giữ nguyên số phiếu</h2>
+  <p class="lede">Khác biệt duy nhất về mặt dữ liệu so với Thêm mới nằm ở Số phiếu: <strong>không sinh lại</strong>, giữ giá trị đã lưu, và chỉ mở cho sửa khi quy tắc đánh số bật <span class="f">ChoPhepSuaSo</span>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A([Bấm Sửa trên dòng lưới hoặc màn Xem]) --> B{"Có quyền<br/>KiemKeTSCD.Edit?"}
+    B -- Không --> B1["Ẩn nút Sửa — BR25.2<br/>MSG_007 nếu gọi bằng đường khác"]:::err
+    B -- Có --> C["Đọc fa_kiem_ke_tai_san_co_dinh theo Id"]
+    C --> D{Tìm thấy biên bản?}
+    D -- Không --> D1["MSG_017<br/>Quay về danh sách"]:::err
+    D -- Có --> E["Mở popup Chỉnh sửa · load chi tiết<br/>tài sản và thành viên — BR-KK06"]
+    E --> F["Số phiếu giữ giá trị đã lưu<br/>enable chỉ khi ChoPhepSuaSo"]
+    F --> G["Sửa thông tin chung · thêm hoặc xóa<br/>tài sản · thêm hoặc xóa thành viên"]
+    G --> H{Bấm nút nào?}
+    H -- "Lưu biên bản" --> I{Validate như luồng Thêm mới?}
+    I -- Không đạt --> I1["Hiện mã lỗi tương ứng<br/>giữ nguyên form"]:::err
+    I -- Đạt --> J["Cập nhật cả 3 bảng<br/>NguoiCapNhatId · NgayCapNhat — BR46"]
+    J --> K["MSG_015 · đóng popup"]:::ok
+    J -.-> L["Lỗi ghi dữ liệu: MSG_016"]:::err
+    H -- "Hủy khi form đã đổi" --> M{"Xác nhận đóng? — BR3"}
+    M -- Có --> M1["Đóng popup<br/>thay đổi không được lưu"]
+    M -- Không --> M2([Quay lại popup])
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Sửa tay số phiếu thì phải đụng bộ đếm.</b> BR-KK00 bản Chỉnh sửa yêu cầu cập nhật bộ đếm theo BR04 của Cấu hình đánh số chứng từ và kiểm trùng lại; trùng thì chặn lưu với <span class="chip c-msg">MSG_109</span>.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Mở từ màn Xem thì quay về đâu</span>
+    <p>Nếu popup Chỉnh sửa được mở từ màn Xem chi tiết, sau khi Lưu hoặc Hủy hệ thống đóng popup và <strong>trở lại ngay màn Xem chi tiết</strong> với dữ liệu đã cập nhật — không tự nhảy về màn danh sách <span class="chip c-br">BR34</span>. Sau khi sửa từ một trang bất kỳ của danh sách, người dùng vẫn ở đúng trang đó <span class="chip c-br">BR29.4</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — PMKT-U-02592</span>
+  <h2>Xóa: cửa sổ 10 ngày và xóa mềm lan ba bảng</h2>
+  <p class="lede">Epic chỉ có <strong>xóa đơn lẻ</strong> — không UC nào mô tả xóa hàng loạt. Xóa luôn là xóa mềm, và luôn kéo theo hai bảng con.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A([Bấm icon Xóa trên một dòng]) --> B{"Có quyền<br/>KiemKeTSCD.Delete?"}
+    B -- Không --> B1["Ẩn nút Xóa — BR25.2<br/>MSG_007 · AD ghi MSG_004"]:::err
+    B -- Có --> C{"Biên bản đã lập quá 10 ngày?"}
+    C -- Có --> C1["Chặn xóa — MSG_116<br/>giữ nguyên danh sách"]:::err
+    C -- Không --> D["Popup xác nhận xóa — MSG_002<br/>ESC và click ngoài = hủy — BR3"]
+    D --> E{Người dùng xác nhận?}
+    E -- Không --> E1([Đóng popup · danh sách nguyên trạng])
+    E -- Có --> F["Đặt DaXoa = true trên<br/>fa_kiem_ke_tai_san_co_dinh"]
+    F --> G["Xóa mềm lan sang ..._chi_tiet<br/>và fa_thanh_vien_kiem_ke... — BR29.2"]
+    G --> H["Ghi NguoiXoaId · NgayXoa — BR46"]
+    H --> I["MSG_003 · làm mới danh sách<br/>giữ nguyên trang hiện tại — BR29.4"]:::ok
+    F -.-> J["Lỗi khi xóa: MSG_004<br/>danh sách nguyên trạng"]:::err
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Không bao giờ xóa vật lý.</b> Bản ghi <span class="f">DaXoa = true</span> bị loại khỏi mọi danh sách và báo cáo nhưng vẫn nằm trong DB để đối chiếu <span class="chip c-br">BR29.1</span> <span class="chip c-br">BR46.3</span>.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Ba điểm lệch trong tài liệu xóa</span>
+    <p><strong>Một —</strong> AD_Xoa dùng <span class="chip c-msg">MSG_004</span> ("có lỗi xảy ra khi xóa") cho nhánh <em>không có quyền</em>, trong khi UC dùng <span class="chip c-msg">MSG_007</span>; theo BR25 thì đúng ra nút phải bị ẩn hoàn toàn.<br>
+    <strong>Hai —</strong> AD_Xoa không vẽ nhánh kiểm 10 ngày, ràng buộc này chỉ nằm ở BR-KK01 và UC.<br>
+    <strong>Ba —</strong> nội dung popup theo <span class="f">SCR_PopupXacNhanXoa</span> là "Bạn có chắc chắn muốn xóa biên bản kiểm kê này?" còn <span class="chip c-msg">MSG_002</span> ghi "Xác nhận xóa biên bản kiểm kê này?" — hai chuỗi khác nhau cho cùng một popup.</p>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Mã message không có luồng tương ứng</span>
+    <p><span class="chip c-msg">MSG_001</span> "Vui lòng chọn ít nhất một biên bản" hàm ý có thao tác hàng loạt <span class="chip c-br">BR45</span>, nhưng không UC, AD hay màn hình nào trong epic mô tả chọn nhiều dòng để xóa/xử lý — dù màn danh sách có thống kê "đã chọn". Trang này không vẽ luồng hàng loạt vì tài liệu chưa quy định.</p>
+  </div>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — SCR_ChiTietBienBanKiemKe</span>
+  <h2>Màn chi tiết và ba mode dùng chung một khung</h2>
+  <p class="lede">Màn chi tiết khai báo <strong>ba mode create · edit · view</strong> trên cùng một layout; mode quyết định cả tiêu đề trang, tính enable của từng ô lẫn bộ nút ở footer.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A([Click Số phiếu hoặc icon Xem]) --> B{"Có quyền<br/>KiemKeTSCD.View.Detail?"}
+    B -- Không --> B1["Không mở màn — MSG_007"]:::err
+    B -- Có --> C{Mode nào?}
+    C -- create --> C1["Tiêu đề: Thêm mới biên bản<br/>Nút: Hủy · Lưu · Lưu và ghi giảm"]
+    C -- edit --> C2["Tiêu đề: Sửa biên bản kèm số phiếu<br/>Nút: Hủy · Cập nhật · Lưu và ghi giảm"]
+    C -- view --> C3["Tiêu đề: Xem chi tiết kèm số phiếu<br/>Nút: Quay lại · Sửa"]
+    C3 --> D["Mọi control disable — BR14.1"]
+    C3 --> E["Bấm Sửa: nạp lại màn ở mode edit<br/>BR34"]
+    C1 --> F["Hủy: hỏi xác nhận nếu có thay đổi"]
+    C2 --> G["Hủy: quay về danh sách<br/>KHÔNG hỏi xác nhận"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Nút Hủy ở mode edit không hỏi xác nhận.</b> Tài liệu ghi rõ "Quay về danh sách (không confirm)" cho mode=edit, ngược với mode=create và ngược với BR3 về form dirty — điểm lệch cần BA xác nhận trước khi code.</figcaption>
+  </figure>
+
+  <h3>Ma trận ẩn/hiện rút gọn theo mode</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thành phần</th><th>create</th><th>edit</th><th>view</th></tr></thead>
+    <tbody>
+      <tr><td>Số phiếu</td><td>Disable</td><td>Disable</td><td>Disable</td></tr>
+      <tr><td>Ngày KK · Lý do · Đơn vị QL · Nội dung</td><td>Show</td><td>Show</td><td>Disable</td></tr>
+      <tr><td>Mã TS</td><td>Disable</td><td>Disable</td><td>Disable</td></tr>
+      <tr><td>Tên TS · Đơn vị QL · Nguyên giá · HMLK · GTCL</td><td>Disable</td><td>Disable</td><td>Disable</td></tr>
+      <tr><td>Kiểm đếm · Tình trạng · Ghi chú</td><td>Show</td><td>Show</td><td>Disable</td></tr>
+      <tr><td>Nút Xóa dòng tài sản</td><td>Show</td><td>Hide</td><td>Hide</td></tr>
+      <tr><td>Nút Thêm thành viên</td><td>Show</td><td>Hide</td><td>Hide</td></tr>
+      <tr><td>Họ và tên · Chức danh · Đại diện</td><td>Show</td><td>Disable</td><td>Disable</td></tr>
+      <tr><td>Nút Xóa dòng thành viên</td><td>Show</td><td>Show</td><td>Hide</td></tr>
+      <tr><td>Hủy</td><td>Show</td><td>Show</td><td>Hide</td></tr>
+      <tr><td>Lưu · Cập nhật</td><td>Lưu</td><td>Cập nhật</td><td>Hide</td></tr>
+      <tr><td>Lưu và ghi giảm</td><td>Show</td><td>Show</td><td>Hide</td></tr>
+      <tr><td>Quay lại · Sửa</td><td>Hide</td><td>Hide</td><td>Show</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Trùng phạm vi màn — chưa chốt</span>
+    <p>Mode <em>create</em> và <em>edit</em> của màn chi tiết trùng chức năng với hai popup Thêm mới / Chỉnh sửa, và <strong>mâu thuẫn trực tiếp</strong> ở ba chỗ: Mã TS (màn chi tiết cho <em>không sửa</em> ở cả create, popup cho <em>chọn được</em> bằng combogrid), Ban kiểm kê ở mode edit (màn chi tiết cho read-only và ẩn nút Thêm thành viên, popup cho sửa đầy đủ), và tính bắt buộc của Chức danh / Đại diện (màn chi tiết Y, popup N). File ma trận ẩn/hiện của epic đã ghi cả ba là <em>Điểm cần xác nhận</em>.</p>
+  </div>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — Ánh xạ LDM</span>
+  <h2>Quan hệ dữ liệu và trường dẫn xuất</h2>
+  <p class="lede">Biên bản kiểm kê không sao chép dữ liệu tài sản. Trừ đúng một snapshot tên đơn vị, mọi giá trị master hiển thị trên lưới đều <strong>đọc qua JOIN tại thời điểm hiển thị</strong>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    QT["cfg_quy_tac_danh_so<br/>LoaiChungTuId Kiểm kê TSCĐ<br/>ChoPhepSuaSo"]
+    DV["mst_don_vi<br/>lọc theo phạm vi truy cập"]
+    H["<b>fa_kiem_ke_tai_san_co_dinh</b><br/>SoPhieu · NgayKiemKe<br/>NoiDungKiemKe · DienGiai<br/>PhongBanId · TenPhongBan"]
+    D["<b>fa_kiem_ke_..._chi_tiet</b><br/>TaiSanCoDinhId · KiemDem<br/>TinhTrang · DienGiai"]
+    M["<b>fa_thanh_vien_kiem_ke_...</b><br/>HoTen · ChucDanh<br/>DaiDien · DienGiai"]
+    TS["fa_tai_san_co_dinh<br/>MaTaiSan · TenTaiSan<br/>TenBoPhanQuanLy · NguyenGia"]
+    KH["fa_khau_hao_..._chi_tiet<br/>SoTienKhauHao đã ghi sổ"]
+    QT -- "sinh SoPhieu" --> H
+    DV -- "lưu Id + snapshot tên" --> H
+    H --> D
+    H --> M
+    D -- "JOIN TaiSanCoDinhId = Id" --> TS
+    TS -- "cộng dồn thành HMLK" --> KH
+
+    classDef hi fill:#e8f0f4,stroke:#2f6f8f,color:#1d4457;
+    class H,D,M hi;
+</pre>
+    </div>
+    <figcaption><b>Ba bảng in đậm là dữ liệu của epic;</b> bốn bảng còn lại chỉ được đọc. Sửa tên tài sản hay nguyên giá ở danh mục TSCĐ sẽ thay đổi ngay số hiển thị trên biên bản kiểm kê cũ <span class="chip c-br">BR29.3</span>.</figcaption>
+  </figure>
+
+  <h3>Trường dẫn xuất, không lưu trong epic</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Giá trị hiển thị</th><th>Cách lấy</th><th>Nơi dùng</th></tr></thead>
+    <tbody>
+      <tr><td>Mã TS · Tên tài sản · Đơn vị QL của dòng</td><td>JOIN <span class="f">fa_tai_san_co_dinh</span></td><td>Lưới tài sản cả 3 màn</td></tr>
+      <tr><td>Nguyên giá</td><td class="mono">fa_tai_san_co_dinh.NguyenGia</td><td>Lưới tài sản · dòng tổng</td></tr>
+      <tr><td>HMLK</td><td>Tổng <span class="f">SoTienKhauHao</span> đã ghi sổ</td><td>Lưới tài sản · dòng tổng</td></tr>
+      <tr><td>Giá trị còn lại</td><td>Dẫn xuất từ nguyên giá và khấu hao đã ghi sổ</td><td>Lưới tài sản · dòng tổng</td></tr>
+      <tr><td>Số TS kiểm kê · Còn · Tốt · Kém · Hỏng · Không XĐ</td><td>Đếm lại từ <span class="f">..._chi_tiet</span></td><td>Lưới danh sách · thanh thống kê</td></tr>
+      <tr><td>Người tạo</td><td class="mono">NguoiTaoId</td><td>Cột lưới danh sách <span class="chip c-br">BR46</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Cả ba bảng của epic đều phải khai đủ bộ trường hệ thống <span class="chip c-br">BR46.1</span>: <span class="f">DaXoa · NguoiXoaId · NgayXoa · NguoiTaoId · NgayTao · NguoiCapNhatId · NgayCapNhat</span>. Cặp <span class="f">NguoiGhiSoId · ThoiGianGhiSo</span> vẫn khai nhưng để trống vì epic không có nghiệp vụ ghi sổ.</p>
+</section>
+
+<!-- ============ 13 ============ -->
+<section id="s13">
+  <span class="snum">13 — Tra cứu</span>
+  <h2>Điều kiện chặn, quyền và khoảng trống tài liệu</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> trong các sơ đồ trên theo thao tác. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-02588_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện chặn</th><th class="mono">Mã</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="10">Lưu / Cập nhật / Lưu và ghi giảm</td><td>Ngày kiểm kê để trống</td><td class="mono">101</td></tr>
+      <tr><td>Ngày kiểm kê là ngày tương lai</td><td class="mono">102</td></tr>
+      <tr><td>Lý do kiểm kê để trống</td><td class="mono">103</td></tr>
+      <tr><td>Lý do kiểm kê ngắn hơn 10 ký tự</td><td class="mono">104</td></tr>
+      <tr><td>Đơn vị quản lý để trống</td><td class="mono">105</td></tr>
+      <tr><td>Lưới tài sản không có dòng nào</td><td class="mono">106</td></tr>
+      <tr><td>Còn tài sản chưa có trạng thái kiểm kê</td><td class="mono">107</td></tr>
+      <tr><td>Thành viên thiếu họ tên · chức vụ · vai trò</td><td class="mono">110 · 111 · 112</td></tr>
+      <tr><td>Số phiếu trùng trong loại Kiểm kê TSCĐ và đơn vị</td><td class="mono">109</td></tr>
+      <tr><td>Tài sản đã ghi giảm vẫn được gửi lên</td><td class="mono">115</td></tr>
+      <tr><td>Lưu và ghi giảm</td><td>Không có tài sản nào bị đánh Mất</td><td class="mono">108</td></tr>
+      <tr><td>Đính kèm file</td><td>File vượt 10MB · định dạng không hỗ trợ</td><td class="mono">113 · 114</td></tr>
+      <tr><td rowspan="2">Xóa</td><td>Biên bản đã lập quá 10 ngày</td><td class="mono">116</td></tr>
+      <tr><td>Lỗi hệ thống khi xóa</td><td class="mono">004</td></tr>
+      <tr><td>Chỉnh sửa</td><td>Không tìm thấy biên bản · lỗi khi cập nhật</td><td class="mono">017 · 016</td></tr>
+      <tr><td>Thêm mới</td><td>Lỗi hệ thống khi lưu</td><td class="mono">013</td></tr>
+      <tr><td>Xem danh sách</td><td>Không có dữ liệu</td><td class="mono">008 · 010</td></tr>
+      <tr><td>Mọi màn</td><td>Không có quyền truy cập chức năng</td><td class="mono">007</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Mã thông báo thành công và xác nhận</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Mã</th><th>Nội dung</th><th>Loại</th><th>Bắn ở đâu</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">002</td><td>Xác nhận xóa biên bản kiểm kê này?</td><td>Warning</td><td>Popup xác nhận xóa</td></tr>
+      <tr><td class="mono">003</td><td>Xóa biên bản kiểm kê thành công</td><td>Success</td><td>Sau khi xóa mềm xong</td></tr>
+      <tr><td class="mono">011</td><td>Có dấu hiệu bất thường: {n} biên bản</td><td>Info</td><td>Thống kê đầu màn danh sách</td></tr>
+      <tr><td class="mono">012</td><td>Lưu biên bản kiểm kê thành công</td><td>Success</td><td>Sau khi ghi đủ 3 bảng</td></tr>
+      <tr><td class="mono">014</td><td>Xác nhận hủy bỏ? Mọi thay đổi sẽ không được lưu</td><td>Warning</td><td>Bấm Hủy khi form dirty</td></tr>
+      <tr><td class="mono">015</td><td>Cập nhật biên bản kiểm kê thành công</td><td>Success</td><td>Sau khi cập nhật 3 bảng</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">KiemKeTSCD.View</td><td>Vào màn danh sách biên bản kiểm kê</td></tr>
+      <tr><td class="mono">KiemKeTSCD.View.Detail</td><td>Chọn dòng mở bảng chi tiết dưới lưới · vào màn Chi tiết</td></tr>
+      <tr><td class="mono">KiemKeTSCD.Create</td><td>Nút Thêm mới · hành động Lưu · Lưu và ghi giảm</td></tr>
+      <tr><td class="mono">KiemKeTSCD.Edit</td><td>Nút Sửa · hành động Cập nhật</td></tr>
+      <tr><td class="mono">KiemKeTSCD.Delete</td><td>Icon Xóa trên dòng · xác nhận xóa</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Ba tác nhân trong use case diagram: <strong>Kế toán</strong> dùng đủ năm quyền; <strong>Kế toán trưởng</strong> và <strong>Quản trị hệ thống</strong> chỉ có Xem danh sách và Xem chi tiết. Nút thiếu quyền phải <em>ẩn hẳn</em>, không disable <span class="chip c-br">BR25.2</span>.</p>
+
+  <h3>Điểm tài liệu BA chưa quy định — không vẽ vào sơ đồ</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Khoảng trống</th><th>Nguồn nêu vấn đề</th></tr></thead>
+    <tbody>
+      <tr><td>Điều kiện hiển thị và enable của ba nút Sửa · Xóa · Xem chi tiết trên lưới</td><td><span class="f">SCR_DanhSachBienBanKiemKe</span> ghi thẳng "Chưa được mô tả trong tài liệu gốc"</td></tr>
+      <tr><td>Tiêu chí để một biên bản bị tính là "có dấu hiệu bất thường" trong <span class="chip c-msg">MSG_011</span></td><td>Không UC/màn nào định nghĩa công thức</td></tr>
+      <tr><td>Thao tác hàng loạt ứng với <span class="chip c-msg">MSG_001</span></td><td>Không có UC xóa/xử lý hàng loạt</td></tr>
+      <tr><td>Luồng tải lên file đính kèm ứng với <span class="chip c-msg">MSG_113</span> <span class="chip c-msg">MSG_114</span></td><td>Tab Đính kèm ở màn danh sách chỉ ở chế độ xem</td></tr>
+      <tr><td>Bộ giá trị chuẩn của <span class="f">KiemDem</span>: Còn/Mất hay Có/Không có/Chưa kiểm tra</td><td>Ba màn khai ba kiểu khác nhau</td></tr>
+      <tr><td>Nút Hủy/Đóng trên hai popup Thêm mới và Chỉnh sửa</td><td>Bảng Chức năng không liệt kê, UC/AD lại có nhánh Hủy</td></tr>
+      <tr><td>Nhánh "Lưu và Ghi tăng" và tập tài sản được fill sang Ghi tăng</td><td>Chỉ UC Chỉnh sửa nhắc, không màn nào có nút</td></tr>
+      <tr><td>Màn Chi tiết 3 mode hay hai popup riêng mới là luồng chuẩn</td><td>File ma trận ẩn/hiện nêu là điểm trùng phạm vi cần BA chốt</td></tr>
+      <tr><td>Trường "Vai trò" của thành viên trong <span class="chip c-msg">MSG_112</span></td><td>Bảng thành viên không có cột Vai trò</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-02588 · Kiểm kê TSCĐ</span>
+  <span>Dựng từ 4 UC · 4 Activity Diagram · 5 màn hình · 3 ma trận ẩn/hiện · 30 mã MSG</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

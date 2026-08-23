@@ -1,0 +1,1163 @@
+<title>Luồng Chi phí trả trước</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-05853 · Phân hệ Chi phí trả trước</p>
+  <h1>Luồng xử lý Chi phí trả trước</h1>
+  <p>Toàn bộ luồng nghiệp vụ của epic Chi phí trả trước — khai báo khoản chi phí trên TK 242, thiết lập hệ số phân bổ, tính phân bổ theo kỳ, tính lại, ghi sổ và bỏ ghi sổ chứng từ phân bổ, tạm dừng và tiếp tục phân bổ. Mỗi sơ đồ bám đúng Activity Diagram và BR trong bộ tài liệu BA.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 15 use case · 15 Activity Diagram · 10 màn hình</span>
+    <span><b>Entity gốc:</b> cptt_khai_bao_chi_phi_tra_truoc</span>
+    <span><b>Quyền:</b> GhiTangCPTT.* · PhanBoCPTT.*</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Hai vòng đời song song</a></li>
+    <li><a href="#s1"><span>01</span>Danh sách khai báo</a></li>
+    <li><a href="#s2"><span>02</span>Thêm mới: nhập liệu</a></li>
+    <li><a href="#s3"><span>03</span>Thêm mới: validate &amp; lưu</a></li>
+    <li><a href="#s4"><span>04</span>Quan hệ dữ liệu</a></li>
+    <li><a href="#s5"><span>05</span>Chỉnh sửa khai báo</a></li>
+    <li><a href="#s6"><span>06</span>Xóa · Tạm dừng · Tiếp tục</a></li>
+    <li><a href="#s7"><span>07</span>Tính phân bổ: chọn kỳ</a></li>
+    <li><a href="#s8"><span>08</span>Tính phân bổ: thuật toán</a></li>
+    <li><a href="#s9"><span>09</span>Tính lại chứng từ</a></li>
+    <li><a href="#s10"><span>10</span>Màn Phân bổ Năm · Kỳ</a></li>
+    <li><a href="#s11"><span>11</span>Chỉnh sửa chứng từ</a></li>
+    <li><a href="#s12"><span>12</span>Ghi sổ · Bỏ ghi sổ · Xóa</a></li>
+    <li><a href="#s13"><span>13</span>Trường dẫn xuất</a></li>
+    <li><a href="#s14"><span>14</span>Tra cứu chặn &amp; quyền</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Hai vòng đời chạy song song</h2>
+  <p class="lede">Epic này có <strong>hai đối tượng có trạng thái riêng</strong>: <em>khai báo CPTT</em> (khuôn mẫu phân bổ, 4 trạng thái) và <em>chứng từ phân bổ</em> (bút toán từng kỳ, 2 trạng thái). Chúng chỉ khớp nhau ở một điểm duy nhất — thao tác <strong>Ghi sổ</strong> chứng từ mới làm thay đổi <span class="f">SoTienDaPhanBo</span>, và chính con số đó quyết định trạng thái khai báo.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(( )) -- "Lưu: đã PB = 0" --> A
+    S -- "Lưu: CPTT đầu kỳ, đã PB dương" --> B
+    A["<b>CHƯA PHÂN BỔ</b><br/>Số tiền đã PB = 0<br/>Sửa mọi tab · Xóa được"]
+    B["<b>ĐANG PHÂN BỔ</b><br/>Đã PB nằm giữa 0 và Tổng<br/>Chỉ sửa tab Thiết lập PB"]
+    C["<b>HOÀN THÀNH PHÂN BỔ</b><br/>Đã PB = Tổng số tiền<br/>Khóa sửa · khóa xóa"]
+    D["<b>TẠM DỪNG PHÂN BỔ</b><br/>Không sinh CT kỳ mới<br/>Chỉ sửa tab Thiết lập PB"]
+    A -- "Ghi sổ CT phân bổ đầu tiên" --> B
+    B -- "Ghi sổ CT kỳ cuối" --> C
+    C -- "Bỏ ghi sổ CT kỳ cuối" --> B
+    B -- "Bỏ ghi sổ hết, đã PB về 0" --> A
+    A -- "Tạm dừng phân bổ" --> D
+    B -- "Tạm dừng phân bổ" --> D
+    D -- "Tiếp tục: đã PB = 0" --> A
+    D -- "Tiếp tục: đã PB giữa 0 và Tổng" --> B
+    D -- "Tiếp tục: đã PB = Tổng" --> C
+    D -- "Ghi sổ hoặc Bỏ ghi sổ CT cũ" --> D
+
+    classDef st fill:#ffffff,stroke:#2f6f8f,color:#16202b;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class A,B,C st;
+    class D warn;
+</pre>
+    </div>
+    <figcaption><b>Trạng thái khai báo là hàm của một con số.</b> BR02 phát biểu nguyên văn: đã PB = 0 → <em>Chưa phân bổ</em>; 0 nhỏ hơn đã PB nhỏ hơn Tổng → <em>Đang phân bổ</em>; đã PB = Tổng → <em>Hoàn thành phân bổ</em>. Riêng <em>Tạm dừng phân bổ</em> là trạng thái do người dùng đặt, và nó <strong>đè lên</strong> công thức: khi đang tạm dừng, Ghi sổ / Bỏ ghi sổ chỉ cập nhật số tiền chứ không đổi trạng thái — vòng lặp tự trỏ trên sơ đồ.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(( )) -- "Tính phân bổ rồi Lưu" --> A
+    A["<b>CHƯA GHI SỔ</b><br/>Sửa · Xóa · Tính lại · Ghi sổ<br/>Chưa đụng số dư khai báo"]
+    B["<b>ĐÃ GHI SỔ</b><br/>Chỉ còn Bỏ ghi sổ<br/>Đã có bút toán trên Sổ cái"]
+    D["<b>ĐÃ XÓA MỀM</b><br/>Thiết lập kỳ về Chưa sinh CT"]
+    A -- "Ghi sổ: đã PB cộng tổng tiền CT" --> B
+    B -- "Bỏ ghi sổ: đã PB trừ tổng tiền CT" --> A
+    A -- "Xóa — cần Chưa ghi sổ" --> D
+    B -. "không có đường trực tiếp" .-> D
+
+    classDef st fill:#ffffff,stroke:#2f6f8f,color:#16202b;
+    classDef gone fill:#faf8f3,stroke:#cdc7b9,color:#6f6a61;
+    class A,B st;
+    class D gone;
+</pre>
+    </div>
+    <figcaption><b>Tính phân bổ không đổi trạng thái khai báo.</b> Chứng từ mới sinh luôn ở <em>Chưa ghi sổ</em>, nên <span class="f">SoTienDaPhanBo</span> chưa nhúc nhích — đây là điểm dễ hiểu nhầm nhất của epic. Trạng thái khai báo chỉ dịch chuyển tại thời điểm Ghi sổ hoặc Bỏ ghi sổ.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Đối tượng</th><th class="mono">Field trạng thái</th><th>Giá trị</th><th>Tính lại khi</th></tr></thead>
+    <tbody>
+      <tr><td>Khai báo CPTT</td><td class="mono">TrangThai</td><td>Chưa phân bổ · Đang phân bổ · Tạm dừng phân bổ · Hoàn thành phân bổ</td><td>Lưu lần đầu · Ghi sổ · Bỏ ghi sổ · Tạm dừng · Tiếp tục</td></tr>
+      <tr><td>Chứng từ phân bổ</td><td class="mono">TrangThai</td><td>Chưa ghi sổ · Đã ghi sổ</td><td>Lưu · Lưu và ghi sổ · Ghi sổ · Bỏ ghi sổ</td></tr>
+      <tr><td>Thiết lập phân bổ chi tiết theo kỳ</td><td class="mono">TrangThai</td><td>Chưa sinh CT · Đã sinh CT · Đã ghi sổ</td><td>Tính phân bổ · Ghi sổ · Bỏ ghi sổ · Xóa chứng từ</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Ngoại lệ phải nhớ</span>
+    <p>Khi khai báo đang <strong>Tạm dừng phân bổ</strong>, các chứng từ đã sinh trước thời điểm dừng vẫn Ghi sổ / Bỏ ghi sổ bình thường, nhưng thao tác đó <strong>chỉ</strong> cập nhật <span class="f">SoTienDaPhanBo</span> và <span class="f">SoTienPhanBoConLai</span>. Trạng thái khai báo được tính lại theo <span class="chip c-br">BR02</span> đúng một lần: lúc người dùng bấm <em>Tiếp tục phân bổ</em>.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — PMKT-U-05857</span>
+  <h2>Danh sách khai báo: bảng điều phối mọi thao tác</h2>
+  <p class="lede">Màn <span class="f">SCR_DanhSachKhaiBaoChiPhiTraTruoc</span> là cửa vào của toàn bộ phân hệ. Mọi nút trên dòng gác bởi cặp <strong>quyền × trạng thái khai báo</strong>; riêng bảng chi tiết dưới lưới gác thêm một quyền độc lập là <span class="f">GhiTangCPTT.View.Detail</span>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Menu Chi phí trả trước"]) --> B{"Quyền GhiTangCPTT.View?"}
+    B -- Không --> B1["MSG 004 — chặn vào màn"]:::err
+    B -- Có --> C["Tải danh sách + thanh thống kê<br/>Tổng · Chưa PB · Đang PB<br/>Tạm dừng PB · Hoàn thành PB"]
+    C --> C0{"Danh sách có dữ liệu?"}
+    C0 -- Không --> C1["MSG 001 — Không có dữ liệu"]:::warn
+    C0 -- Có --> D["Lưới sắp xếp mặc định<br/>Ngày bắt đầu giảm dần"]
+
+    D --> E1{"Click chọn một dòng"}
+    E1 -- "Thiếu View.Detail" --> E2["MSG 011 · không chọn dòng"]:::err
+    E1 -- "Có View.Detail" --> E3["Bảng chi tiết 4 tab<br/>Thông tin PB · Thiết lập PB<br/>Đính kèm · Tham chiếu"]
+
+    D --> G{"Gác nút theo trạng thái"}
+    G -- "Chưa phân bổ" --> A1["Xem · Sửa · Xóa<br/>Tạm dừng phân bổ"]
+    G -- "Đang phân bổ" --> A2["Xem · Sửa<br/>Tạm dừng phân bổ"]
+    G -- "Tạm dừng phân bổ" --> A3["Xem · Sửa<br/>Tiếp tục phân bổ"]
+    G -- "Hoàn thành phân bổ" --> A4["Chỉ Xem chi tiết"]
+    D --> H["Nút màn hình<br/>Thêm mới · Phân bổ"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Bốn bộ nút, không bộ nào giống bộ nào.</b> <em>Xóa</em> chỉ mở ở Chưa phân bổ; <em>Sửa</em> mở ở ba trạng thái đầu nhưng phạm vi sửa khác nhau (mục 05); <em>Tạm dừng</em> và <em>Tiếp tục</em> loại trừ nhau tuyệt đối.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Chức năng trên lưới</th><th>Điều kiện hiển thị và enable</th><th class="mono">Chặn</th></tr></thead>
+    <tbody>
+      <tr><td>Xem chi tiết</td><td>Có quyền xem chi tiết khai báo</td><td class="mono">011</td></tr>
+      <tr><td>Chỉnh sửa</td><td>Khai báo chưa ở trạng thái Hoàn thành phân bổ</td><td class="mono">013 · 014</td></tr>
+      <tr><td>Xóa</td><td>Khai báo ở trạng thái Chưa phân bổ</td><td class="mono">017 · 018</td></tr>
+      <tr><td>Tạm dừng phân bổ</td><td>Khai báo ở Chưa phân bổ hoặc Đang phân bổ</td><td class="mono">046</td></tr>
+      <tr><td>Tiếp tục phân bổ</td><td>Khai báo ở Tạm dừng phân bổ</td><td class="mono">047</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Vùng click chọn dòng là <strong>toàn bộ dòng trừ cột Mã chi phí và cột Chức năng</strong>: click Mã chi phí mở popup Xem chi tiết, click Chức năng chỉ mở menu — cả hai đều không đổi bản ghi đang chọn ở bảng chi tiết. Phân trang bảng chi tiết mặc định 20 dòng/trang theo <span class="chip c-br">BR1</span>; sắp xếp và tìm kiếm nhanh theo <span class="chip c-br">BR11</span>; dòng Tổng của tab Thiết lập phân bổ và tab Tham chiếu theo <span class="chip c-br">BR31</span>.</p>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — PMKT-U-05860</span>
+  <h2>Thêm mới khai báo: hai công tắc quyết định cả form</h2>
+  <p class="lede">Form <span class="f">SCR_ThemMoiKhaiBaoChiPhiTraTruoc</span> có ba tab, nhưng hình dạng của nó do đúng <strong>hai công tắc</strong> quy định: radio <em>Phương thức phân bổ</em> và checkbox <em>Là CPTT đầu kỳ</em>. Bốn tổ hợp của chúng ra bốn bộ trường và bốn cách dựng nhóm thiết lập phân bổ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Thêm mới trên màn danh sách"]) --> P{"Quyền GhiTangCPTT.Create?"}
+    P -- Không --> P1["Ẩn nút hoặc MSG 004"]:::err
+    P -- Có --> B["Mở form · xác định LoaiChungTuId<br/>tra Tài khoản ngầm định"]
+    B --> B1["Vai trò TaiKhoanNo áp vào TK chờ PB<br/>Vai trò TaiKhoanCo áp vào TK chi phí<br/>LocTaiKhoan giới hạn danh sách"]
+    B1 --> C["Nhập Mã chi phí · Tên chi phí"]
+    C --> D["Tab 1: TK chờ PB<br/>Ngày bắt đầu = Ngày chứng từ"]
+
+    D --> E{"Phương thức phân bổ"}
+    E -- "Phân bổ theo tháng" --> E1["Nhập Số tiền · Số kỳ PB<br/>Gợi ý Ngày kết thúc<br/>PB hằng kỳ = Số tiền chia Số kỳ PB"]
+    E -- "Phân bổ hai lần" --> E2["Nhập Số tiền<br/>Ngày kết thúc bắt buộc<br/>PB hằng kỳ = Số tiền chia 2"]
+
+    E1 --> F{"Tích Là CPTT đầu kỳ?"}
+    E2 --> F
+    F -- Có --> F1["Hiện Số tiền đã PB, mặc định 0<br/>Số kỳ và Số tiền PB còn lại<br/>đều tự tính, không cho sửa"]
+    F -- Không --> F2["Không hiện nhóm trường dang dở"]
+
+    F1 --> G["Tab 2: Thiết lập phân bổ"]
+    F2 --> G
+    G --> G1["Mỗi nhóm gắn một kỳ<br/>Theo tháng: chọn Năm và Tháng<br/>Hai lần: nhóm Lần 1 và Lần 2"]
+    G1 --> G2["Dòng chi tiết: TK chi phí · Hệ số<br/>Đơn vị · Vụ việc · Khoản mục<br/>Đối tượng THCP · Diễn giải"]
+    G2 --> H["Tab 3: Tham chiếu<br/>Chọn chứng từ gốc"]
+    H --> H1["Popup lọc theo Loại CT<br/>và Khoảng thời gian"]
+    H1 --> H2["Chỉ chọn được chứng từ chưa gắn<br/>khai báo CPTT hay ghi tăng CCDC khác"]
+    H2 --> H3["Tổng giá trị CT đã chọn<br/>fill vào Tổng số tiền khai báo"]
+    H3 --> Z(["Bấm Lưu — sang mục 03"]):::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Tài khoản là bản sao, không phải tham chiếu sống.</b> TKND chỉ dùng để <em>khởi tạo</em> và <em>giới hạn</em> danh sách lúc lập khai báo. Giá trị đã chọn được lưu trên khai báo; đổi cấu hình TKND sau đó không hồi tố dữ liệu cũ.</figcaption>
+  </figure>
+
+  <h3>Bốn tổ hợp của BR07</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường hợp</th><th>Trường riêng ở Tab 1</th><th>Nhóm thiết lập ở Tab 2</th></tr></thead>
+    <tbody>
+      <tr><td>Đầu kỳ + Theo tháng</td><td>Số tiền · Số kỳ PB · PB hằng kỳ · Số tiền đã PB · Số kỳ và Số tiền PB còn lại</td><td>Nhiều nhóm, mỗi nhóm chọn Năm + Tháng, có nút thêm nhóm</td></tr>
+      <tr><td>Đầu kỳ + Hai lần</td><td>Số tiền · Số kỳ PB cố định 2 và khóa · PB hằng kỳ · Số tiền đã PB tự tính · Số tiền PB còn lại · Số kỳ PB còn lại = 1</td><td><strong>Một nhóm duy nhất: Lần 2</strong> — Lần 1 đã phân bổ trước khi vào hệ thống. Không có nút thêm nhóm</td></tr>
+      <tr><td>Không đầu kỳ + Theo tháng</td><td>Số tiền · Số kỳ PB · PB hằng kỳ</td><td>Nhiều nhóm, mỗi nhóm chọn Năm + Tháng, có nút thêm nhóm</td></tr>
+      <tr><td>Không đầu kỳ + Hai lần</td><td>Số tiền · Số kỳ PB cố định 2 và khóa · PB hằng kỳ</td><td><strong>Hai nhóm: Lần 1 và Lần 2</strong>. Không có nút thêm nhóm</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Công thức tính — nguyên văn theo BR</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">BR</th><th>Công thức nguyên văn</th><th>Ví dụ trong tài liệu</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">BR01</td><td>Số tiền PB hằng kỳ = Số tiền / Số kỳ PB</td><td>120.000.000 / 12 = 10.000.000đ/tháng</td></tr>
+      <tr><td class="mono">BR01</td><td>Số tiền PB hằng kỳ (dòng) = Số tiền PB hằng kỳ (Header) × (Hệ số phân bổ / Tổng hệ số)</td><td>Header 10.000.000; hệ số 3 và 2 → 6.000.000 và 4.000.000</td></tr>
+      <tr><td class="mono">BR01</td><td>Phân bổ 2 lần: Số tiền PB hằng kỳ = Số tiền / 2</td><td>120.000.000 / 2 = 60.000.000đ/lần</td></tr>
+      <tr><td class="mono">BR03</td><td>Ngày kết thúc gợi ý = Ngày bắt đầu + (Số kỳ PB - 1) tháng, luôn là ngày cuối tháng</td><td>15/02/2026 + 3 kỳ → 30/04/2026</td></tr>
+      <tr><td class="mono">BR04</td><td>Số tiền đã PB &gt; 0 → trạng thái ban đầu "Đang phân bổ"; ngược lại → "Chưa phân bổ"</td><td>Đã PB 30.000.000 → lưu xong là Đang phân bổ</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">BR10 — đổi công tắc là xóa trắng</span>
+    <p>Khi người dùng đổi <em>Phương thức phân bổ</em> hoặc bật/tắt checkbox <em>CPTT đầu kỳ</em>, hệ thống phải <strong>tự động xóa trắng toàn bộ dữ liệu cấu hình chi tiết phân bổ đã nhập</strong> và dựng lại lưới về mặc định của thiết lập mới. Không giữ lại dòng cũ dù trông có vẻ tương thích.</p>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — PMKT-U-05860</span>
+  <h2>Chuỗi validate khi Lưu: chín cửa ải theo đúng thứ tự</h2>
+  <p class="lede">Activity Diagram của Thêm mới quy định một <strong>chuỗi kiểm tra tuần tự</strong>, mỗi cửa ải dừng ngay tại thông báo tương ứng. Kiểm tra bất biến quan trọng nhất nằm ở hai cửa cuối: tổng hệ số phải dương và tổng số tiền phân bổ các dòng phải khớp đúng số tiền phân bổ hằng kỳ ở header.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Bấm Lưu"]) --> V1{"Trường bắt buộc đủ?"}
+    V1 -- Chưa --> X1["MSG 005"]:::err
+    V1 -- Đủ --> V2{"Mã CP đã tồn tại?"}
+    V2 -- Có --> X2["MSG 008"]:::err
+    V2 -- Chưa --> V3{"Số tiền hoặc Hệ số nhỏ hơn 1?"}
+    V3 -- "Không dương" --> X3["MSG 027"]:::err
+    V3 -- "Đều dương" --> V4{"Số kỳ PB hợp lệ?"}
+    V4 -- "Không nguyên dương" --> X4["MSG 025"]:::err
+    V4 -- "Nhỏ hơn 2" --> X5["MSG 043"]:::err
+    V4 -- "Hợp lệ" --> V5{"Số tiền đã PB âm?"}
+    V5 -- Có --> X6["MSG 042"]:::err
+    V5 -- Không --> V6{"Số tiền đã PB vượt Số tiền?"}
+    V6 -- Có --> X7["MSG 049"]:::err
+    V6 -- Không --> V7{"Hai lần: Ngày kết thúc<br/>không sau Ngày bắt đầu?"}
+    V7 -- Có --> X8["MSG 039"]:::err
+    V7 -- Không --> V8{"Có ít nhất 1 nhóm thiết lập?"}
+    V8 -- Không --> X9["MSG 036"]:::err
+    V8 -- Có --> V9{"Tổng Hệ số phân bổ dương?"}
+    V9 -- Không --> X10["MSG 006"]:::err
+    V9 -- Có --> V10{"Tổng Số tiền PB các dòng<br/>bằng Số tiền PB hằng kỳ?"}
+    V10 -- Không --> X11["MSG 007"]:::err
+    V10 -- Có --> W{"Ngày bắt đầu sau kỳ hiện tại?"}
+    W -- Có --> W1["Cảnh báo MSG 105<br/>vẫn cho lưu"]:::warn
+    W -- Không --> G["Ghi dữ liệu"]
+    W1 --> G
+    G --> G1["Lưu khai báo + nhóm thiết lập<br/>+ chi tiết thiết lập + chứng từ gốc"]
+    G1 --> G2{"Số tiền đã PB dương?"}
+    G2 -- Có --> G3["Trạng thái = Đang phân bổ"]:::ok
+    G2 -- Không --> G4["Trạng thái = Chưa phân bổ"]:::ok
+    G3 --> Z(["MSG 003 — Thêm mới thành công"])
+    G4 --> Z
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>MSG 105 là cảnh báo, không phải chặn.</b> Ngày bắt đầu ở tương lai vẫn lưu được — hệ thống chỉ nhắc rằng khoản chi phí này sẽ chỉ được tính phân bổ từ kỳ chứa Ngày bắt đầu trở đi. Tám nhánh còn lại đều dừng luồng.</figcaption>
+  </figure>
+
+  <p>Ràng buộc bất biến ở bước 17 của use case được nêu rõ là kiểm tra <strong>phía server</strong>, không chỉ ở client: <em>tổng tỷ lệ phải lớn hơn 0</em> và <em>tổng số tiền phân bổ ở các dòng chi tiết phải bằng đúng Số tiền PB hằng kỳ ở Header</em>. Validate bắt buộc và validate kiểu dữ liệu tuân <span class="chip c-br">BR15</span>; trim khoảng trắng theo <span class="chip c-br">BR43</span>; kiểm trùng Mã CP theo <span class="chip c-br">BR19.2</span>.</p>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — Quan hệ dữ liệu</span>
+  <h2>Bảy bảng, hai cụm, một điểm nối</h2>
+  <p class="lede">Cụm <em>khai báo</em> mô tả khuôn mẫu phân bổ và tồn tại độc lập với thời gian. Cụm <em>chứng từ phân bổ</em> là kết quả tính cho từng kỳ. Điểm nối duy nhất giữa hai cụm là khóa <span class="f">KhaiBaoChiPhiTraTruocId</span> trên bản ghi chi tiết phân bổ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    K["<b>khai_bao_chi_phi_tra_truoc</b><br/>Mã CP · Tổng số tiền · Số kỳ PB<br/>TaiKhoanChoPhanBoId · Trạng thái<br/>SoTienDaPhanBo · SoTienPhanBoConLai"]
+    G["<b>chung_tu_goc_chi_phi_tra_truoc</b><br/>Tab 3 Tham chiếu<br/>ChungTuId · LoaiChungTuId<br/>TenLoaiChungTu là ảnh chụp"]
+    N["<b>nhom_thiet_lap_phan_bo</b><br/>Một nhóm = một kỳ<br/>Năm + Tháng hoặc Lần phân bổ"]
+    T["<b>thiet_lap_phan_bo_chi_tiet</b><br/>TaiKhoanCoId · Hệ số<br/>SoTienPhanBoHangKy<br/>Trạng thái sinh chứng từ"]
+
+    C["<b>chung_tu_phan_bo</b><br/>Tháng · Năm · Số chứng từ<br/>Ngày CT · Ngày hạch toán<br/>Trạng thái ghi sổ"]
+    P["<b>phan_bo_chi_phi_tra_truoc_chi_tiet</b><br/>Bảng cha của Tab 1<br/>KhaiBaoChiPhiTraTruocId<br/>SoTien kỳ này"]
+    L["<b>dong_phan_bo_chi_phi_tra_truoc</b><br/>Bảng con của Tab 1<br/>TaiKhoanNoId · TaiKhoanCoId<br/>Hệ số · Các chiều phân tích"]
+    SC["<b>Sổ cái kế toán</b><br/>Bút toán sinh khi Ghi sổ"]
+
+    K --> G
+    K --> N
+    N --> T
+    C --> P
+    P --> L
+    K -. "khóa nối hai cụm" .-> P
+    T -. "trạng thái theo chứng từ kỳ đó" .-> P
+    L -- "Ghi sổ: Nợ TK chờ PB, Có TK chi phí" --> SC
+
+    classDef kb fill:#ffffff,stroke:#2f6f8f,color:#16202b;
+    classDef ct fill:#faf8f3,stroke:#a9761f,color:#6d4a12;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class K,G,N,T kb;
+    class C,P,L ct;
+    class SC ok;
+</pre>
+    </div>
+    <figcaption><b>Chứng từ phân bổ sao chép tài khoản, không tra lại.</b> <span class="f">dong_phan_bo.TaiKhoanNoId</span> lấy từ <span class="f">khai_bao.TaiKhoanChoPhanBoId</span>, <span class="f">TaiKhoanCoId</span> lấy từ <span class="f">thiet_lap_chi_tiet.TaiKhoanCoId</span>, rồi lưu lại giá trị thực tế. Khi ghi sổ, bút toán đọc thẳng từ dòng chứng từ — không tra lại cấu hình TKND lần nữa.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Bảng</th><th>Sinh ra ở</th><th>Bị sửa ở</th><th>Bị xóa ở</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">khai_bao_chi_phi_tra_truoc</td><td>Thêm mới khai báo</td><td>Chỉnh sửa · Ghi sổ · Bỏ ghi sổ · Tạm dừng · Tiếp tục</td><td>Xóa khai báo</td></tr>
+      <tr><td class="mono">chung_tu_goc_chi_phi_tra_truoc</td><td>Thêm mới khai báo</td><td>Chỉnh sửa khai báo</td><td>Xóa khai báo</td></tr>
+      <tr><td class="mono">nhom_thiet_lap_phan_bo</td><td>Thêm mới khai báo</td><td>Chỉnh sửa khai báo</td><td>Xóa khai báo</td></tr>
+      <tr><td class="mono">thiet_lap_phan_bo_chi_tiet</td><td>Tính phân bổ</td><td>Tính lại · Xóa phân bổ · Ghi sổ · Bỏ ghi sổ</td><td>Xóa khai báo</td></tr>
+      <tr><td class="mono">chung_tu_phan_bo</td><td>Tính phân bổ</td><td>Tính lại · Chỉnh sửa CT · Ghi sổ · Bỏ ghi sổ</td><td>Xóa phân bổ</td></tr>
+      <tr><td class="mono">phan_bo_chi_tiet</td><td>Tính phân bổ</td><td>Tính lại · Chỉnh sửa CT · Ghi sổ · Bỏ ghi sổ</td><td>Xóa phân bổ</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Lệch với quy chuẩn chung</span>
+    <p>Epic BR06 của màn chứng từ phân bổ yêu cầu <strong>gom nhóm</strong> các dòng cùng bộ khóa thành một bút toán, trong khi <span class="chip c-br">BR36</span> chung phát biểu "không gộp bút toán". Đây là <em>epic thắng trong phạm vi epic</em>: gom nhóm ở đây là gom các dòng phân bổ của nhiều khai báo có cùng tài khoản và cùng các chiều phân tích, không phải gộp hai vế Nợ / Có của một nghiệp vụ. Cần BA xác nhận lại khi hiện thực.</p>
+  </div>
+
+  <p>Xóa dữ liệu ở cả hai cụm đều là <strong>xóa mềm</strong> theo <span class="chip c-br">BR29</span>. Mọi bảng mang đủ trường hệ thống và trường phạm vi tenant theo <span class="chip c-br">BR46</span> và <span class="chip c-br">BR28</span>. Snapshot <span class="f">TenLoaiChungTu</span> ở tab Tham chiếu là cố ý: khi xem lại phải dùng dữ liệu đã lưu, không JOIN để hồi tố tên.</p>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — PMKT-U-05859</span>
+  <h2>Chỉnh sửa khai báo: phạm vi sửa co lại theo trạng thái</h2>
+  <p class="lede">BR00 chia màn chỉnh sửa thành ba chế độ. Khi đã có chứng từ phân bổ chạy qua, chỉ còn <strong>Tab 2 — Thiết lập phân bổ</strong> mở khóa; hai tab còn lại chuyển read-only vì sửa chúng sẽ làm sai lệch các kỳ đã tính.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Chỉnh sửa trên danh sách"]) --> P{"Quyền GhiTangCPTT.Edit?"}
+    P -- Không --> P1["MSG 013"]:::err
+    P -- Có --> S{"Trạng thái khai báo"}
+    S -- "Hoàn thành phân bổ" --> S1["MSG 014 — không mở form"]:::err
+    S -- "Chưa phân bổ" --> M1["Mở khóa cả 3 tab<br/>Mã CP vẫn read-only"]
+    S -- "Đang phân bổ hoặc Tạm dừng" --> M2["Chỉ mở khóa Tab 2<br/>Tab 1 và Tab 3 read-only"]
+
+    M2 --> M3{"Cố sửa tab bị khóa?"}
+    M3 -- Có --> M4["MSG 110 — nêu rõ trạng thái"]:::warn
+    M3 -- Không --> M5{"Trạng thái Đang phân bổ?"}
+    M5 -- Có --> M6["Bật cờ cảnh báo Tính lại"]:::warn
+    M5 -- Không --> M7["Không bật cờ"]
+
+    M1 --> E["Sửa dữ liệu<br/>Giữ nguyên TK thực tế đã lưu<br/>Dòng mới mới áp TKND"]
+    M6 --> E
+    M7 --> E
+    M4 --> E
+
+    E --> D{"Sửa hoặc xóa thiết lập<br/>của kỳ đã có bút toán?"}
+    D -- "Sửa" --> D1["MSG 034 — xóa bút toán trước"]:::err
+    D -- "Xóa nhóm hoặc hệ số" --> D2["MSG 035 — xóa bút toán trước"]:::err
+    D -- "Kỳ chưa chạy phân bổ" --> V{"Validate ngày và số"}
+
+    V -- "Ngày bắt đầu trống" --> V1["MSG 037"]:::err
+    V -- "Ngày kết thúc trống, Hai lần" --> V2["MSG 038"]:::err
+    V -- "Ngày kết thúc không sau Ngày bắt đầu" --> V3["MSG 039"]:::err
+    V -- "Đã có phân bổ lần 1" --> V4["MSG 040 — khóa Ngày bắt đầu"]:::err
+    V -- "Đã có phân bổ lần 2" --> V5["MSG 041 — khóa Ngày kết thúc"]:::err
+    V -- "Hợp lệ" --> W["Cập nhật khai báo, nhóm thiết lập<br/>và chứng từ gốc"]
+    W --> W1{"Chưa phân bổ và đổi<br/>Tổng số tiền hoặc Số kỳ?"}
+    W1 -- Có --> W2["Tính lại Số tiền PB hằng kỳ"]
+    W1 -- Không --> W3["Giữ nguyên"]
+    W2 --> Z(["MSG 012 — Cập nhật thành công"]):::ok
+    W3 --> Z
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Sửa Tổng số tiền và Số kỳ PB chỉ có nghĩa khi Chưa phân bổ.</b> Ở hai trạng thái còn lại, hai trường này nằm trong Tab 1 vốn đã read-only, nên nhánh tính lại Số tiền PB hằng kỳ không bao giờ chạm tới.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trạng thái khai báo</th><th>Tab 1 Thông tin phân bổ</th><th>Tab 2 Thiết lập phân bổ</th><th>Tab 3 Tham chiếu</th></tr></thead>
+    <tbody>
+      <tr><td>Chưa phân bổ</td><td>Sửa được</td><td>Sửa được</td><td>Sửa được</td></tr>
+      <tr><td>Đang phân bổ</td><td>Read-only</td><td>Sửa được · bật cờ Tính lại</td><td>Read-only</td></tr>
+      <tr><td>Tạm dừng phân bổ</td><td>Read-only</td><td>Sửa được</td><td>Read-only</td></tr>
+      <tr><td>Hoàn thành phân bổ</td><td colspan="3">Không mở được form — chặn ngay bằng MSG 014</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Cờ <em>Tính lại</em> bật ở trạng thái Đang phân bổ chính là nguồn của icon cảnh báo <span class="chip c-msg">MSG 103</span> trên card kỳ ở màn Phân bổ (mục 10) — hệ thống báo rằng khai báo gốc đã đổi nên chứng từ chưa ghi sổ của kỳ đó cần tính lại.</p>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — PMKT-U-05862 · 07464 · 07465</span>
+  <h2>Ba thao tác đổi trạng thái khai báo</h2>
+  <p class="lede">Xóa, Tạm dừng và Tiếp tục đều đi qua cùng một khuôn: <strong>gác trạng thái → popup xác nhận → cập nhật → refresh danh sách</strong>. Khác biệt nằm ở cửa gác và ở việc <em>Tiếp tục</em> phải suy lại trạng thái từ số tiền đã phân bổ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"nodeSpacing":26,"rankSpacing":40,"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Menu 3 chấm trên dòng khai báo"]) --> B{"Chọn thao tác"}
+
+    B -- "Xóa" --> X0{"Bản ghi còn tồn tại?"}
+    X0 -- Không --> X01["MSG 031"]:::err
+    X0 -- Có --> X1{"Trạng thái Chưa phân bổ?"}
+    X1 -- Không --> X2["MSG 017"]:::err
+    X1 -- Có --> X3["Popup xác nhận xóa theo BR3"]
+    X3 -- "Hủy" --> X4(["Đóng popup, không xóa"])
+    X3 -- "Xóa" --> X5["Xóa mềm khai báo · chứng từ gốc<br/>nhóm thiết lập · thiết lập chi tiết"]
+    X5 --> X6(["MSG 016 · tải lại danh sách"]):::ok
+
+    B -- "Tạm dừng phân bổ" --> D1{"Chưa phân bổ<br/>hoặc Đang phân bổ?"}
+    D1 -- Không --> D2["MSG 046"]:::err
+    D1 -- Có --> D3["Popup xác nhận"]
+    D3 -- "Không" --> D4(["Đóng popup"])
+    D3 -- "Có" --> D5["Trạng thái = Tạm dừng phân bổ"]
+    D5 --> D6["Không đưa vào các lần Tính phân bổ<br/>Chứng từ đã sinh giữ nguyên"]
+    D6 --> D7(["MSG 023 · refresh danh sách"]):::ok
+
+    B -- "Tiếp tục phân bổ" --> T1{"Trạng thái Tạm dừng phân bổ?"}
+    T1 -- Không --> T2["MSG 047"]:::err
+    T1 -- Có --> T3["Popup xác nhận"]
+    T3 -- "Không" --> T4(["Đóng popup"])
+    T3 -- "Có" --> T5{"Đọc SoTienDaPhanBo"}
+    T5 -- "Bằng 0" --> T6["Trạng thái = Chưa phân bổ"]:::ok
+    T5 -- "Giữa 0 và Tổng số tiền" --> T7["Trạng thái = Đang phân bổ"]:::ok
+    T5 -- "Bằng Tổng số tiền" --> T8["Trạng thái = Hoàn thành phân bổ"]:::ok
+    T6 --> T9["Đưa lại vào danh sách tính phân bổ<br/>từ kỳ tính kế tiếp"]
+    T7 --> T9
+    T8 --> T10["Đã phân bổ hết<br/>không đưa vào lần tính nào nữa"]
+    T9 --> T11(["MSG 024 · refresh danh sách"])
+    T10 --> T11
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Không có phân bổ bù.</b> Các kỳ nằm trong khoảng thời gian tạm dừng vĩnh viễn không được phân bổ bù tự động. Sau khi Tiếp tục, số kỳ phân bổ còn lại = Số kỳ PB trừ số kỳ đã sinh chứng từ, và lịch phân bổ kéo dài tương ứng cho đến khi phân bổ hết Tổng số tiền — số tiền hằng kỳ giữ nguyên, kỳ cuối nhận phần còn lại.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Tại sao Tiếp tục phải suy lại trạng thái</span>
+    <p>Trong lúc khai báo bị tạm dừng, người dùng vẫn có thể Ghi sổ hoặc Bỏ ghi sổ các chứng từ đã sinh trước đó. Những thao tác ấy làm <span class="f">SoTienDaPhanBo</span> thay đổi nhưng <strong>không</strong> chạm tới trạng thái. Vì vậy tại thời điểm Tiếp tục, hệ thống buộc phải đọc lại con số hiện tại rồi áp <span class="chip c-br">BR02</span> — kết quả có thể là cả ba trạng thái, kể cả <em>Hoàn thành phân bổ</em>.</p>
+  </div>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — PMKT-U-05858</span>
+  <h2>Tính phân bổ: cửa kiểm trùng kỳ trước khi tính</h2>
+  <p class="lede">Nút <em>Phân bổ</em> mở popup chọn Tháng và Năm. Trước khi động tới bất kỳ phép tính nào, hệ thống hỏi đúng một câu: <strong>kỳ này đã có chứng từ phân bổ chưa, và nó ở trạng thái gì</strong>. Câu trả lời rẽ luồng thành ba hướng hoàn toàn khác nhau.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm nút Phân bổ"]) --> P{"Quyền PhanBoCPTT.Create?"}
+    P -- Không --> P1["MSG 004"]:::err
+    P -- Có --> B["Popup chọn kỳ<br/>Tháng và Năm"]
+    B --> C(["Bấm Tính phân bổ"])
+    C --> D{"Kỳ chọn đã có chứng từ phân bổ?"}
+
+    D -- "Chưa có" --> E["Đi tiếp sang tính mới — mục 08"]:::ok
+
+    D -- "Đã có, Đã ghi sổ" --> F["MSG 029<br/>Yêu cầu bỏ ghi sổ trước"]:::err
+
+    D -- "Đã có, Chưa ghi sổ" --> G["Popup xác nhận MSG 030"]:::warn
+    G -- "Không đồng ý" --> G1["Đóng popup xác nhận<br/>Giữ nguyên chứng từ cũ"]
+    G1 --> G2(["Quay về popup chọn kỳ đang mở"])
+    G -- "Đồng ý" --> H["Chuyển sang luồng Tính lại<br/>xem mục 09"]:::warn
+
+    E --> I{"Có khai báo hợp lệ<br/>Ngày bắt đầu không sau kỳ tính?"}
+    I -- Không --> I1["MSG 032"]:::err
+    I -- Có --> J{"Có kỳ đã khóa sổ<br/>trong khoảng chọn?"}
+    J -- Có --> J1["Chặn theo BR17<br/>không cho tính"]:::err
+    J -- Không --> K(["Tính toán số liệu — mục 08"]):::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hủy xác nhận thì quay về popup chọn kỳ, không đóng hết.</b> Đây là áp dụng <span class="chip c-br">BR35</span> giữ ngữ cảnh nghiệp vụ: popup chọn kỳ vẫn đang mở để người dùng chọn kỳ khác, và chứng từ cũ của kỳ vừa thử vẫn nguyên vẹn.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Đừng nhầm hai mã lỗi</span>
+    <p><span class="chip c-msg">MSG 029</span> là <em>không thể tính lại chứng từ phân bổ đã ghi sổ</em> — chặn cứng. <span class="chip c-msg">MSG 030</span> là <em>kỳ phân bổ đã tồn tại chứng từ chưa ghi sổ, có muốn tính lại và thay thế không</em> — hỏi rồi mới làm. Chỉ khác nhau ở trạng thái chứng từ đã tồn tại của kỳ.</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — PMKT-U-05858</span>
+  <h2>Thuật toán sinh chứng từ phân bổ</h2>
+  <p class="lede">Qua được cửa kiểm trùng kỳ, hệ thống quét toàn bộ khai báo hợp lệ, tính số tiền cho từng dòng theo phương thức của khai báo đó, rồi gom các dòng cùng bộ khóa thành bút toán. Kết quả <strong>không tự lưu</strong> — nó hiển thị lên màn Thêm mới chứng từ phân bổ để người dùng kiểm rồi chủ động bấm Lưu.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Kỳ tính đã hợp lệ"]) --> B["Quét khai báo trạng thái<br/>Chưa phân bổ hoặc Đang phân bổ"]
+    B --> B1["Bỏ qua khai báo Tạm dừng phân bổ<br/>và khai báo đã hết số tiền còn lại"]
+    B1 --> B2["Chỉ lấy khai báo có Ngày bắt đầu<br/>không sau kỳ đang tính"]
+    B2 --> C{"Phương thức phân bổ<br/>của từng khai báo"}
+
+    C -- "Phân bổ theo tháng" --> C1["Tính cho từng kỳ theo Số kỳ PB<br/>bắt đầu từ kỳ chứa Ngày bắt đầu"]
+    C -- "Phân bổ hai lần" --> C2["Đúng 2 bút toán, mỗi lần một nửa<br/>Lần 1 tại kỳ chứa Ngày bắt đầu<br/>Lần 2 tại kỳ chứa Ngày kết thúc"]
+
+    C1 --> D["Không tính lẻ theo ngày<br/>Lấy nguyên số tiền hằng kỳ"]
+    C2 --> D
+    D --> E{"Có phần dư do làm tròn?"}
+    E -- Có --> E1["Cộng toàn bộ phần dư<br/>vào kỳ cuối cùng"]
+    E -- Không --> E2["Giữ nguyên"]
+
+    E1 --> F["Chia xuống dòng theo hệ số<br/>PB dòng = PB hằng kỳ nhân<br/>Hệ số chia Tổng hệ số"]
+    E2 --> F
+    F --> G["Ánh xạ tài khoản<br/>Nợ = TK chờ PB đã lưu<br/>Có = TK chi phí đã lưu"]
+    G --> H["Gom nhóm theo bộ khóa 6 trường<br/>tạo bút toán Tab 2"]
+    H --> I["Sinh Số CT theo quy tắc đánh số<br/>của loại CT phân bổ CPTT"]
+    I --> J["Mở màn Thêm mới chứng từ phân bổ"]
+
+    J --> K{"Người dùng thao tác"}
+    K -- "Hủy" --> K1(["Đóng màn, không sinh chứng từ"])
+    K -- "Lưu nháp" --> L{"Số chứng từ bị trùng?"}
+    K -- "Lưu và ghi sổ" --> L
+    L -- Có --> L1["MSG 051 — không lưu"]:::err
+    L -- Không --> M["Tạo chứng từ phân bổ<br/>và các dòng chi tiết<br/>Lưu tài khoản thực tế"]
+    M --> N{"Chọn Lưu và ghi sổ?"}
+    N -- Không --> N1(["MSG 019 · trạng thái Chưa ghi sổ"]):::ok
+    N -- Có --> N2(["Ghi sổ ngay — mục 12"]):::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Lưu nháp không đổi trạng thái khai báo.</b> Use case ghi rõ ở bước 13: chứng từ mới sinh ở trạng thái Chưa ghi sổ nên <span class="f">SoTienDaPhanBo</span> không thay đổi, do đó trạng thái khai báo giữ nguyên. Chỉ Ghi sổ mới đẩy trạng thái đi tiếp.</figcaption>
+  </figure>
+
+  <h3>Bộ khóa gom nhóm bút toán</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Trường trong bộ khóa</th><th>Nguồn</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">TaiKhoanNoId</td><td>TK chờ phân bổ trên khai báo</td></tr>
+      <tr><td class="mono">TaiKhoanCoId</td><td>TK chi phí trên dòng thiết lập phân bổ</td></tr>
+      <tr><td class="mono">DonViId</td><td>Đơn vị sử dụng trên dòng thiết lập</td></tr>
+      <tr><td class="mono">DoiTuongTapHopChiPhiId</td><td>Đối tượng tập hợp chi phí trên dòng thiết lập</td></tr>
+      <tr><td class="mono">VuViecId</td><td>Vụ việc trên dòng thiết lập</td></tr>
+      <tr><td class="mono">KhoanMucChiPhiId</td><td>Khoản mục chi phí trên dòng thiết lập</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ba ví dụ tính nguyên văn từ BA</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tình huống</th><th>Dữ liệu</th><th>Kết quả</th></tr></thead>
+    <tbody>
+      <tr><td>Phân bổ theo tháng</td><td>Ngày bắt đầu 15/03/2026 · Số kỳ PB 6</td><td>6 bút toán cho các kỳ 03, 04, 05, 06, 07, 08 năm 2026</td></tr>
+      <tr><td>Phân bổ hai lần</td><td>Bắt đầu 15/02/2026 · Kết thúc 30/04/2026 · 100.000.000đ</td><td>Kỳ 02/2026 nhận 50.000.000đ; kỳ 04/2026 nhận 50.000.000đ</td></tr>
+      <tr><td>Lệch kỳ do làm tròn</td><td>100.000.000đ chia 3 kỳ, làm tròn 33.333.333đ mỗi kỳ</td><td>3 kỳ được 99.999.999đ, dư 1đ; kỳ cuối thành 33.333.334đ</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Làm tròn và độ chính xác số thập phân theo <span class="chip c-br">BR7</span>; Số chứng từ tự sinh theo cấu hình đánh số của loại chứng từ, chỉ cho sửa khi <span class="f">QuyTacDanhSo.ChoPhepSuaSo</span> bật, không hard-code tiền tố — <span class="chip c-br">BR20</span> và <span class="chip c-br">BR19.1</span>.</p>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — PMKT-U-05865</span>
+  <h2>Tính lại: ghi đè chứ không tạo mới</h2>
+  <p class="lede">Tính lại chạy khi dữ liệu nền của kỳ đã đổi — hoặc khai báo gốc bị sửa, hoặc chứng từ kỳ trước bị sửa rồi ghi sổ làm số dư còn lại của các kỳ sau lệch đi. Điểm cốt lõi: kết quả tính mới mở ra ở màn <strong>Chỉnh sửa</strong> chứng từ phân bổ, và chỉ khi bấm Lưu mới ghi đè lên chứng từ cũ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A1(["Lối vào 1: popup chọn kỳ<br/>đồng ý ở MSG 030"]) --> B
+    A2(["Lối vào 2: nút Tính lại<br/>trên card tháng ở Period View"]) --> B
+    B{"Chứng từ đang ở Chưa ghi sổ?"}
+    B -- Không --> B1["MSG 029<br/>Yêu cầu bỏ ghi sổ trước"]:::err
+    B -- Có --> C["Hiển thị xác nhận tính lại"]
+    C -- "Không" --> C1(["Hủy thao tác, quay về màn trước"])
+    C -- "Có" --> D["Quét khai báo Chưa phân bổ<br/>hoặc Đang phân bổ"]
+    D --> D1{"Còn khai báo hợp lệ?"}
+    D1 -- Không --> D2["MSG 203"]:::warn
+    D1 -- Có --> E["Tính lại số liệu phân bổ cho kỳ"]
+    E --> F["Mở màn Chỉnh sửa chứng từ phân bổ<br/>với dữ liệu lưới đã tính lại"]
+    F --> G{"Người dùng thao tác"}
+    G -- "Hủy" --> G1(["Chứng từ cũ giữ nguyên<br/>trạng thái không đổi"])
+    G -- "Lưu nháp" --> H["Ghi đè dữ liệu mới lên chứng từ cũ<br/>Cập nhật dòng chi tiết, thiết lập kỳ"]
+    G -- "Lưu và ghi sổ" --> H
+    H --> I{"Có chọn Lưu và ghi sổ?"}
+    I -- Không --> I1(["MSG 028 — Tính lại thành công"]):::ok
+    I -- Có --> I2(["MSG 021 — Ghi sổ thành công"]):::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hủy là an toàn tuyệt đối.</b> Bấm Hủy ở màn chỉnh sửa thì chứng từ cũ không bị xóa và trạng thái không đổi — hệ thống chỉ vứt bỏ kết quả tính mới. Cùng nguyên tắc áp cho trường hợp lỗi khi sinh chứng từ.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nguyên nhân cần tính lại</th><th>Biểu hiện trên màn Phân bổ</th></tr></thead>
+    <tbody>
+      <tr><td>Khai báo CPTT gốc bị chỉnh sửa: số tiền, số kỳ, hệ số phân bổ</td><td rowspan="2">Icon cảnh báo với tooltip <span class="chip c-msg">MSG 103</span> và nút Tính lại trên card tháng. Chỉ hiện khi chứng từ của kỳ đó ở trạng thái Chưa ghi sổ</td></tr>
+      <tr><td>Chứng từ phân bổ kỳ trước bị chỉnh sửa và đã ghi sổ, làm đổi số dư phân bổ còn lại của các kỳ sau</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Ví dụ nguyên văn trong tài liệu: khai báo ban đầu phân bổ 3 kỳ mỗi kỳ 5 triệu; sửa kỳ 1 thành 10 triệu thì số dư cho kỳ 2 và kỳ 3 chỉ còn 5 triệu thay vì 10 triệu — hai kỳ đó cần tính lại.</p>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — PMKT-U-05864 · 09943</span>
+  <h2>Màn Phân bổ: drill-down Năm rồi tới Kỳ</h2>
+  <p class="lede">Khác với màn khai báo dạng lưới, màn <span class="f">SCR_PhanBoChiPhiTraTruoc</span> là hai tầng card. Tầng Năm cho biết tiến độ tổng; tầng Kỳ là nơi mọi hành động lên chứng từ được phát ra, và mỗi card kỳ tương ứng đúng một chứng từ phân bổ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Menu Phân bổ chi phí trả trước"]) --> P{"Quyền PhanBoCPTT.View?"}
+    P -- Không --> P1["Ẩn chức năng hoặc báo lỗi"]:::err
+    P -- Có --> Y["<b>Year View</b><br/>Card Năm · Tổng giá trị kỳ đã ghi sổ<br/>Label Đang phân bổ hoặc Hoàn thành"]
+    Y -- "Click card Năm" --> M["<b>Period View</b> 12 card kỳ<br/>Header: đã phân bổ X kỳ<br/>còn lại Y kỳ · tổng giá trị"]
+    M -- "Quay lại" --> Y
+    M --> N{"Không có dữ liệu phân bổ?"}
+    N -- "Cả năm rỗng" --> N1["MSG 201"]:::warn
+    N -- "Riêng kỳ chưa sinh CT" --> N2["MSG 202"]:::warn
+
+    M --> C{"Trạng thái chứng từ của card"}
+    C -- "Chưa sinh" --> C0["Card trống, không label trạng thái"]
+    C -- "Chưa ghi sổ" --> C1["Icon con mắt · menu 3 chấm<br/>Chỉnh sửa · Ghi sổ · Xóa"]
+    C -- "Chưa ghi sổ và dữ liệu đã đổi" --> C2["Thêm icon cảnh báo MSG 103<br/>và nút Tính lại"]:::warn
+    C -- "Đã ghi sổ" --> C3["Icon con mắt · menu 3 chấm<br/>chỉ còn Bỏ ghi sổ"]
+
+    C1 --> V["<b>Popup chi tiết chứng từ</b> read-only<br/>Tab 1 Xác định CP · Tab 2 Hạch toán"]
+    C3 --> V
+    V --> V1{"Bộ nút theo trạng thái"}
+    V1 -- "Chưa ghi sổ" --> V2["Chỉnh sửa · Ghi sổ · Đóng"]
+    V1 -- "Đã ghi sổ" --> V3["Bỏ ghi sổ · Đóng"]
+    M --> Q["Nút Phân bổ<br/>mở popup chọn kỳ — mục 07"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Nút trên card và nút trong popup chi tiết phải khớp nhau.</b> Cả hai đều lấy đúng một trục điều kiện là trạng thái ghi sổ của chứng từ, theo <span class="chip c-br">BR13.1</span> cho danh sách và <span class="chip c-br">BR13.2</span> cho màn chi tiết. Nút Bỏ ghi sổ tuyệt đối không hiện ở chứng từ Chưa ghi sổ — <span class="chip c-br">BR42</span>.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thành phần card kỳ</th><th>Nội dung</th></tr></thead>
+    <tbody>
+      <tr><td>Trạng thái CT</td><td>Label Đã ghi sổ / Chưa ghi sổ, hoặc không có label nếu kỳ chưa sinh chứng từ</td></tr>
+      <tr><td>Giá trị</td><td>Giá trị phân bổ của kỳ</td></tr>
+      <tr><td>Số chứng từ</td><td>Mã chứng từ phân bổ của kỳ</td></tr>
+      <tr><td>Ngày hạch toán</td><td>Ngày chốt số liệu của chứng từ</td></tr>
+      <tr><td>Cảnh báo tính lại</td><td>Icon với tooltip MSG 103 kèm nút Tính lại, chỉ khi chứng từ Chưa ghi sổ</td></tr>
+      <tr><td>Icon con mắt</td><td>Mở popup Xem chi tiết chứng từ phân bổ</td></tr>
+      <tr><td>Icon 3 chấm</td><td>Chỉnh sửa · Ghi sổ · Bỏ ghi sổ · Xóa, hiện theo trạng thái</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Phân biệt Chưa ghi sổ và Đã ghi sổ bằng màu hoặc badge theo <span class="chip c-br">BR33</span>. Từ popup chi tiết bấm Chỉnh sửa thì mở popup sửa tại chỗ và quay về đúng màn chi tiết sau khi Lưu hoặc Hủy — <span class="chip c-br">BR34</span>.</p>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — PMKT-U-05861</span>
+  <h2>Chỉnh sửa chứng từ phân bổ: hệ số kéo tiền, tiền không kéo hệ số</h2>
+  <p class="lede">Lưới Tab 1 là cấu trúc cha-con: bản ghi cha là một khai báo CPTT, các dòng con là chi tiết phân bổ theo từng tài khoản và chiều phân tích. Hai chiều liên động giữa cha và con được BR01 quy định rất chặt, và trần số tiền được BR02 chặn cứng ở cả lúc nhập lẫn lúc lưu.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Chỉnh sửa chứng từ"]) --> P{"Quyền PhanBoCPTT.Edit?"}
+    P -- Không --> P1["MSG 004"]:::err
+    P -- Có --> S{"Trạng thái chứng từ"}
+    S -- "Đã ghi sổ" --> S1["MSG 050 — không mở form"]:::err
+    S -- "Chưa ghi sổ" --> B["Mở popup chỉnh sửa<br/>Số CT giữ nguyên, không sinh lại"]
+
+    B --> C{"Người dùng sửa gì"}
+    C -- "Sửa Hệ số dòng con" --> C1["Tính lại Số tiền kỳ này của các con<br/>theo hệ số mới"]
+    C -- "Sửa tổng tiền ở bản ghi cha" --> C2["Chia lại xuống các con<br/>theo hệ số hiện có"]
+    C -- "Sửa Số tiền dòng con" --> C3["Hệ số KHÔNG đổi theo"]
+    C -- "Sửa Diễn giải" --> C4["Diễn giải Tab 2 lấy từ Header<br/>vẫn cho sửa riêng"]
+
+    C1 --> D{"Tổng tiền kỳ này của một khai báo<br/>vượt Số tiền chưa phân bổ?"}
+    C2 --> D
+    C3 --> D
+    D -- Có --> D1["Tự động cap về mức tối đa<br/>hiện MSG 104 · highlight dòng cha"]:::warn
+    D -- Không --> E["Tab 2 tự gom nhóm lại<br/>theo bộ khóa 6 trường"]
+    D1 --> E
+
+    E --> F(["Bấm Lưu nháp hoặc Lưu và ghi sổ"])
+    F --> V1{"Trường bắt buộc đủ?"}
+    V1 -- Không --> X1["MSG 005"]:::err
+    V1 -- Có --> V2{"Số tiền phân bổ kỳ này<br/>là số nguyên dương?"}
+    V2 -- Không --> X2["MSG 025"]:::err
+    V2 -- Có --> V3{"Ngày hạch toán không trước<br/>Ngày chứng từ?"}
+    V3 -- "Vi phạm" --> X3["Lỗi so sánh ngày theo BR15.3"]:::err
+    V3 -- "Hợp lệ" --> V4{"Tổng PB kỳ này vượt<br/>Số tiền chưa PB?"}
+    V4 -- Có --> X4["MSG 104 — chặn Lưu"]:::err
+    V4 -- Không --> V5{"Số chứng từ bị trùng?"}
+    V5 -- Có --> X5["MSG 051"]:::err
+    V5 -- Không --> G["Cập nhật chứng từ và dòng chi tiết"]
+    G --> H{"Chọn Lưu và ghi sổ?"}
+    H -- Không --> H1(["MSG 020 · giữ Chưa ghi sổ"]):::ok
+    H -- Có --> H2(["Ghi sổ ngay — mục 12"]):::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>MSG 104 xuất hiện hai lần với hai vai trò khác nhau.</b> Lúc đang nhập, nó là cảnh báo kèm hành vi tự cap giá trị về mức tối đa. Lúc bấm Lưu hoặc Ghi sổ, nó là lỗi chặn — không cho lưu cho tới khi số tiền được điều chỉnh xuống.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Ví dụ BR01 nguyên văn</th><th>Trước</th><th>Sau</th></tr></thead>
+    <tbody>
+      <tr><td>Đổi hệ số, tổng cha 10.000.000 giữ nguyên</td><td>A hệ số 3 được 3.000.000; B hệ số 7 được 7.000.000</td><td>Đổi cả hai về hệ số 5 → A và B mỗi bên 5.000.000</td></tr>
+      <tr><td>Đổi tổng cha, hệ số A là 4 và B là 6</td><td>Tổng 10.000.000 → A 4.000.000; B 6.000.000</td><td>Sửa tổng thành 15.000.000 → A 6.000.000; B 9.000.000</td></tr>
+      <tr><td>Ví dụ BR02: Số tiền 120.000.000, đã PB 70.000.000</td><td>Số tiền chưa PB còn 50.000.000</td><td>Nhập 60.000.000 → tự cap xuống 50.000.000 kèm MSG 104</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Tab 2 Hạch toán chỉ là <strong>xem trước</strong> bút toán sẽ ghi sổ: mọi thay đổi ở Tab 1 đều làm Tab 2 gom nhóm lại, nhưng Tab 2 không cho sửa số tiền. Lưới chi tiết con theo <span class="chip c-br">BR21</span>; ngày hạch toán và ngày chứng từ liên động theo <span class="chip c-br">BR37</span>; chống sửa đồng thời theo <span class="chip c-br">BR12</span>.</p>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — PMKT-U-05863 · 09941 · 10327</span>
+  <h2>Ghi sổ, Bỏ ghi sổ và Xóa chứng từ phân bổ</h2>
+  <p class="lede">Ba thao tác cuối vòng đời chứng từ. Ghi sổ và Bỏ ghi sổ đối xứng nhau qua một quy tắc thứ tự kỳ: <strong>ghi sổ từ kỳ trước tới kỳ sau, bỏ ghi sổ từ kỳ sau về kỳ trước</strong>. Cả hai đều thao tác trực tiếp, không qua popup xác nhận theo BR13.2.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Ghi sổ"]) --> P{"Quyền PhanBoCPTT.Post?"}
+    P -- Không --> P1["MSG 004"]:::err
+    P -- Có --> S{"Trạng thái Chưa ghi sổ?"}
+    S -- "Đã ghi sổ" --> S1["MSG 044"]:::err
+    S -- "Chưa ghi sổ" --> K{"Kỳ kế toán đã khóa sổ?"}
+    K -- Có --> K1["Chặn theo BR17"]:::err
+    K -- Không --> V{"Số tiền PB của chứng từ<br/>vượt Số tiền chưa PB?"}
+    V -- Có --> V1["MSG 104"]:::err
+    V -- Không --> T{"Còn kỳ trước cùng năm<br/>ở trạng thái Chưa ghi sổ?"}
+    T -- Có --> T1["MSG 026 — ghi sổ theo thứ tự<br/>từ kỳ trước đến kỳ sau"]:::err
+    T -- Không --> G["Sinh bút toán vào Sổ cái<br/>Nợ TK chờ PB · Có TK chi phí<br/>đọc từ dòng chứng từ đã lưu"]
+    G --> G1["Chứng từ chuyển Đã ghi sổ<br/>Thiết lập kỳ chuyển Đã ghi sổ"]
+    G1 --> G2["SoTienDaPhanBo cộng thêm<br/>tổng số tiền chứng từ<br/>Tính lại SoTienPhanBoConLai"]
+    G2 --> G3{"Khai báo đang Tạm dừng phân bổ?"}
+    G3 -- Có --> G4["Giữ nguyên trạng thái khai báo<br/>chỉ cập nhật hai con số"]:::warn
+    G3 -- Không --> G5["Cập nhật trạng thái theo BR02"]:::ok
+    G4 --> Z(["MSG 021 — Ghi sổ thành công"])
+    G5 --> Z
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Ghi sổ là lúc duy nhất bút toán chạm Sổ cái.</b> Nguồn tài khoản là dữ liệu thực tế đã lưu trên dòng chứng từ phân bổ, không tra lại cấu hình Tài khoản ngầm định — nên đổi TKND về sau không làm sai bút toán cũ.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Bỏ ghi sổ"]) --> P{"Quyền PhanBoCPTT.Unpost?"}
+    P -- Không --> P1["MSG 004"]:::err
+    P -- Có --> S{"Trạng thái Đã ghi sổ?"}
+    S -- "Chưa ghi sổ" --> S1["MSG 045 · nút vốn đã bị ẩn"]:::err
+    S -- "Đã ghi sổ" --> K{"Kỳ chứa Ngày hạch toán<br/>đã khóa sổ?"}
+    K -- Có --> K1["Chặn theo BR17"]:::err
+    K -- Không --> T{"Kỳ sau cùng năm đã ghi sổ?"}
+    T -- Có --> T1["MSG 048 — bỏ ghi sổ theo thứ tự<br/>từ kỳ sau về kỳ trước"]:::err
+    T -- Không --> G["Xóa bút toán của chứng từ<br/>trên Sổ cái kế toán"]
+    G --> G1["SoTienDaPhanBo trừ đi<br/>tổng số tiền chứng từ<br/>SoTienPhanBoConLai cộng lại"]
+    G1 --> G2["Chứng từ về Chưa ghi sổ<br/>Thiết lập kỳ về Đã sinh CT"]
+    G2 --> G3{"Khai báo đang Tạm dừng phân bổ?"}
+    G3 -- Có --> G4["Giữ nguyên trạng thái khai báo"]:::warn
+    G3 -- Không --> G5["Cập nhật trạng thái theo BR02"]:::ok
+    G4 --> Z(["MSG 022 · mở lại Sửa và Xóa"])
+    G5 --> Z
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Cộng vào rồi trừ ra đúng bằng con số cũ.</b> Tài liệu nêu rõ việc khôi phục dùng phép cộng trừ trực tiếp giá trị của chính chứng từ bị bỏ ghi sổ, nên không phát sinh sai số làm tròn — giá trị sinh ra thế nào thì trừ đi nguyên vẹn thế đó.</figcaption>
+  </figure>
+
+  <h3>Xóa chứng từ phân bổ</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Bước</th><th>Điều kiện · hành động</th><th class="mono">Chặn</th></tr></thead>
+    <tbody>
+      <tr><td>1. Kiểm tồn tại</td><td>Bản ghi phải còn tồn tại</td><td class="mono">031</td></tr>
+      <tr><td>2. Kiểm trạng thái</td><td>Chỉ xóa được chứng từ Chưa ghi sổ</td><td class="mono">050</td></tr>
+      <tr><td>3. Xác nhận</td><td>Popup xác nhận xóa theo BR3; bấm Hủy thì đóng popup, không xóa</td><td>—</td></tr>
+      <tr><td>4. Xóa</td><td>Xóa mềm chứng từ phân bổ và các dòng chi tiết liên quan</td><td>—</td></tr>
+      <tr><td>5. Trả trạng thái thiết lập</td><td>Thiết lập phân bổ chi tiết của kỳ về <em>Chưa sinh CT</em> để cho phép tính lại</td><td>—</td></tr>
+      <tr><td>6. Kết thúc</td><td>Thông báo thành công rồi tải lại màn Phân bổ</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Một mã lỗi, hai chiều kiểm</span>
+    <p><span class="chip c-msg">MSG 026</span> dùng cho cả kiểm chuẩn (<em>còn kỳ trước chưa ghi sổ</em>) lẫn kiểm phòng vệ chiều ngược (<em>kỳ sau đã ghi sổ trong khi kỳ này chưa</em>). BA ghi rõ tình huống thứ hai về nguyên tắc không xảy ra nếu quy tắc chuẩn luôn được tuân thủ — nó chỉ tồn tại để bảo toàn số dư phân bổ của các kỳ sau.</p>
+  </div>
+</section>
+
+<!-- ============ 13 ============ -->
+<section id="s13">
+  <span class="snum">13 — Trường dẫn xuất</span>
+  <h2>Những con số hệ thống tự tính</h2>
+  <p class="lede">Sáu trường trên khai báo không do người dùng nhập trực tiếp mà là kết quả của công thức hoặc của thao tác ghi sổ. Nắm đúng thời điểm chúng đổi giá trị là nắm được toàn bộ epic.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Field</th><th>Cách tính</th><th>Đổi giá trị khi</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">SoTienPhanBoHangKy</td><td>Số tiền / Số kỳ PB, hoặc Số tiền / 2 khi Phân bổ hai lần</td><td>Nhập hoặc sửa Số tiền, Số kỳ PB ở trạng thái Chưa phân bổ</td></tr>
+      <tr><td class="mono">SoTienPhanBoHangKy<br>(mỗi dòng thiết lập)</td><td>PB hằng kỳ Header × (Hệ số dòng / Tổng hệ số)</td><td>Thêm, sửa, xóa dòng thiết lập hoặc đổi hệ số</td></tr>
+      <tr><td class="mono">SoTienDaPhanBo</td><td>Cộng tổng tiền chứng từ khi Ghi sổ; trừ đi khi Bỏ ghi sổ. Có thể nhập tay khi khai báo CPTT đầu kỳ</td><td>Ghi sổ · Bỏ ghi sổ · nhập tay lúc thêm mới</td></tr>
+      <tr><td class="mono">SoTienPhanBoConLai</td><td>Tính lại mỗi lần SoTienDaPhanBo đổi</td><td>Ghi sổ · Bỏ ghi sổ</td></tr>
+      <tr><td class="mono">SoKyPhanBoConLai</td><td>Tự tính, không cho sửa. Ví dụ BA: 120tr chia 12 kỳ, đã PB 30tr → còn lại 9 kỳ</td><td>Đổi Số tiền đã PB hoặc Số kỳ PB</td></tr>
+      <tr><td class="mono">TrangThai</td><td>Theo BR02, trừ ngoại lệ Tạm dừng phân bổ</td><td>Lưu lần đầu · Ghi sổ · Bỏ ghi sổ · Tạm dừng · Tiếp tục</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Quy tắc thứ tự kỳ — hai chiều đối xứng</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Quy tắc</th><th>Ví dụ chặn</th><th class="mono">Mã</th></tr></thead>
+    <tbody>
+      <tr><td>Ghi sổ</td><td>Chỉ ghi sổ được khi mọi chứng từ của các kỳ trước đó đã ghi sổ</td><td>Kỳ 02/2026 còn Chưa ghi sổ thì không ghi sổ được kỳ 03/2026</td><td class="mono">026</td></tr>
+      <tr><td>Bỏ ghi sổ</td><td>Bỏ ghi sổ theo thứ tự từ kỳ sau về kỳ trước</td><td>Kỳ 04/2026 còn Đã ghi sổ thì không bỏ ghi sổ được kỳ 03/2026</td><td class="mono">048</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Chưa có quy định trong BA</span>
+    <p>Ba điểm tài liệu chưa chốt, không được tự đặt luật: (1) <strong>công thức nguyên văn của <span class="f">SoKyPhanBoConLai</span></strong> — BA chỉ ghi "Auto" và đưa ví dụ số; (2) <strong>mã MSG thành công của thao tác Xóa chứng từ phân bổ</strong> — use case chỉ ghi "hiển thị thông báo thành công"; (3) <strong>bảng <span class="f">cptt_dong_phan_bo_chi_phi_tra_truoc</span></strong> được các màn hình tham chiếu nhưng không có mặt trong ma trận CRUD.</p>
+  </div>
+</section>
+
+<!-- ============ 14 ============ -->
+<section id="s14">
+  <span class="snum">14 — Tra cứu</span>
+  <h2>Điều kiện chặn và thông báo tương ứng</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> trong các sơ đồ trên, theo thao tác. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-05853_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện chặn</th><th class="mono">Mã</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="9">Thêm mới khai báo</td><td>Thiếu trường bắt buộc</td><td class="mono">005</td></tr>
+      <tr><td>Mã CP đã tồn tại</td><td class="mono">008</td></tr>
+      <tr><td>Số tiền hoặc Hệ số phân bổ không dương</td><td class="mono">027</td></tr>
+      <tr><td>Số kỳ PB không phải số nguyên dương · Số kỳ PB không lớn hơn 1</td><td class="mono">025 · 043</td></tr>
+      <tr><td>Số tiền đã PB âm · Số tiền đã PB vượt Tổng số tiền</td><td class="mono">042 · 049</td></tr>
+      <tr><td>Phân bổ hai lần: Ngày kết thúc không sau Ngày bắt đầu</td><td class="mono">039</td></tr>
+      <tr><td>Không có nhóm thiết lập phân bổ nào</td><td class="mono">036</td></tr>
+      <tr><td>Tổng Hệ số phân bổ không lớn hơn 0</td><td class="mono">006</td></tr>
+      <tr><td>Tổng Số tiền PB các dòng khác Số tiền PB hằng kỳ</td><td class="mono">007</td></tr>
+      <tr><td rowspan="6">Chỉnh sửa khai báo</td><td>Trạng thái Hoàn thành phân bổ</td><td class="mono">014</td></tr>
+      <tr><td>Cố sửa tab bị khóa khi Đang phân bổ hoặc Tạm dừng</td><td class="mono">110</td></tr>
+      <tr><td>Ngày bắt đầu trống · Ngày kết thúc trống khi Phân bổ hai lần</td><td class="mono">037 · 038</td></tr>
+      <tr><td>Sửa Ngày bắt đầu khi đã có phân bổ lần 1 · Ngày kết thúc khi đã có lần 2</td><td class="mono">040 · 041</td></tr>
+      <tr><td>Sửa thiết lập của kỳ đã có bút toán · xóa nhóm hoặc hệ số của kỳ đã có bút toán</td><td class="mono">034 · 035</td></tr>
+      <tr><td>Lỗi hệ thống khi cập nhật</td><td class="mono">015</td></tr>
+      <tr><td rowspan="2">Xóa khai báo</td><td>Khai báo không ở trạng thái Chưa phân bổ</td><td class="mono">017</td></tr>
+      <tr><td>Bản ghi không tồn tại</td><td class="mono">031</td></tr>
+      <tr><td>Tạm dừng phân bổ</td><td>Khai báo không ở Chưa phân bổ hoặc Đang phân bổ</td><td class="mono">046</td></tr>
+      <tr><td>Tiếp tục phân bổ</td><td>Khai báo không ở Tạm dừng phân bổ</td><td class="mono">047</td></tr>
+      <tr><td rowspan="4">Tính phân bổ</td><td>Kỳ đã có chứng từ Đã ghi sổ</td><td class="mono">029</td></tr>
+      <tr><td>Kỳ đã có chứng từ Chưa ghi sổ — hỏi xác nhận thay thế</td><td class="mono">030</td></tr>
+      <tr><td>Không có khai báo phù hợp để phân bổ trong kỳ</td><td class="mono">032</td></tr>
+      <tr><td>Số chứng từ bị trùng khi lưu</td><td class="mono">051</td></tr>
+      <tr><td rowspan="2">Tính lại chứng từ</td><td>Chứng từ đã ghi sổ</td><td class="mono">029</td></tr>
+      <tr><td>Không còn khai báo hợp lệ để phân bổ</td><td class="mono">203</td></tr>
+      <tr><td rowspan="3">Chỉnh sửa chứng từ phân bổ</td><td>Chứng từ ở trạng thái Đã ghi sổ</td><td class="mono">050</td></tr>
+      <tr><td>Số tiền PB kỳ này vượt Số tiền chưa PB</td><td class="mono">104</td></tr>
+      <tr><td>Số tiền PB kỳ này không phải số nguyên dương</td><td class="mono">025</td></tr>
+      <tr><td rowspan="3">Ghi sổ</td><td>Chứng từ không ở trạng thái Chưa ghi sổ</td><td class="mono">044</td></tr>
+      <tr><td>Còn kỳ trước cùng năm chưa ghi sổ</td><td class="mono">026</td></tr>
+      <tr><td>Số tiền PB vượt Số tiền chưa PB còn lại</td><td class="mono">104</td></tr>
+      <tr><td rowspan="2">Bỏ ghi sổ</td><td>Chứng từ không ở trạng thái Đã ghi sổ</td><td class="mono">045</td></tr>
+      <tr><td>Kỳ sau cùng năm đã ghi sổ</td><td class="mono">048</td></tr>
+      <tr><td rowspan="2">Xóa chứng từ phân bổ</td><td>Chứng từ không ở trạng thái Chưa ghi sổ</td><td class="mono">050</td></tr>
+      <tr><td>Bản ghi không tồn tại</td><td class="mono">031</td></tr>
+      <tr><td rowspan="4">Mọi màn</td><td>Không có quyền truy cập chức năng</td><td class="mono">004</td></tr>
+      <tr><td>Không có quyền xem chi tiết · chỉnh sửa · xóa</td><td class="mono">011 · 013 · 018</td></tr>
+      <tr><td>Kỳ kế toán đã khóa sổ khi Lưu, Ghi sổ, Bỏ ghi sổ</td><td class="mono">BR17</td></tr>
+      <tr><td>Lỗi tải danh sách · không tìm thấy khai báo</td><td class="mono">002 · 010</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Cảnh báo và thông báo thông tin</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Mã</th><th>Loại</th><th>Xuất hiện ở</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">103</td><td>Cảnh báo</td><td>Icon trên card kỳ: khai báo phân bổ đã bị thay đổi, cần tính lại</td></tr>
+      <tr><td class="mono">104</td><td>Cảnh báo và chặn</td><td>Nhập vượt số dư thì tự cap; Lưu hoặc Ghi sổ thì chặn</td></tr>
+      <tr><td class="mono">105</td><td>Cảnh báo</td><td>Ngày bắt đầu ở tương lai — vẫn cho lưu</td></tr>
+      <tr><td class="mono">001 · 201 · 202 · 203</td><td>Thông tin</td><td>Danh sách rỗng · chưa có chứng từ phân bổ · kỳ chưa sinh CT · không có khai báo để phân bổ</td></tr>
+      <tr><td class="mono">003 · 012 · 016 · 019 · 020 · 021 · 022 · 023 · 024 · 028</td><td>Thành công</td><td>Thêm · sửa · xóa khai báo · tính PB · sửa CT · ghi sổ · bỏ ghi sổ · tạm dừng · tiếp tục · tính lại</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">GhiTangCPTT.View</td><td>Vào màn danh sách khai báo</td></tr>
+      <tr><td class="mono">GhiTangCPTT.View.Detail</td><td>Popup Xem chi tiết khai báo và bảng chi tiết dưới lưới</td></tr>
+      <tr><td class="mono">GhiTangCPTT.Create</td><td>Nút Thêm mới khai báo · popup chọn chứng từ gốc</td></tr>
+      <tr><td class="mono">GhiTangCPTT.Edit</td><td>Nút Chỉnh sửa khai báo · popup chọn chứng từ gốc</td></tr>
+      <tr><td class="mono">GhiTangCPTT.Delete</td><td>Nút Xóa khai báo</td></tr>
+      <tr><td class="mono">PhanBoCPTT.View</td><td>Vào màn Phân bổ, Year View và Period View</td></tr>
+      <tr><td class="mono">PhanBoCPTT.View.Detail</td><td>Popup Xem chi tiết chứng từ phân bổ</td></tr>
+      <tr><td class="mono">PhanBoCPTT.Create</td><td>Nút Phân bổ · popup chọn kỳ · Tính lại chứng từ</td></tr>
+      <tr><td class="mono">PhanBoCPTT.Edit</td><td>Nút Chỉnh sửa chứng từ phân bổ</td></tr>
+      <tr><td class="mono">PhanBoCPTT.Post</td><td>Nút Ghi sổ · nút Lưu và ghi sổ</td></tr>
+      <tr><td class="mono">PhanBoCPTT.Unpost</td><td>Nút Bỏ ghi sổ</td></tr>
+      <tr><td class="mono">PhanBoCPTT.Delete</td><td>Nút Xóa chứng từ phân bổ</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Hành vi khi thiếu quyền theo <span class="chip c-br">BR25</span>: ẩn nút ở màn danh sách, chặn kèm thông báo khi gọi ép qua API. Toast thành công và thông báo lỗi theo <span class="chip c-br">BR26</span>.</p>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-05853 · Chi phí trả trước</span>
+  <span>Dựng từ 15 UC · 15 Activity Diagram · 10 màn hình · 6 ma trận ẩn hiện</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

@@ -1,0 +1,1080 @@
+<title>Luồng Chứng từ trả lại hàng mua</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-06758 · Phân hệ Mua hàng</p>
+  <h1>Luồng xử lý Chứng từ trả lại hàng mua</h1>
+  <p>Toàn bộ vòng đời của chứng từ trả lại hàng mua — từ chọn chứng từ mua hàng gốc, lập bộ chứng từ kèm phiếu xuất kho · hóa đơn · phiếu thu, tới ghi sổ sinh bút toán ngược, bỏ ghi sổ hoàn tác và xóa mềm cả bộ. Mỗi sơ đồ bám đúng Activity Diagram và BR trong bộ tài liệu BA.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 8 use case · 6 activity diagram · 6 màn hình</span>
+    <span><b>Entity gốc:</b> pur_chung_tu_tra_lai_hang_mua</span>
+    <span><b>Quyền:</b> TraLaiHangMua.*</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Bản đồ vòng đời</a></li>
+    <li><a href="#s1"><span>01</span>Xem danh sách</a></li>
+    <li><a href="#s2"><span>02</span>Thêm mới</a></li>
+    <li><a href="#s3"><span>03</span>Chọn chứng từ gốc</a></li>
+    <li><a href="#s4"><span>04</span>Ba công tắc &amp; bộ chứng từ</a></li>
+    <li><a href="#s5"><span>05</span>Tính tiền trên dòng</a></li>
+    <li><a href="#s6"><span>06</span>Ghi sổ &amp; bút toán</a></li>
+    <li><a href="#s7"><span>07</span>Bỏ ghi sổ</a></li>
+    <li><a href="#s8"><span>08</span>Chỉnh sửa &amp; Nhân bản</a></li>
+    <li><a href="#s9"><span>09</span>Xóa</a></li>
+    <li><a href="#s10"><span>10</span>Xem chi tiết</a></li>
+    <li><a href="#s11"><span>11</span>Trường dẫn xuất</a></li>
+    <li><a href="#s12"><span>12</span>Tra cứu chặn &amp; quyền</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Bản đồ vòng đời một chứng từ trả lại</h2>
+  <p class="lede">Chứng từ trả lại hàng mua chỉ có <strong>hai trạng thái ghi sổ</strong>, nhưng khác chứng từ thông thường ở chỗ nó luôn là <em>một bộ</em>: chứng từ trả lại + phiếu xuất kho + hóa đơn + phiếu thu chuyển trạng thái và bị xóa cùng nhau.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(( )) -- "Lưu nháp" --> A
+    S -- "Lưu và ghi sổ" --> A
+    A["<b>CHƯA GHI SỔ</b><br/>Sửa · Xóa · Ghi sổ mở<br/>Chưa có bút toán"]
+    B["<b>ĐÃ GHI SỔ</b><br/>Khóa sửa · khóa xóa<br/>Bút toán · tồn kho · công nợ"]
+    D["<b>ĐÃ XÓA MỀM</b><br/>DaXoa = true cho cả bộ<br/>Ẩn khỏi danh sách đối trừ"]
+    N["<b>BẢN SAO MỚI</b><br/>Luôn Chưa ghi sổ<br/>Số chứng từ sinh mới"]
+    A -- "Ghi sổ nguyên tử" --> B
+    B -- "Bỏ ghi sổ — rollback đủ" --> A
+    B -. "Đã đối trừ thủ công thì chặn" .-> A
+    A -- "Xóa — kéo theo cả bộ" --> D
+    B -. "Không có đường trực tiếp" .-> D
+    A -- "Nhân bản" --> N
+    B -- "Nhân bản" --> N
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    class B ok;
+    class N warn;
+    class D err;
+</pre>
+    </div>
+    <figcaption><b>Ghi sổ là bản lề duy nhất.</b> Nút Sửa · Xóa · Ghi sổ chỉ hiện ở <em>Chưa ghi sổ</em>; nút Bỏ ghi sổ chỉ hiện ở <em>Đã ghi sổ</em>. Muốn xóa một chứng từ đã ghi sổ thì phải bỏ ghi sổ trước — và bỏ ghi sổ lại bị chặn nếu chứng từ đã được đối trừ công nợ thủ công.</figcaption>
+  </figure>
+
+  <h3>Loại chứng từ là trường dẫn xuất, không phải trường nhập</h3>
+  <p>Cột <span class="f">Loại chứng từ</span> trên danh sách không có ô nhập tương ứng — nó được tính từ hai công tắc thanh toán theo <span class="chip c-br">BR1 danh sách</span>, để khách hàng lọc và dựng báo cáo nội bộ.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">ThanhToanNgay</th><th class="mono">HinhThucThanhToan</th><th>Loại chứng từ hiển thị</th><th>Tab thanh toán</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">false</td><td>—</td><td>Trả lại hàng mua - Giảm trừ công nợ</td><td>Không có</td></tr>
+      <tr><td class="mono">true</td><td>Tiền mặt</td><td>Trả lại hàng mua - Thanh toán ngay - Phiếu thu</td><td>Phiếu thu</td></tr>
+      <tr><td class="mono">true</td><td>Chuyển khoản</td><td>Trả lại hàng mua - Thanh toán ngay - Giấy báo có</td><td>Giấy báo có</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Chốt phạm vi giá trị</span>
+    <p><span class="f">HinhThucThanhToan</span> của trả lại hàng mua <strong>chỉ có hai giá trị</strong>: Tiền mặt và Chuyển khoản. Các giá trị <em>Ủy nhiệm chi · Séc chuyển khoản · Séc tiền mặt</em> thuộc enum chi tiền của Chứng từ mua hàng và phân hệ Tiền — không dùng cho epic này.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — UC_TLHM_XemDanhSach</span>
+  <h2>Xem danh sách: bảng điều phối mọi thao tác</h2>
+  <p class="lede">Màn <span class="f">SCR_TLHM_DanhSach</span> là nơi mở mọi luồng còn lại. Mọi nút trên dòng đều gác bởi cặp điều kiện <strong>quyền × trạng thái ghi sổ</strong>; riêng section chi tiết dưới lưới gác bằng một quyền riêng.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Mở menu Trả lại hàng mua"]) --> B{"Có quyền View?"}
+    B -- "Không" --> B1["Ẩn cả chức năng truy cập"]:::err
+    B -- "Có" --> C["Tải danh sách của tenant<br/>20 dòng mỗi trang<br/>Sắp xếp ngày tạo mới nhất"]
+    C --> D["Lưới danh sách<br/>Dòng Chưa ghi sổ được highlight"]
+
+    D --> G1{{"Gác theo trạng thái ghi sổ"}}
+    D --> G2{{"Gác theo phương thức hóa đơn"}}
+    D --> G3{{"Không gác trạng thái"}}
+    D --> G4{{"Gác theo quyền View.Detail"}}
+
+    G1 -- "Chưa ghi sổ" --> A1["Sửa · Ghi sổ · Xóa"]
+    G1 -- "Đã ghi sổ" --> A2["Bỏ ghi sổ"]
+    G2 -- "Đã ghi sổ · người bán xuất HĐ" --> A3["Lập hóa đơn điều chỉnh"]
+    G2 -- "Đã ghi sổ · người mua xuất HĐ" --> A4["Nhận hóa đơn"]
+    G3 --> A5["Xem · Nhân bản · Tìm kiếm<br/>Xóa bộ lọc · Làm mới"]
+    G3 --> A6["Xóa hàng loạt<br/>Disable nếu chọn dòng đã ghi sổ"]
+    G4 --> A7["Section chi tiết 4 tab<br/>Chỉ đọc · không phân trang"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+</pre>
+    </div>
+    <figcaption><b>Bốn nhóm điều kiện hiển thị nút, không phải một.</b> Nhóm theo ghi sổ (Sửa · Ghi sổ · Xóa · Bỏ ghi), nhóm theo phương thức lập hóa đơn (Lập hóa đơn điều chỉnh · Nhận hóa đơn — chỉ mở khi chứng từ đã ghi sổ), nhóm không gác trạng thái, và nhóm gác bằng quyền xem chi tiết.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Điểm dễ sai</span>
+    <p><strong>Section Thông tin chi tiết dưới lưới không đi kèm quyền xem danh sách.</strong> Người dùng chỉ có <span class="f">TraLaiHangMua.View</span> vẫn thấy lưới bình thường nhưng <em>không được render và không được nạp dữ liệu</em> section chi tiết — quyền cần là <span class="f">TraLaiHangMua.View.Detail</span>. Khi lưới trống thì cả thanh tiêu đề section cũng không hiển thị.</p>
+  </div>
+
+  <h3>Số chứng từ trên lưới lấy từ đâu</h3>
+  <p>Thứ tự tab trên chứng từ là <strong>Phiếu xuất kho → Công nợ hoặc Phiếu thu → Hóa đơn</strong>. Cột <span class="f">SoChungTu</span> · <span class="f">NgayChungTu</span> · <span class="f">NgayHachToan</span> · <span class="f">TenNhaCungCap</span> trên lưới lấy theo <strong>tab đầu tiên đang hiển thị</strong> của chứng từ đó — tích Trả lại hàng trong kho thì lấy của Phiếu xuất kho, ngược lại lấy của chứng từ Ghi giảm công nợ. Bốn cột tiền trên lưới đều là bản <em>quy đổi</em>: <span class="f">TongTienHangHoaQuyDoi</span>, <span class="f">TongTienChietKhauQuyDoi</span>, <span class="f">TongTienThueGTGTQuyDoi</span>, <span class="f">TongTienThanhToanQuyDoi</span>.</p>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — UC_TLHM_ThemMoi</span>
+  <h2>Thêm mới: một form, cả bộ chứng từ</h2>
+  <p class="lede">Đây là luồng nặng nhất của epic. Ba công tắc trên Section 1 quyết định form hiện tab nào <em>và</em> lúc Lưu hệ thống sinh ra bao nhiêu bản ghi. Chứng từ trả lại chỉ giữ dữ liệu trả lại; phiếu xuất kho, hóa đơn, phiếu thu đều là bản ghi riêng.</p>
+
+  <h3>Chuỗi nhập liệu</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Thêm mới trên Danh sách"]) --> P{"Có quyền Add?"}
+    P -- "Không" --> PE["Không hiển thị chức năng"]:::err
+    P -- "Có" --> B["Mở SCR_TLHM_ThemMoi"]
+    B --> C["Đặt ba công tắc Section 1<br/>Thu tiền ngay · Trả lại trong kho<br/>Phương thức lập hóa đơn"]
+    C --> D{"Lấy hàng hóa từ đâu?"}
+
+    D -- "Chọn chứng từ gốc" --> D1["Popup hoặc combo chọn nguồn<br/>Xem mục 03"]
+    D -- "Nhập thủ công" --> D2["Bấm Thêm dòng<br/>Chọn Mã hàng từ danh mục"]
+
+    D1 --> E["Lưới Chi tiết hàng hóa"]
+    D2 --> E
+    E --> E1["Autofill TK Nợ theo TK công nợ NCC<br/>mặc định 331x đầu tiên"]
+    E1 --> E2["Autofill TK Có theo công tắc kho<br/>TK vật tư hoặc TK giá vốn"]
+    E2 --> E3["Nhập Số lượng · Đơn giá<br/>Chiết khấu · Thuế suất — mục 05"]
+    E3 --> F["Section Tổng hợp tự cộng dồn"]
+    F --> G["Nhập các tab của Section 2<br/>hiện theo ba công tắc — mục 04"]
+    G --> H(["Bấm Lưu nháp hoặc Lưu và ghi sổ"])
+
+    B -. "Hủy hoặc ESC khi đã sửa dữ liệu" .-> Q["Popup xác nhận đóng"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Ba công tắc đặt trước, hàng hóa đặt sau.</b> Giá trị <span class="f">TraLaiHangTrongKho</span> phải có trước khi lưới autofill TK Có, vì chính nó quyết định lấy TK vật tư trên danh mục VTHH hay TK giá vốn.</figcaption>
+  </figure>
+
+  <h3>Chuỗi validate — nơi mọi thứ có thể hỏng</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Bấm Lưu nháp hoặc Lưu và ghi sổ"]) --> V1{"Đủ trường bắt buộc?"}
+    V1 -- "Không" --> X1["Báo lỗi tại trường · focus<br/>BR15.1"]:::err
+    V1 -- "Có" --> V2{"Có ít nhất 1 dòng chi tiết?"}
+    V2 -- "Không" --> X2["MSG 104"]:::err
+    V2 -- "Có" --> V3{"Số lượng trả lại ≥ 1?"}
+    V3 -- "Dòng hàng hóa ≤ 0" --> X3["MSG 101"]:::err
+    V3 -- "Dòng dịch vụ cho phép 0" --> V4
+    V3 -- "Hợp lệ" --> V4{"Đơn giá ≥ 0?"}
+    V4 -- "Không" --> X4["MSG 103"]:::err
+    V4 -- "Có" --> V5{"Đã chọn chứng từ gốc?"}
+    V5 -- "Có" --> V5a{"SL trả ≤ SL còn lại?"}
+    V5a -- "Không" --> X5["MSG 102"]:::err
+    V5a -- "Có" --> V6
+    V5 -- "Không" --> V6{"Ngày HT ≥ Ngày CT?"}
+    V6 -- "Không" --> X6["BR15.3"]:::err
+    V6 -- "Có" --> V7{"Ngày HT thuộc kỳ mở?"}
+    V7 -- "Kỳ đã khóa sổ" --> X7["Chặn theo BR17"]:::err
+    V7 -- "Kỳ mở" --> V8{"Số chứng từ trùng?"}
+    V8 -- "Có" --> X8["MSG 201 số CT đã tồn tại"]:::err
+    V8 -- "Không" --> V9{"Trùng hóa đơn — BR11?"}
+    V9 -- "Người mua xuất HĐ" --> X9["Chặn lưu · focus Số hóa đơn"]:::err
+    V9 -- "Người bán xuất HĐĐC" --> W1["Cảnh báo · vẫn cho lưu"]:::warn
+    V9 -- "Không trùng" --> V10
+    W1 --> V10{"Trả lại hàng trong kho?"}
+    V10 -- "Không" --> OK(["Sang bước ghi dữ liệu"]):::ok
+    V10 -- "Có" --> V11{"Đã chọn Kho cho mọi dòng?"}
+    V11 -- "Thiếu kho hàng hóa" --> X10["Báo đỏ ô Kho · focus dòng đầu"]:::err
+    V11 -- "Đủ" --> V12{"Tồn kho ≥ Số lượng trả lại?"}
+    V12 -- "Đủ" --> V13{"Mọi dòng đều là dịch vụ?"}
+    V12 -- "Thiếu · cấm xuất âm" --> X11["MSG 105 — chặn lưu"]:::err
+    V12 -- "Thiếu · cho xuất âm" --> W2["MSG 601 — Không hoặc Tiếp tục"]:::warn
+    W2 -- "Tiếp tục" --> V13
+    W2 -- "Không" --> X12["Hủy lệnh lưu · focus SL"]:::err
+    V13 -- "Có" --> W3["Cảnh báo tick nhầm kho<br/>vẫn cho lưu"]:::warn
+    V13 -- "Không" --> OK
+    W3 -- "Có" --> OK
+    W3 -- "Không" --> X12
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Nút Lưu nháp chạy đủ bộ validate như Lưu và ghi sổ.</b> Chỉ hai điều kiện khác nhau: kiểm trùng số chứng từ theo <span class="chip c-br">BR1 UC</span> đặc tả là <em>chỉ áp dụng khi ghi sổ</em>, còn kiểm tồn kho vẫn phải chạy ở cả hai nút vì thao tác lưu đã sinh sẵn bản ghi phiếu xuất kho.</figcaption>
+  </figure>
+
+  <h3>Chuỗi ghi dữ liệu sau khi validate qua</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    W["Ghi pur_chung_tu_tra_lai_hang_mua<br/>và bảng chi tiết"] --> W1{"TraLaiHangTrongKho?"}
+    W1 -- "true" --> W1a["Sinh phiếu xuất kho trả lại<br/>pur_phieu_xuat_kho_tra_lai_hang_mua"]
+    W1 -- "false" --> W2{"Phương thức lập hóa đơn?"}
+    W1a --> W2
+    W2 -- "Người bán xuất HĐĐC" --> W2a["Sinh pur_hoa_don_dieu_chinh<br/>lên tab Hóa đơn mua hàng"]
+    W2 -- "Người mua xuất hóa đơn" --> W2b["Sinh sal_hoa_don_ban_hang<br/>lên tab Hóa đơn bán hàng"]
+    W2 -- "Không có hóa đơn" --> W3{"ThanhToanNgay?"}
+    W2a --> W3
+    W2b --> W3
+    W3 -- "true · Tiền mặt" --> W3a["Sinh cash_phieu_thu<br/>loại Phiếu thu"]
+    W3 -- "true · Chuyển khoản" --> W3b["Sinh cash_phieu_thu<br/>loại Giấy báo có"]
+    W3 -- "false" --> Z{"Nhấn nút nào?"}
+    W3a --> Z
+    W3b --> Z
+    Z -- "Lưu nháp" --> Z1["Cả bộ = Chưa ghi sổ<br/>Không sinh bút toán"]:::ok
+    Z -- "Lưu và ghi sổ" --> Z2["Lưu Chưa ghi sổ rồi gọi<br/>UC_TLHM_GhiSo — mục 06"]:::ok
+    Z1 --> Y1["MSG 001 · đóng form · về danh sách"]
+    Z2 --> Y2["MSG 002 · đóng form · về danh sách"]
+    Z1 -.-> E["Lỗi bất kỳ bước nào thì rollback<br/>bỏ cả phiếu xuất · HĐ · phiếu thu"]:::err
+    Z2 -.-> E
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok  fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Cả bộ chứng từ chung một trạng thái.</b> Lưu nháp thì phiếu xuất kho, hóa đơn và phiếu thu đều ở <em>Chưa ghi sổ</em>; thao tác ghi sổ hoặc xóa thực hiện từ danh sách Phiếu xuất kho cũng tác động lên cả bộ, không tách rời từng phiếu.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Ràng buộc dễ bỏ sót</span>
+    <p>Bước 15–16 của luồng chính đặc tả rõ: khi bấm <strong>Lưu và ghi sổ</strong>, hệ thống <em>lưu chứng từ ở trạng thái "Chưa ghi sổ" trước</em>, rồi mới gọi <span class="f">UC_TLHM_GhiSo</span>. Nếu ghi sổ lỗi thì rollback toàn bộ và chứng từ <strong>giữ nguyên "Chưa ghi sổ"</strong> — không tồn tại trạng thái trung gian "đang ghi sổ".</p>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — SCR_TLHM_PopupChonChungTu</span>
+  <h2>Chọn chứng từ mua hàng gốc</h2>
+  <p class="lede">Đây là điểm nối giữa epic này và nghiệp vụ mua hàng. Có hai cách chọn — combo (chọn cả chứng từ) và popup (chọn từng dòng hàng) — nhưng cùng một bộ điều kiện load và cùng một quy tắc fill.</p>
+
+  <h3>Luồng lọc và chọn dòng</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Chọn chứng từ gốc"]) --> B{"Lần đầu mở form?"}
+    B -- "Có" --> B1["Không load dữ liệu<br/>Nhà cung cấp đang trống"]
+    B -- "Đã chọn lần trước" --> B2["Nạp lại NCC và các dòng<br/>đã tick ở lần chọn gần nhất"]
+    B1 --> C["Nhập filter: NCC bắt buộc<br/>Ngày HT mặc định đầu tháng<br/>Loại CT · Số CT"]
+    B2 --> C
+    C --> C1{"Bật Áp dụng đơn giá sau<br/>trả lại và điều chỉnh giá?"}
+    C1 -- "Có" --> C2["Đơn giá và Thành tiền tính<br/>theo BR2 — đọc phiếu ĐCG"]
+    C1 -- "Không" --> C3["Đơn giá lấy trên CT mua hàng"]
+    C2 --> D["Bấm Tìm kiếm"]
+    C3 --> D
+    D --> E["Load dòng hàng thỏa mãn"]
+    E --> E1["Loại CT mua hàng trong nước<br/>hoặc CT mua dịch vụ"]
+    E --> E2["Trạng thái Đã ghi sổ"]
+    E --> E3["Số lượng chưa trả lại ≥ 1"]
+    E --> E4["Dòng dịch vụ SL = 0 chỉ load<br/>nếu thành tiền còn lại ≥ 1"]
+    E1 --> F["Sắp xếp Ngày HT tăng dần<br/>rồi tới Số chứng từ"]
+    E2 --> F
+    E3 --> F
+    E4 --> F
+    F --> G["Tick dòng · nhập Số lượng trả lại"]
+    G --> H{"Chọn ít nhất 1 dòng?"}
+    H -- "Không" --> H1["Chặn lệnh Chọn"]:::err
+    H -- "Có" --> I{"Các chứng từ cùng loại tiền?"}
+    I -- "Không" --> I1["Chặn — yêu cầu cùng loại tiền"]:::err
+    I -- "Có" --> J{"Cùng tỷ giá?"}
+    J -- "Không" --> J1["Cảnh báo · cho tiếp tục"]:::warn
+    J -- "Có" --> K(["Sang bước fill dữ liệu"]):::ok
+    J1 -- "Tiếp tục" --> K
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Khác loại tiền thì chặn, khác tỷ giá thì chỉ cảnh báo.</b> Loại tiền quyết định cấu trúc cột quy đổi của cả chứng từ nên không thể trộn; tỷ giá thì người dùng có thể chủ động sửa lại sau khi fill.</figcaption>
+  </figure>
+
+  <h3>Quy tắc fill sau khi bấm Chọn</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Chọn trên popup hoặc combo"]) --> B{"Lưới chi tiết đã có dữ liệu?"}
+    B -- "Có" --> B1["Cảnh báo sẽ thay thế toàn bộ"]:::warn
+    B1 -- "Không" --> B2["Hủy lệnh chọn · giữ nguyên"]:::err
+    B1 -- "Có" --> C["Xóa sạch lưới chi tiết cũ"]
+    B -- "Không" --> C
+    C --> D{"Chọn từ đâu?"}
+    D -- "Popup" --> D1["Chỉ fill các dòng đã tick"]
+    D -- "Combo" --> D2["Fill toàn bộ dòng của chứng từ"]
+    D1 --> E["Đặt lại ba công tắc"]
+    D2 --> E
+    E --> E1["Thu tiền ngay = false · cho sửa"]
+    E --> E2["Trả lại trong kho = true chỉ khi<br/>mọi CT gốc đều kiêm phiếu nhập"]
+    E --> E3["Phương thức lập hóa đơn mặc định<br/>Người bán xuất hóa đơn điều chỉnh"]
+    E1 --> F["Fill thông tin chung các tab"]
+    E2 --> F
+    E3 --> F
+    F --> F1["Mã NCC lấy từ chứng từ gốc"]
+    F --> F2["Loại tiền lấy từ CT gốc · readonly"]
+    F --> F3["Tỷ giá lấy từ danh mục · cho sửa"]
+    F1 --> G["Fill lưới chi tiết hàng hóa"]
+    F2 --> G
+    F3 --> G
+    G --> G1["Mã hàng · Số CT · Số HĐ<br/>disable · vẫn cho xóa cả dòng"]
+    G --> G2["TK kho · TK thuế · TK giá vốn<br/>lấy trên chứng từ gốc"]
+    G --> G3["Loại chiết khấu theo mặt hàng nếu<br/>CT gốc có ít nhất 1 dòng có CK"]
+    F1 -. "Người dùng sửa lại Mã NCC" .-> H["Cảnh báo xóa liên kết CT gốc"]:::warn
+    H -- "Có" --> H1["Xóa liên kết · xóa dữ liệu đã có<br/>autofill như lập mới · mở Loại tiền"]:::err
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Đổi nhà cung cấp là đổi cả nguồn.</b> Chứng từ trả lại giữ liên kết tới chứng từ mua gốc qua Mã NCC; sửa lại NCC sau khi đã chọn nguồn sẽ <em>xóa toàn bộ liên kết và dữ liệu đã fill</em>, đưa form về đúng trạng thái lập mới không chọn nguồn.</figcaption>
+  </figure>
+
+  <h3>Công thức ba cột trên lưới popup</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột</th><th>Công thức</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td>Số lượng</td><td>SL trên CT mua hàng − SL đã trả lại</td><td>SL đã trả lại là tổng của mọi chứng từ trả lại chọn nguồn từ đúng dòng hàng đó</td></tr>
+      <tr><td>Đơn giá</td><td>Đơn giá trên CT mua hàng<br>hoặc Thành tiền ÷ Số lượng</td><td>Vế sau áp dụng khi bật checkbox Áp dụng đơn giá sau trả lại và điều chỉnh giá</td></tr>
+      <tr><td>Thành tiền</td><td>Số lượng × Đơn giá<br>hoặc TT gốc + ĐC tăng − ĐC giảm − đã trả</td><td>Dòng dịch vụ có SL = ĐG = 0 <b>luôn</b> dùng vế sau, bất kể trạng thái checkbox, và hai cột SL · ĐG bị disable</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Quy đổi đơn vị tính khi cộng dồn</span>
+    <p>Nếu chứng từ trả lại dùng ĐVT khác chứng từ mua gốc thì <strong>phải quy đổi trước khi trừ</strong>. Phép quy đổi trên danh mục VTHH là phép <em>nhân</em> thì SL theo ĐVT gốc = SL theo ĐVT chính ÷ tỷ lệ quy đổi; là phép <em>chia</em> thì nhân với tỷ lệ. Bỏ bước này thì cột Số lượng còn lại sai và toàn bộ validate <span class="chip c-msg">MSG 102</span> sai theo.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — Nghiệp vụ đặc thù</span>
+  <h2>Ba công tắc điều khiển cả giao diện lẫn dữ liệu</h2>
+  <p class="lede">Ma trận ẩn hiện của màn Thêm mới dựng trên đúng ba trục trực giao. Cùng một tích chuột vừa mở tab nhập liệu, vừa quyết định bản ghi sinh ra khi Lưu, vừa đổi tài khoản autofill trên lưới.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    I1{{"TraLaiHangTrongKho"}}
+    I2{{"ThanhToanNgay"}}
+    I3{{"PhuongThucLapHoaDon"}}
+
+    I1 -- "true" --> K1["Tab Phiếu xuất kho<br/>Cột Kho · Số lô · Hạn sử dụng<br/>TK Có = TK vật tư hoặc TK kho"]
+    I1 -- "false" --> K2["Tab Chứng từ giảm công nợ<br/>Ẩn Kho · Số lô · HSD<br/>TK Có = TK giá vốn"]
+
+    I2 -- "true · Tiền mặt" --> T1["Tab Phiếu thu<br/>TK tiền mặc định 111x"]
+    I2 -- "true · Chuyển khoản" --> T2["Tab Giấy báo có<br/>TK tiền mặc định 112x"]
+    I2 -- "false" --> T3["Không tab thanh toán<br/>Ẩn Phương thức thanh toán"]
+
+    I3 -- "Người bán xuất HĐĐC" --> H1["Tab Hóa đơn · nhóm cột thuế<br/>Nhóm HHDV mua vào mặc định 1"]
+    I3 -- "Người mua xuất hóa đơn" --> H2["Tab Hóa đơn · nhóm cột thuế<br/>Nhóm HHDV mua vào để trống"]
+    I3 -- "Không có hóa đơn" --> H3["Ẩn tab Hóa đơn · tab Thuế<br/>Ẩn toàn bộ nhóm cột thuế GTGT"]
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class K1,T1,T2,H1,H2 ok;
+    class K2,T3,H3 warn;
+</pre>
+    </div>
+    <figcaption><b>Ẩn không đồng nghĩa với giữ dữ liệu.</b> Bỏ tick một công tắc thì dữ liệu phụ thuộc bị <em>xóa</em>, không chỉ ẩn khỏi giao diện: bỏ Thu tiền ngay thì xóa Phương thức thanh toán và dữ liệu tab thanh toán, bỏ Trả lại hàng trong kho thì xóa Kho · Số lô · Hạn sử dụng trên mọi dòng.</figcaption>
+  </figure>
+
+  <h3>Bản ghi sinh ra và tab tương ứng</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Công tắc</th><th>Tab hiện thêm</th><th class="mono">Entity sinh ra khi Lưu</th><th>Tác động khi ghi sổ</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">TraLaiHangTrongKho = true</td><td>Phiếu xuất kho</td><td class="mono">pur_phieu_xuat_kho<br>_tra_lai_hang_mua</td><td>Giảm số lượng và giá trị tồn kho</td></tr>
+      <tr><td class="mono">TraLaiHangTrongKho = false</td><td>Chứng từ giảm công nợ</td><td>— dùng chính bảng gốc</td><td>Không chạm tồn kho</td></tr>
+      <tr><td class="mono">ThanhToanNgay = true</td><td>Phiếu thu hoặc Giấy báo có</td><td class="mono">cash_phieu_thu</td><td>Tăng quỹ tiền mặt hoặc tiền gửi<br>Không thay đổi công nợ</td></tr>
+      <tr><td class="mono">ThanhToanNgay = false</td><td>— không có</td><td>—</td><td>Giảm công nợ phải trả NCC</td></tr>
+      <tr><td>Người bán xuất HĐĐC</td><td>Hóa đơn</td><td class="mono">pur_hoa_don_dieu_chinh</td><td>Lên bảng kê thuế GTGT mua vào</td></tr>
+      <tr><td>Người mua xuất hóa đơn</td><td>Hóa đơn</td><td class="mono">sal_hoa_don_ban_hang</td><td>Lên tab Hóa đơn phân hệ Bán hàng</td></tr>
+      <tr><td>Không có hóa đơn</td><td>— ẩn tab Hóa đơn và tab Thuế</td><td>—</td><td>Không phát sinh dữ liệu thuế</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Đồng bộ thông tin chung giữa các tab</span>
+    <p><strong>Chiều thường:</strong> sửa một trường ở tab bất kỳ (Phiếu xuất kho · Giảm công nợ · Phiếu thu · Giấy báo có) thì mọi tab khác có trường đó cập nhật theo <span class="chip c-br">BR2 màn ThemMoi</span>.<br>
+    <strong>Chiều tab Hóa đơn là ngoại lệ:</strong> sửa trên tab Hóa đơn <em>không</em> lan sang tab khác. Chiều ngược lại chỉ lan khi Mã NCC hai bên giống nhau, và với từng trường thì chỉ lan khi giá trị hai bên đang giống nhau <span class="chip c-br">BR3 màn ThemMoi</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — Nghiệp vụ đặc thù</span>
+  <h2>Tính tiền trên một dòng chi tiết</h2>
+  <p class="lede">Toàn bộ số tiền của chứng từ sinh ra từ bốn phép trên mỗi dòng: thành tiền, chiết khấu, thuế GTGT, quy đổi. Điểm khó là quan hệ hai chiều giữa Đơn giá và Thành tiền, và việc cột quy đổi được phép lệch khỏi cột nguyên tệ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Nhập Số lượng và Đơn giá"] --> B["Thành tiền = SL × Đơn giá"]
+    B -. "Người dùng sửa tay Thành tiền" .-> B1{"Số lượng = 0?"}
+    B1 -- "Có" --> B2["Đơn giá = 0"]:::warn
+    B1 -- "Không" --> B3["Tính lại Đơn giá = TT ÷ SL"]
+    B --> C{"Loại chiết khấu của dòng"}
+    C -- "Không chiết khấu" --> C0["Ẩn giá trị CK của dòng"]
+    C -- "Theo mặt hàng" --> C1["Nhập Tỷ lệ CK hoặc Tiền CK<br/>riêng từng dòng"]
+    C -- "Theo phần trăm hóa đơn" --> C2["Áp tỷ lệ xuống mọi dòng<br/>sửa Tiền CK không đổi tỷ lệ"]
+    C -- "Theo số tiền tổng hóa đơn" --> C3["Popup Phân bổ chiết khấu<br/>ghi đè · không cộng dồn"]
+    C0 --> D["Kiểm 0 ≤ Tỷ lệ CK ≤ 100<br/>và 0 ≤ Tiền CK ≤ Thành tiền"]
+    C1 --> D
+    C2 --> D
+    C3 --> D
+    D --> E{"Có hóa đơn?"}
+    E -- "Không" --> F["Bỏ qua khối thuế GTGT"]
+    E -- "Có" --> E1["Giá trị thuế suất theo bảng ánh xạ<br/>KHAC thì nhập tay"]
+    E1 --> E2["Tiền thuế = TT − Tiền CK<br/>nhân giá trị thuế suất chia 100"]
+    F --> G{"Loại tiền khác tiền hạch toán?"}
+    E2 --> G
+    G -- "Không" --> H["Cộng dồn Section Tổng hợp"]
+    G -- "Có" --> G1["Cột quy đổi = nguyên tệ × tỷ giá"]
+    G1 --> G2["Sửa cột quy đổi không đụng nguyên tệ<br/>Sửa tỷ giá thì tính lại cột quy đổi"]
+    G2 --> H
+    H --> H1["Tổng TT = Σ TT − Σ CK + Σ thuế"]
+    H1 --> H2["Khối quy đổi cộng từ từng dòng<br/>không nhân tổng với tỷ giá"]:::ok
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Tổng quy đổi cộng từ dòng, không nhân từ tổng.</b> Mỗi dòng đã được làm tròn riêng theo cấu hình tenant; lấy tổng nguyên tệ nhân tỷ giá sẽ lệch so với tổng các dòng đúng bằng phần dư làm tròn.</figcaption>
+  </figure>
+
+  <h3>Ánh xạ thuế suất GTGT</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">ThueSuatGTGT</th><th class="mono num">GiaTriThueSuatGTGT</th><th class="mono">KhongTongHopToKhaiGTGT</th></tr></thead>
+    <tbody>
+      <tr><td>0 · 5 · 8 · 10</td><td class="num">0 · 5 · 8 · 10</td><td>false · cho phép sửa</td></tr>
+      <tr><td>KCT — không chịu thuế</td><td class="num">0</td><td>false · cho phép sửa</td></tr>
+      <tr><td>KKKNT</td><td class="num">0</td><td><b>true</b> · disable checkbox</td></tr>
+      <tr><td>KHAC</td><td class="num">nhập tay</td><td><b>true</b> · disable checkbox</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Cờ <span class="f">KhongTongHopToKhaiGTGT</span> quyết định dòng đó có được đẩy lên Bảng kê thuế GTGT mua vào khi ghi sổ hay không — chỉ dòng <span class="f">false</span> mới lên bảng kê. Khi copy từ chứng từ gốc thì <strong>giữ nguyên giá trị</strong>, không tự động đè theo thuế suất.</p>
+
+  <div class="note">
+    <span class="lbl">Phân bổ chiết khấu theo tổng hóa đơn</span>
+    <p>Popup dùng chung với CTMH và CTBH. Chỉ các dòng có <span class="f">LoaiChietKhau = Theo số tiền trên tổng hóa đơn</span> tham gia; dòng loại khác <strong>giữ nguyên</strong> giá trị chiết khấu hiện có. Sau làm tròn, tổng đã phân bổ phải <em>bằng đúng</em> tổng đã nhập — phần dư rải lại vào các dòng còn dư địa, không dồn hết vào dòng cuối, và mọi dòng vẫn thỏa <span class="f">0 ≤ Tiền CK ≤ Thành tiền</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — UC_TLHM_GhiSo</span>
+  <h2>Ghi sổ: bút toán ngược và bốn tác động số liệu</h2>
+  <p class="lede">Ghi sổ gọi được từ hai nơi — nút <em>Lưu và ghi sổ</em> trên form, hoặc nút <em>Ghi sổ</em> trên dòng danh sách. Cả hai đi qua đúng một chuỗi validate và một chuỗi ghi, và toàn bộ chuỗi ghi là <strong>nguyên tử</strong>.</p>
+
+  <h3>Chuỗi validate trước khi ghi sổ</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S{"Gọi ghi sổ từ đâu?"}
+    S -- "Form Thêm mới hoặc Sửa" --> S1["Nút Lưu và ghi sổ"]
+    S -- "Màn danh sách" --> S2["Nút Ghi sổ trên dòng"]
+    S1 --> P{"Có quyền Post?"}
+    S2 --> P
+    P -- "Không" --> PE["Không hiển thị chức năng<br/>Ép qua API thì MSG 301"]:::err
+    P -- "Có" --> V0{"Trạng thái Chưa ghi sổ?"}
+    V0 -- "Đã ghi sổ" --> X0["Chặn — ghi sổ duy nhất BR12"]:::err
+    V0 -- "Chưa ghi sổ" --> V1["Validate dữ liệu chung<br/>≥ 1 dòng · trường bắt buộc"]
+    V1 --> V2{"Ngày HT thuộc kỳ mở?"}
+    V2 -- "Kỳ đã khóa" --> X2["Chặn theo BR17"]:::err
+    V2 -- "Kỳ mở" --> V3{"Trả lại hàng trong kho?"}
+    V3 -- "Không" --> V6
+    V3 -- "Có" --> V4["Validate phiếu xuất kho<br/>Kho · lô · hạn dùng · SL ≥ 1"]
+    V4 --> V5{"Tồn kho ≥ Số lượng trả lại?"}
+    V5 -- "Đủ" --> V6{"Thanh toán ngay?"}
+    V5 -- "Thiếu · cấm xuất âm" --> X5["MSG 105 — dừng ghi sổ"]:::err
+    V5 -- "Thiếu · cho xuất âm" --> W5["MSG 601 — Không hoặc Tiếp tục"]:::warn
+    W5 -- "Tiếp tục" --> V6
+    W5 -- "Không" --> X6["Đóng popup · không thay đổi gì"]:::err
+    V6 -- "Có" --> V7["Validate phiếu thu hoặc giấy báo<br/>TK tiền · số tiền thực nhận"]
+    V6 -- "Không" --> V8
+    V7 --> V8{"Số tiền thuế ≤ thuế hóa đơn gốc?"}
+    V8 -- "Vượt" --> X8["Chặn — thuế vượt hóa đơn gốc"]:::err
+    V8 -- "Hợp lệ" --> V9{"Số chứng từ trùng?"}
+    V9 -- "Có" --> X9["MSG 201 — số CT đã tồn tại"]:::err
+    V9 -- "Không" --> OK(["Vào chuỗi ghi nguyên tử"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Ghi sổ chạy validate của từng thành phần trong bộ, không chỉ của chứng từ trả lại.</b> Tích Trả lại hàng trong kho thì phải chạy trọn bộ kiểm của phiếu xuất kho; tích Thanh toán ngay thì phải chạy trọn bộ kiểm của phiếu thu hoặc giấy báo có.</figcaption>
+  </figure>
+
+  <h3>Chuỗi ghi — tất cả hoặc không gì cả</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Chuyển trạng thái sang Đã ghi sổ"] --> B["Sinh bút toán ngược với mua hàng<br/>Nợ và Có đảo chiều"]
+    B --> C{"Trả lại hàng trong kho?"}
+    C -- "Có" --> C1["Tồn kho mới = tồn cũ − Σ SL trả"]
+    C1 --> C2["Giá trị mới = giá trị hiện tại<br/>trừ Σ Thành tiền quy đổi"]
+    C -- "Không" --> D
+    C2 --> D{"Xử lý công nợ theo hình thức"}
+    D -- "Giảm công nợ" --> D1{"TT − đã thanh toán ≥ giảm trừ?"}
+    D1 -- "Đúng" --> D1a["Tăng TongTienGiamTru của CT gốc<br/>Chứng từ không lên danh sách đối trừ"]
+    D1 -- "Sai" --> D1b["Tăng công nợ của chứng từ trả lại<br/>TongTienDaThanhToan = 0"]
+    D1a --> D2["Giảm công nợ của nhà cung cấp"]
+    D1b --> D2
+    D -- "Thu tiền ngay" --> D3["Không thay đổi công nợ<br/>Tăng quỹ tiền mặt hoặc tiền gửi"]
+    D2 --> E{"Có hóa đơn?"}
+    D3 --> E
+    E -- "Có" --> E1["Cập nhật bảng kê thuế GTGT mua vào<br/>chỉ dòng cờ tờ khai GTGT = false"]
+    E -- "Không" --> F
+    E1 --> F["Cộng dồn SL đã trả lại<br/>lên dòng của chứng từ gốc"]
+    F --> G["MSG 003 — ghi sổ thành công"]:::ok
+    G --> H{"Gọi từ đâu?"}
+    H -- "Form" --> H1["Đóng màn hình · về danh sách"]
+    H -- "Danh sách" --> H2["Làm mới danh sách"]
+    A -.-> R["Lỗi ở bất kỳ bước nào thì rollback<br/>giữ Chưa ghi sổ · không bút toán<br/>không đụng tồn kho · công nợ · thuế"]:::err
+    F -.-> R
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok  fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Không có bút toán bán phần và không có tồn kho cập nhật một phần.</b> Bảy thao tác — bút toán, trạng thái, tồn kho, công nợ, bảng kê thuế, counter chứng từ gốc, phiếu thu — phải thành công đồng thời hoặc rollback sạch.</figcaption>
+  </figure>
+
+  <h3>Bút toán sinh ra</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Vế</th><th class="mono">Tài khoản</th><th>Khi nào phát sinh</th></tr></thead>
+    <tbody>
+      <tr><td>Nợ</td><td class="mono">331</td><td>Giảm công nợ — <span class="f">ThanhToanNgay = false</span></td></tr>
+      <tr><td>Nợ</td><td class="mono">111 · 112</td><td>Thu tiền ngay — nhận lại tiền mặt hoặc tiền gửi</td></tr>
+      <tr><td>Có</td><td class="mono">152 · 153 · 156</td><td>Trị giá hàng trả lại theo giá mua chưa thuế</td></tr>
+      <tr><td>Có</td><td class="mono">133 — 1331</td><td>Thuế GTGT được khấu trừ, khi chứng từ có hóa đơn</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Hai vế Nợ là <em>loại trừ nhau</em> theo hình thức thanh toán, còn hai vế Có cùng đối ứng với vế Nợ đang áp dụng. Ví dụ mua hàng ghi Nợ 156 / Có 331 thì trả lại ghi ngược Nợ 331 / Có 156.</p>
+
+  <div class="note stop">
+    <span class="lbl">Điểm lệch giữa epic và BR chung — cần BA chốt</span>
+    <p>Bước 6 của <span class="f">UC_TLHM_GhiSo</span> ghi <em>"hệ thống tổng hợp theo từng cặp TK Nợ – TK Có và sinh bút toán"</em>, trong khi <span class="chip c-br">BR36</span> của bộ quy chuẩn chung quy định <strong>không gộp bút toán</strong> — mỗi cặp tài khoản trên mỗi dòng chứng từ phải sinh dòng bút toán riêng. Trang này không tự chọn bên nào; cần BA xác nhận trước khi code.</p>
+  </div>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — UC_TLHM_BoGhiSo</span>
+  <h2>Bỏ ghi sổ: hoàn tác đúng bảy thao tác của ghi sổ</h2>
+  <p class="lede">Bỏ ghi sổ là ảnh phản chiếu của ghi sổ, cộng thêm <strong>một điều kiện chặn riêng</strong> mà ghi sổ không có: chứng từ hình thức Giảm công nợ đã được đối trừ thủ công thì không được bỏ ghi.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Ở màn danh sách hoặc chi tiết"]) --> P{"Có quyền Unpost?"}
+    P -- "Không" --> PE["Không hiển thị nút Bỏ ghi sổ"]:::err
+    P -- "Có" --> B{"Trạng thái Đã ghi sổ?"}
+    B -- "Chưa ghi sổ" --> BE["Ẩn nút theo BR42<br/>Ép qua API thì chặn"]:::err
+    B -- "Đã ghi sổ" --> C["Bấm Bỏ ghi sổ"]
+    C --> D["MSG 602 — popup xác nhận"]
+    D -- "Hủy" --> DE["Đóng popup · không thay đổi"]:::warn
+    D -- "Xác nhận" --> E{"Giảm công nợ và đã đối trừ thủ công?"}
+    E -- "Có" --> EE["MSG 203 — chặn bỏ ghi sổ"]:::err
+    E -- "Không" --> F{"Ngày HT thuộc kỳ mở?"}
+    F -- "Kỳ đã khóa" --> FE["Chặn theo BR17"]:::err
+    F -- "Kỳ mở" --> G["Xóa bút toán hạch toán đã sinh"]
+    G --> H["Bỏ chứng từ khỏi các báo cáo"]
+    H --> I{"Trả lại hàng trong kho?"}
+    I -- "Có" --> I1["Cộng lại số lượng và giá trị tồn kho"]
+    I -- "Không" --> J
+    I1 --> J{"Hoàn tác công nợ"}
+    J -- "Giảm công nợ" --> J1{"Đã đối trừ trực tiếp?"}
+    J1 -- "Đúng" --> J1a["Hoàn tác công nợ cho chứng từ gốc"]
+    J1 -- "Sai" --> J2
+    J1a --> J2["Tăng công nợ của nhà cung cấp"]
+    J -- "Thu tiền ngay" --> J3["Cập nhật lại quỹ tiền mặt · tiền gửi"]
+    J2 --> K["Rollback sổ thuế GTGT đầu vào<br/>chỉ dòng cờ tờ khai GTGT = false"]
+    J3 --> K
+    K --> L["Trừ lại SL đã trả lại trên CT gốc"]
+    L --> M["Trạng thái về Chưa ghi sổ"]:::ok
+    M --> N["MSG 004 · refresh màn đang đứng"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Đối trừ thủ công là cánh cửa một chiều.</b> Chứng từ trả lại hình thức Giảm công nợ, một khi kế toán đã tự tay đối trừ với chứng từ khác ở epic Đối trừ công nợ phải trả, thì không còn bỏ ghi sổ được — phải hủy phiếu đối trừ trước.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Phân biệt hai kiểu đối trừ</span>
+    <p><strong>Đối trừ trực tiếp</strong> là do chính thao tác ghi sổ sinh ra (tăng <span class="f">TongTienGiamTru</span> của chứng từ gốc) — bỏ ghi sổ <em>hoàn tác được</em>.<br>
+    <strong>Đối trừ thủ công</strong> là do kế toán lập phiếu đối trừ riêng — bỏ ghi sổ <em>bị chặn</em> <span class="chip c-msg">MSG 203</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — UC_TLHM_Sua · UC_TLHM_NhanBan</span>
+  <h2>Chỉnh sửa và Nhân bản</h2>
+  <p class="lede">Hai luồng này không có Activity Diagram trong bộ tài liệu — sơ đồ dưới đây dựng từ luồng chính và các BR của use case. Cả hai đều đổ về đúng màn Thêm mới, khác nhau ở chỗ sửa giữ liên kết còn nhân bản cắt liên kết hóa đơn.</p>
+
+  <h3>Chỉnh sửa</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Chỉnh sửa<br/>từ danh sách hoặc màn chi tiết"]) --> P{"Có quyền Edit?"}
+    P -- "Không" --> PE["Không hiển thị nút Sửa"]:::err
+    P -- "Có" --> B{"Trạng thái Chưa ghi sổ?"}
+    B -- "Đã ghi sổ" --> BE["MSG 202 — chỉ sửa khi chưa ghi sổ"]:::err
+    B -- "Chưa ghi sổ" --> C["Mở SCR_TLHM_Sua<br/>Kế thừa toàn bộ form Thêm mới"]
+    C --> D["Số chứng từ readonly ở mọi tab"]
+    D --> E{"Người dùng sửa gì?"}
+    E -- "Đổi nhà cung cấp" --> E1["Đồng bộ lại 4 tab<br/>TK Nợ · TK Có · Tên · MST · Địa chỉ"]
+    E -- "Đổi chứng từ gốc" --> E2["Nạp lại hàng hóa từ CT gốc mới<br/>theo quy tắc fill mục 03"]
+    E -- "Sửa dòng chi tiết" --> E3["Thêm dòng · Xóa dòng · Nhân bản dòng<br/>đều mở bình thường"]
+    E -- "Đổi ba công tắc" --> E4["Ẩn hiện tab và cột<br/>xóa dữ liệu phụ thuộc"]
+    E1 --> F["Tính lại Section Tổng hợp"]
+    E2 --> F
+    E3 --> F
+    E4 --> F
+    F --> G{"Bấm nút nào?"}
+    G -- "Lưu nháp" --> G1["Giữ Chưa ghi sổ<br/>Cập nhật ModifiedOn · ModifiedBy"]:::ok
+    G -- "Lưu và ghi sổ" --> G2["Gọi UC_TLHM_GhiSo — mục 06"]:::ok
+    G -- "Đóng khi đã sửa" --> G3["Popup xác nhận đóng"]:::warn
+    G1 --> H["Ghi LichSuSua<br/>Về danh sách hoặc chi tiết"]
+    G2 --> H
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Sửa được mở gần như hoàn toàn, trừ Số chứng từ.</b> Kể cả nhà cung cấp và chứng từ gốc đều đổi được — đây là điểm khác nhiều chứng từ khác, và kéo theo yêu cầu đồng bộ lại toàn bộ bốn tab mỗi lần đổi NCC.</figcaption>
+  </figure>
+
+  <h3>Nhân bản</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Nhân bản trên dòng danh sách"]) --> P{"Có quyền Add?"}
+    P -- "Không" --> PE["Không hiển thị nút Nhân bản"]:::err
+    P -- "Có" --> B["Đọc chi tiết chứng từ nguồn"]
+    B --> C["Mở SCR_TLHM_ThemMoi"]
+    C --> D["Nạp trước hai cờ từ chứng từ nguồn<br/>ThanhToanNgay · TraLaiHangTrongKho"]
+    D --> E["Chép thông tin chung và lưới hàng<br/>kèm tab Tham chiếu"]
+    E --> F{"Dọn dữ liệu phụ thuộc"}
+    F -- "ThanhToanNgay = false" --> F1["Xóa HinhThucThanhToan<br/>và dữ liệu tab thanh toán"]
+    F -- "TraLaiHangTrongKho = false" --> F2["Xóa Kho · Số lô · Hạn sử dụng<br/>trên mọi dòng chi tiết"]
+    F -- "Không cần dọn" --> G
+    F1 --> G["Autofill lại ba cột hạch toán"]
+    F2 --> G
+    G --> G1["TK Nợ theo TK công nợ NCC · 331x"]
+    G --> G2["TK Có theo cờ kho vừa chép<br/>TK vật tư hoặc TK giá vốn"]
+    G --> G3["TK Thuế GTGT theo 1331x"]
+    G1 --> H["Sinh Số chứng từ mới"]
+    G2 --> H
+    G3 --> H
+    H --> I["Bỏ trống Mẫu số · Ký hiệu<br/>Số hóa đơn · Ngày hóa đơn"]
+    I --> J["Bản sao ở trạng thái Chưa ghi sổ<br/>kể cả nguồn đã ghi sổ"]:::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok  fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Thứ tự nạp quyết định tính đúng sai.</b> Hai cờ phải nạp <em>trước</em> khi autofill tài khoản, vì TK Có phụ thuộc <span class="f">TraLaiHangTrongKho</span> — nếu autofill chạy trước theo giá trị mặc định của màn Thêm mới thì mọi dòng của bản sao sẽ mang sai tài khoản.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nhóm dữ liệu</th><th>Nhân bản</th><th>Lý do</th></tr></thead>
+    <tbody>
+      <tr><td>Thông tin chung, hai cờ, loại tiền, tỷ giá</td><td><span class="chip c-ok">Chép</span></td><td>Dùng lại nguyên nghiệp vụ cũ</td></tr>
+      <tr><td>Trường hàng hóa trên lưới và tab Tham chiếu</td><td><span class="chip c-ok">Chép</span></td><td>Phần nhập liệu nặng nhất</td></tr>
+      <tr><td class="mono">TaiKhoanNo · TaiKhoanCo · TaiKhoanThueGTGTId</td><td><span class="chip c-warn">Autofill lại</span></td><td>Phụ thuộc NCC và cờ kho hiện tại</td></tr>
+      <tr><td>Số chứng từ</td><td><span class="chip c-warn">Sinh mới</span></td><td>Theo quy tắc sinh số chứng từ chung</td></tr>
+      <tr><td>Mẫu số · Ký hiệu · Số hóa đơn · Ngày hóa đơn</td><td><span class="chip c-msg">Không chép</span></td><td>Mỗi chứng từ trả lại phải gắn hóa đơn riêng biệt</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — UC_TLHM_Xoa</span>
+  <h2>Xóa: xóa mềm cả bộ chứng từ</h2>
+  <p class="lede">Chỉ chứng từ <em>Chưa ghi sổ</em> mới xóa được, và xóa một chứng từ trả lại nghĩa là xóa mềm toàn bộ các bản ghi con mà nó đã sinh ra.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Ở màn danh sách"]) --> P{"Có quyền Delete?"}
+    P -- "Không" --> PE["Không hiển thị chức năng xóa"]:::err
+    P -- "Có" --> B{"Xóa một hay hàng loạt?"}
+    B -- "Một dòng" --> B1["Nút Xóa chỉ hiện trên dòng<br/>đang ở Chưa ghi sổ"]
+    B -- "Hàng loạt" --> B2{"Có tick dòng đã ghi sổ?"}
+    B2 -- "Có" --> B2a["Nút Xóa hàng loạt disable"]:::err
+    B2 -- "Không" --> B2b["Nút Xóa hàng loạt enable"]
+    B1 --> C["Popup SCR_TLHM_Xoa"]
+    B2b --> C
+    C -- "Hủy hoặc đóng" --> CE["Không thực hiện xóa"]:::warn
+    C -- "Xác nhận" --> D["Đặt DaXoa = true cho cả bộ"]
+    D --> D1["Chứng từ trả lại và bảng chi tiết"]
+    D --> D2["Phiếu xuất kho trả lại"]
+    D --> D3["Hóa đơn điều chỉnh hoặc HĐ bán hàng"]
+    D --> D4["Phiếu thu hoặc giấy báo có"]
+    D1 --> E["Ẩn khỏi danh sách trả lại hàng mua<br/>và khỏi danh sách đối trừ công nợ"]:::ok
+    D2 --> E
+    D3 --> E
+    D4 --> E
+    E --> F["MSG 005 · làm mới danh sách"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Xóa hàng loạt gác ở nút, không gác ở lúc chạy.</b> Tài liệu đặc tả nút Xóa hàng loạt bị <em>disable</em> ngay khi tập chọn có chứa dòng đã ghi sổ — không phải chọn xong rồi mới lọc bỏ như quy tắc bỏ qua của <span class="chip c-br">BR45</span>.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — UC_TLHM_XemChiTiet</span>
+  <h2>Xem chi tiết: chỉ đọc nhưng vẫn là bàn điều khiển</h2>
+  <p class="lede">Màn <span class="f">SCR_TLHM_ChiTiet</span> có bố cục y hệt màn Thêm mới, mọi control chuyển thành label. Ba thao tác nặng nhất của epic vẫn gọi được từ đây và sau khi chạy thì <strong>quay về chính màn chi tiết</strong>, không nhảy về danh sách.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Bấm Xem hoặc bấm Số chứng từ"]) --> B["Mở SCR_TLHM_ChiTiet<br/>Mọi control là label<br/>Ẩn nút Thêm dòng và Chọn chứng từ"]
+    B --> C{"Trạng thái chứng từ"}
+    C -- "Chưa ghi sổ" --> C1["Hiện Chỉnh sửa và Ghi sổ"]
+    C -- "Đã ghi sổ" --> C2["Hiện Bỏ ghi sổ"]
+    C1 -- "Chỉnh sửa" --> D1["Mở SCR_TLHM_Sua tại chỗ<br/>Lưu xong về lại chi tiết — BR34"]
+    C1 -- "Ghi sổ" --> D2["Gọi UC_TLHM_GhiSo<br/>Refresh màn chi tiết"]
+    C2 -- "Bỏ ghi sổ" --> D3["Popup xác nhận<br/>rồi gọi UC_TLHM_BoGhiSo"]
+    B -- "Hủy hoặc ESC" --> E["Đóng màn · về danh sách"]
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class D1,D2,D3 ok;
+</pre>
+    </div>
+    <figcaption><b>Header chi tiết có thêm badge trạng thái.</b> Đây là phần duy nhất khác màn Thêm mới về mặt nội dung hiển thị — Chưa ghi sổ dùng màu xám hoặc vàng, Đã ghi sổ dùng màu xanh theo <span class="chip c-br">BR33</span>.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — Trường dẫn xuất</span>
+  <h2>Bốn con số hệ thống tự tính</h2>
+  <p class="lede">Không trường nào dưới đây có ô nhập; sai một trong bốn thì hoặc là chặn nhầm người dùng, hoặc là để lọt chứng từ trả lại vượt số lượng đã mua.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th>Công thức</th><th>Tăng khi</th><th>Giảm khi</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Số lượng đã trả lại<br><span class="mono">trên dòng CT mua gốc</span></td>
+        <td>Σ số lượng của mọi chứng từ trả lại chọn nguồn từ đúng dòng đó, quy đổi về ĐVT của chứng từ mua</td>
+        <td>Ghi sổ chứng từ trả lại</td>
+        <td>Bỏ ghi sổ chứng từ trả lại</td>
+      </tr>
+      <tr>
+        <td>Số lượng còn lại<br><span class="mono">cột SL trên popup</span></td>
+        <td>SL trên chứng từ mua gốc − SL đã trả lại</td>
+        <td>Khi số đã trả lại giảm</td>
+        <td>Khi số đã trả lại tăng</td>
+      </tr>
+      <tr>
+        <td class="mono">TongTienGiamTru<br>của chứng từ gốc</td>
+        <td>Chỉ tăng khi <span class="f">TongTienThanhToan − TongTienDaThanhToan &gt; TongTienGiamTru</span></td>
+        <td>Ghi sổ chứng từ trả lại hình thức Giảm công nợ</td>
+        <td>Bỏ ghi sổ khi đã đối trừ trực tiếp</td>
+      </tr>
+      <tr>
+        <td>Loại chứng từ trên danh sách</td>
+        <td>Suy từ <span class="f">ThanhToanNgay</span> và <span class="f">HinhThucThanhToan</span> — xem <a href="#s0">mục 00</a></td>
+        <td colspan="2">Đổi ngay khi người dùng đổi công tắc, không chờ ghi sổ</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Vì sao TongTienGiamTru có điều kiện chặn trên</span>
+    <p>Điều kiện <span class="f">TongTienThanhToan − TongTienDaThanhToan &gt; TongTienGiamTru</span> đảm bảo số tiền giảm trừ <strong>không vượt quá số còn phải trả</strong> của chứng từ gốc. Khi điều kiện không thỏa, hệ thống chuyển sang tăng công nợ của chính chứng từ trả lại (<span class="f">TongTienDaThanhToan = 0</span>) — nhờ vậy chứng từ này <em>xuất hiện</em> trong danh sách đối trừ công nợ phải trả để kế toán tự đối trừ với chứng từ khác.</p>
+  </div>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — Tra cứu</span>
+  <h2>Điều kiện chặn, thông báo và quyền</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> và <em>cảnh báo</em> trong các sơ đồ trên, theo thao tác. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-06758_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện</th><th>Hành vi</th><th class="mono">Mã</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="9">Lưu nháp · Lưu và ghi sổ</td><td>Thiếu trường bắt buộc</td><td>Chặn · focus trường</td><td class="mono">BR15.1</td></tr>
+      <tr><td>Không có dòng chi tiết hàng hóa</td><td>Chặn</td><td class="mono">104</td></tr>
+      <tr><td>Số lượng trả lại ≤ 0 trên dòng hàng hóa</td><td>Chặn</td><td class="mono">101</td></tr>
+      <tr><td>Số lượng trả lại vượt số lượng còn lại</td><td>Chặn</td><td class="mono">102</td></tr>
+      <tr><td>Đơn giá âm</td><td>Chặn</td><td class="mono">103</td></tr>
+      <tr><td>Tiền chiết khấu vượt thành tiền dòng</td><td>Chặn</td><td class="mono">06194_044</td></tr>
+      <tr><td>Ngày hạch toán trước ngày chứng từ</td><td>Chặn</td><td class="mono">BR15.3</td></tr>
+      <tr><td>Trùng hóa đơn · người bán xuất HĐĐC</td><td>Cảnh báo · cho lưu</td><td class="mono">BR11</td></tr>
+      <tr><td>Trùng hóa đơn · người mua xuất hóa đơn</td><td>Chặn · focus Số hóa đơn</td><td class="mono">BR11</td></tr>
+      <tr><td rowspan="6">Ghi sổ</td><td>Số chứng từ đã tồn tại</td><td>Chặn</td><td class="mono">201</td></tr>
+      <tr><td>Tồn kho thiếu · cấu hình cấm xuất âm</td><td>Chặn</td><td class="mono">105</td></tr>
+      <tr><td>Tồn kho thiếu · cấu hình cho xuất âm</td><td>Cảnh báo hai nút</td><td class="mono">601</td></tr>
+      <tr><td>Thiếu Kho trên dòng hàng hóa</td><td>Chặn · báo đỏ ô Kho</td><td class="mono">BR1 SCR</td></tr>
+      <tr><td>Số tiền thuế vượt thuế hóa đơn gốc</td><td>Chặn</td><td class="mono">AD ghi sổ</td></tr>
+      <tr><td>Ngày hạch toán thuộc kỳ đã khóa sổ</td><td>Chặn</td><td class="mono">BR17</td></tr>
+      <tr><td rowspan="2">Bỏ ghi sổ</td><td>Xác nhận trước khi chạy</td><td>Popup</td><td class="mono">602</td></tr>
+      <tr><td>Giảm công nợ và đã đối trừ thủ công</td><td>Chặn</td><td class="mono">203</td></tr>
+      <tr><td rowspan="2">Xóa</td><td>Xác nhận trước khi chạy</td><td>Popup</td><td class="mono">603</td></tr>
+      <tr><td>Chứng từ đã ghi sổ</td><td>Ẩn nút · disable xóa hàng loạt</td><td class="mono">202</td></tr>
+      <tr><td>Chỉnh sửa</td><td>Chứng từ đã ghi sổ</td><td>Chặn</td><td class="mono">202</td></tr>
+      <tr><td>Mọi thao tác</td><td>Không có quyền tương ứng</td><td>Ẩn chức năng · API chặn</td><td class="mono">301</td></tr>
+      <tr><td>Mọi thao tác</td><td>Lỗi hệ thống</td><td>Rollback · báo lỗi</td><td class="mono">998</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">TraLaiHangMua.View</td><td>Vào màn danh sách · tìm kiếm · phân trang</td></tr>
+      <tr><td class="mono">TraLaiHangMua.View.Detail</td><td>Nút Xem · section chi tiết 4 tab dưới lưới</td></tr>
+      <tr><td class="mono">TraLaiHangMua.Add</td><td>Nút Thêm mới · nút Nhân bản · hành động Lưu nháp</td></tr>
+      <tr><td class="mono">TraLaiHangMua.Edit</td><td>Nút Sửa · hành động Lưu ở màn chỉnh sửa</td></tr>
+      <tr><td class="mono">TraLaiHangMua.Post</td><td>Nút Ghi sổ trên dòng và trên màn chi tiết</td></tr>
+      <tr><td class="mono">TraLaiHangMua.Unpost</td><td>Nút Bỏ ghi sổ</td></tr>
+      <tr><td class="mono">TraLaiHangMua.Delete</td><td>Nút Xóa · Xóa hàng loạt</td></tr>
+      <tr><td class="mono">Add + Post</td><td>Nút <b>Lưu và ghi sổ</b> ở màn Thêm mới</td></tr>
+      <tr><td class="mono">Edit + Post</td><td>Nút <b>Lưu và ghi sổ</b> ở màn Chỉnh sửa</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Chỗ tài liệu chưa quy định — không vẽ trong trang này</h3>
+  <ul>
+    <li><strong>Ghi sổ và bỏ ghi sổ hàng loạt:</strong> danh sách chỉ đặc tả <em>xóa</em> hàng loạt. <span class="chip c-br">BR42.3</span> và <span class="chip c-br">BR45</span> chung có mô tả bỏ ghi sổ hàng loạt nhưng epic không nhắc, nên không vẽ thành nhánh.</li>
+    <li><strong>Mã message cho hai nhánh chặn:</strong> "Thuế vượt hóa đơn gốc" (AD ghi sổ) và cảnh báo trùng hóa đơn theo BR11 chưa được cấp mã <span class="f">MSG_*</span> riêng trong <span class="f">6.messages.md</span>.</li>
+    <li><strong>Số chứng từ trùng:</strong> mã <span class="mono">201</span> dùng trong bảng trên là mã suy từ nhóm <span class="mono">_2xx</span>; danh mục message hiện chỉ liệt kê <span class="mono">202</span> và <span class="mono">203</span>, còn tình huống trùng số chứng từ được trỏ về message chung <span class="chip c-br">BR19.1</span>.</li>
+    <li><strong>"Bỏ qua chứng từ trên các báo cáo"</strong> khi bỏ ghi sổ chưa được đặc tả là những báo cáo nào và cơ chế loại trừ ra sao.</li>
+    <li><strong>Nút Lập hóa đơn điều chỉnh · Nhận hóa đơn</strong> trên dòng danh sách chưa có use case riêng trong epic — chỉ có điều kiện hiển thị.</li>
+    <li><strong>Xung đột bút toán:</strong> UC ghi sổ nói gộp theo cặp tài khoản, <span class="chip c-br">BR36</span> nói không gộp — xem callout ở <a href="#s6">mục 06</a>.</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-06758 · Chứng từ trả lại hàng mua</span>
+  <span>Dựng từ 8 UC · 6 Activity Diagram · 6 màn hình · 4 ma trận ẩn hiện</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

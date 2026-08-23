@@ -1,0 +1,901 @@
+<title>Luồng Điều chuyển CCDC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-01735 · Phân hệ Công cụ dụng cụ</p>
+  <h1>Luồng xử lý Phiếu điều chuyển CCDC</h1>
+  <p>Toàn bộ vòng đời một phiếu điều chuyển công cụ dụng cụ giữa các đơn vị quản lý nội bộ — từ danh sách, thêm mới với chuỗi tự điền và hai tầng validate, tới chỉnh sửa theo thuật toán revert-then-apply, xóa mềm và xem chi tiết. Đây là chứng từ <strong>không ghi sổ</strong>: không sinh bút toán, không có trạng thái Chưa/Đã ghi sổ.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 5 use case · 5 Activity Diagram · 5 màn hình · 3 ma trận</span>
+    <span><b>Entity gốc:</b> ccdc_phieu_dieu_chuyen_ccdc</span>
+    <span><b>Quyền:</b> DieuChuyenCCDC.*</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Bản đồ vòng đời</a></li>
+    <li><a href="#s1"><span>01</span>Xem danh sách</a></li>
+    <li><a href="#s2"><span>02</span>Thêm mới — nhập liệu</a></li>
+    <li><a href="#s3"><span>03</span>Thêm mới — chuỗi Lưu</a></li>
+    <li><a href="#s4"><span>04</span>Quan hệ dữ liệu</a></li>
+    <li><a href="#s5"><span>05</span>Tự điền &amp; reset</a></li>
+    <li><a href="#s6"><span>06</span>Tuần tự thời gian</a></li>
+    <li><a href="#s7"><span>07</span>Hệ phân bổ</a></li>
+    <li><a href="#s8"><span>08</span>Chỉnh sửa</a></li>
+    <li><a href="#s9"><span>09</span>Xóa</a></li>
+    <li><a href="#s10"><span>10</span>Xem chi tiết</a></li>
+    <li><a href="#s11"><span>11</span>Ma trận theo chế độ</a></li>
+    <li><a href="#s12"><span>12</span>Tra cứu chặn &amp; quyền</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Bản đồ vòng đời một phiếu điều chuyển</h2>
+  <p class="lede">Khác mọi chứng từ kế toán khác trong hệ thống, điều chuyển CCDC <strong>không có trạng thái ghi sổ</strong>. Vì thế không có cặp nút Ghi sổ / Bỏ ghi sổ, và Sửa · Xóa <em>chỉ</em> gác bởi quyền. Thứ thay chỗ trạng thái ghi sổ để bảo vệ dữ liệu là <strong>ràng buộc tuần tự thời gian</strong>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(( )) -- "Lưu — quyền Create" --> A
+    A["<b>ĐANG HIỆU LỰC</b><br/>Sửa · Xóa chỉ gác bởi quyền<br/>Không có trạng thái ghi sổ"]
+    A -- "Chỉnh sửa — revert rồi apply" --> A
+    A -- "Xóa mềm — tính lại số lượng" --> D
+    D["<b>ĐÃ XÓA MỀM</b><br/>DaXoa = true · giữ để truy vết<br/>Rời lịch sử còn hiệu lực"]
+    A -- "Lưu hoặc Sửa vào ngày đã có chứng từ sau" --> X
+    X["<b>BỊ CHẶN</b><br/>MSG_103 khi thêm mới<br/>MSG_105 khi chỉnh sửa"]
+    A -. "không sinh bút toán" .-> G
+    G["<b>SỔ CÁI</b><br/>Không có bản ghi nào"]
+
+    classDef st   fill:#ffffff,stroke:#2f6f8f,color:#16202b;
+    classDef gone fill:#faf8f3,stroke:#cdc7b9,color:#6f6a61;
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    class A st;
+    class D,G gone;
+    class X err;
+</pre>
+    </div>
+    <figcaption><b>Không có bản lề ghi sổ.</b> Vòng đời chỉ gồm hai trạng thái thật: đang hiệu lực và đã xóa mềm. Mọi luật gác nút của <span class="chip c-br">BR13.1</span> treo vào <em>Chưa ghi sổ</em> đều không áp dụng ở epic này — BR01 màn danh sách ghi rõ điều đó.</figcaption>
+  </figure>
+
+  <h3>Ba lớp dữ liệu mà mỗi thao tác đụng tới</h3>
+  <p>Một phiếu điều chuyển không chỉ là một bản ghi. Mỗi lần Lưu · Sửa · Xóa đều kéo theo cập nhật <strong>số lượng CCDC theo đơn vị</strong> và <strong>hệ số phân bổ chi phí</strong> — quên một lớp là sai số liệu quản lý tài sản.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Phiếu &amp; chi tiết</th><th>Đơn vị quản lý CCDC</th><th>Hệ số phân bổ</th></tr></thead>
+    <tbody>
+      <tr><td>Thêm mới</td><td>Tạo header + N dòng chi tiết</td><td>Trừ ở đơn vị bàn giao, cộng vào đơn vị tiếp nhận. Về 0 thì <b>xóa dòng quản lý</b>, không giữ dòng số lượng 0</td><td>Tạo mới hoặc cập nhật theo thiết lập phân bổ đã cấu hình</td></tr>
+      <tr><td>Chỉnh sửa</td><td>Cập nhật header + chi tiết</td><td><b>Revert</b> dữ liệu cũ rồi <b>apply</b> dữ liệu mới — hai bước tách bạch</td><td>Tính lại từ lịch sử chứng từ còn hiệu lực, rồi áp thiết lập mới</td></tr>
+      <tr><td>Xóa</td><td>Xóa mềm header + chi tiết</td><td colspan="2">Tính lại toàn bộ từ <b>lịch sử chứng từ còn hiệu lực</b> — không hoàn tác bằng phép cộng trừ ngược</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Điểm dễ sai</span>
+    <p>Ba đường cập nhật số lượng <strong>không giống nhau</strong>: Thêm mới là cộng trừ thuần, Chỉnh sửa là revert-then-apply, Xóa là <em>tính lại từ lịch sử</em>. Dùng chung một hàm cho cả ba là công thức sinh lệch số lượng khi có nhiều phiếu chồng lên cùng một CCDC.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — UC_DieuChuyenCCDC_DanhSach</span>
+  <h2>Xem danh sách: mọi nút gác bằng đúng một điều kiện</h2>
+  <p class="lede">Màn <span class="f">SCR_DieuChuyenCCDC_DanhSach</span> là điểm vào duy nhất của bốn thao tác còn lại. Vì chứng từ không có trạng thái, luật hiển thị nút rút gọn còn <strong>một chiều: quyền</strong>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Mở chức năng Điều chuyển CCDC"]) --> B{"Có quyền View?"}
+    B -- "Không" --> B1["Ẩn khỏi menu<br/>Vào bằng URL: MSG_011"]
+    B -- "Có" --> C["Đọc phiếu theo Tenant<br/>Sắp Ngày CT giảm dần<br/>Mặc định 20 dòng/trang"]
+    C --> E1["Lưới rỗng: MSG_004<br/>hiện ở giữa lưới"]
+    C --> F["Lưới: STT · Số CT · Ngày CT<br/>Mã CCDC · Lý do · Chức năng"]
+    F --> G{{"Gác bởi quyền<br/>không gác trạng thái"}}
+    G -- "Create" --> A1["Thêm mới"]
+    G -- "View.Detail" --> A2["Xem chi tiết<br/>+ khu vực chi tiết dưới lưới"]
+    G -- "Edit" --> A3["Chỉnh sửa"]
+    G -- "Delete" --> A4["Xóa"]
+    G -- "Luôn hiện" --> A5["Tìm kiếm · Lọc · Sắp xếp<br/>Tải lại · Phân trang"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class B1 err;
+    class E1 warn;
+</pre>
+    </div>
+    <figcaption><b>Một chiều điều kiện, không phải hai.</b> Ở chứng từ có ghi sổ, mỗi nút cần kiểm cặp <em>quyền × trạng thái</em>. Ở đây BR01 màn danh sách chốt: Xem chi tiết · Chỉnh sửa · Xóa hiển thị nếu có quyền, <strong>không phụ thuộc trạng thái ghi sổ</strong>.</figcaption>
+  </figure>
+
+  <h3>Nguồn dữ liệu từng cột</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột</th><th class="mono">Nguồn</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td>STT</td><td class="mono">—</td><td>Đánh số liên tục qua các trang theo <span class="chip c-br">BR2</span>, không reset về 1 mỗi trang</td></tr>
+      <tr><td>Số chứng từ</td><td class="mono">PhieuDieuChuyenCCDC<br>.SoChungTu</td><td>Tìm gần đúng</td></tr>
+      <tr><td>Ngày chứng từ</td><td class="mono">PhieuDieuChuyenCCDC<br>.NgayChungTu</td><td>Lọc từ ngày — đến ngày; là khóa sắp xếp mặc định (giảm dần)</td></tr>
+      <tr><td>Mã CCDC</td><td class="mono">ChiTietPhieuDieuChuyenCCDC<br>.CongCuDungCuId → CongCuDungCu.Code</td><td>Chọn từ combogrid khi lọc. Phiếu nhiều dòng: hiển thị theo BR02 màn danh sách</td></tr>
+      <tr><td>Lý do điều chuyển</td><td class="mono">PhieuDieuChuyenCCDC<br>.LyDoDieuChuyen</td><td>Tìm gần đúng; văn bản dài cắt theo <span class="chip c-br">BR44</span></td></tr>
+      <tr><td>Chức năng</td><td class="mono">—</td><td>Cụm nút trên dòng, cố định bên phải khi cuộn ngang <span class="chip c-br">BR2</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Chưa chốt trong BA</span>
+    <p>BR02 màn danh sách viết: phiếu điều chuyển nhiều CCDC thì hiển thị <em>“Code CCDC đầu tiên hoặc tổng hợp (ví dụ: <span class="f">CCDC-001, CCDC-002...</span> hoặc <span class="f">N CCDC</span>)”</em> — <strong>hai phương án song song, chưa chốt một</strong>. Cột này còn là cột được lọc theo <span class="chip c-br">BR11</span>, nên cách hiển thị quyết định luôn cách lọc. Cần BA chốt trước khi code.</p>
+  </div>
+
+  <h3>Khu vực chi tiết dưới lưới — tiêu điểm dòng tách khỏi checkbox</h3>
+  <p>BR04 màn danh sách mô tả một khu vực nằm <em>ngay dưới lưới</em>, không phải popup. Nó nạp theo <strong>tiêu điểm dòng</strong>, và tiêu điểm dòng là một khái niệm khác hẳn tập checkbox đang tích.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Mở màn danh sách"]) --> B{"Có quyền View.Detail?"}
+    B -- "Không" --> B1["Ẩn toàn bộ khu vực chi tiết<br/>Server không trả dữ liệu chi tiết<br/>Lưới danh sách giữ nguyên"]
+    B -- "Có" --> C["Tiêu điểm đặt vào dòng đầu tiên"]
+    C --> D["Nhãn đầu khu vực = Số chứng từ<br/>là liên kết mở Xem chi tiết"]
+    D --> E["Nạp Bảng chi tiết điều chuyển<br/>chỉ đọc · phân trang riêng"]
+    E --> F{"Thao tác kế tiếp"}
+    F -- "Nhấn một dòng khác" --> G["Đổi tiêu điểm · nạp lại nội dung"]
+    F -- "Tích hoặc bỏ tích checkbox" --> H["Không đổi tiêu điểm<br/>Không đổi nội dung"]
+    F -- "Tìm · Lọc · Sắp xếp · Đổi trang" --> I["Tiêu điểm về dòng đầu kết quả mới"]
+    F -- "Mở Xem chi tiết" --> J["Popup riêng<br/>Không thay khu vực này"]
+    F -- "Tải lại danh sách" --> K{"Bản ghi còn trên danh sách?"}
+    K -- "Còn" --> L["Giữ nguyên tiêu điểm"]
+    K -- "Không còn" --> I
+    G --> M["Trong lúc chờ hiện trạng thái đang tải<br/>Không giữ nội dung bản ghi trước đó"]
+    I --> M
+    L --> M
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class B1 err;
+    class H,J ok;
+</pre>
+    </div>
+    <figcaption><b>Ba nguồn có thể đổi nội dung, checkbox không nằm trong đó.</b> Chỉ nhấn dòng, đổi kết quả lọc, hoặc tải lại mất bản ghi mới làm khu vực chi tiết nạp lại. Tích chọn hàng loạt và mở popup Xem chi tiết đều không đụng tới nó.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Quyền kiểm ở server, không chỉ ẩn UI</span>
+    <p>BR04 ghi rõ: <em>“Hệ thống kiểm tra quyền <strong>trước khi trả dữ liệu chi tiết</strong>, không chỉ ẩn hiện trên giao diện.”</em> Thiếu <span class="f">DieuChuyenCCDC.View.Detail</span> thì endpoint chi tiết phải từ chối, không phải chỉ ẩn khối HTML. Khu vực chỉ đưa xuống <strong>một</strong> section — Bảng chi tiết điều chuyển — nên hiển thị thẳng, không chia tab; Form thông tin chính <strong>không</strong> đưa xuống.</p>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — UC_DieuChuyenCCDC_ThemMoi</span>
+  <h2>Thêm mới: chuỗi nhập liệu</h2>
+  <p class="lede">Header gọn — năm trường, hai bắt buộc. Toàn bộ nghiệp vụ nằm ở bảng chi tiết, nơi mỗi dòng là một cặp <em>đơn vị bàn giao → đơn vị tiếp nhận</em> của một CCDC.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Thêm mới — cần quyền Create"]) --> B["Mở SCR_DieuChuyenCCDC_ThemMoi<br/>Ngày chứng từ mặc định = hôm nay<br/>Focus ô nhập đầu tiên"]
+    B --> C["Header: Số chứng từ · Ngày chứng từ<br/>Lý do · Người bàn giao · Người tiếp nhận"]
+    C --> D["Bấm Thêm dòng ở bảng chi tiết"]
+    D --> E["Chọn Mã CCDC qua combogrid<br/>Danh sách mọi trạng thái<br/>trừ CCDC Đã ghi giảm"]
+    E --> F["Tự điền Tên CCDC<br/>Số lượng đang dùng<br/>Đơn vị bàn giao"]
+    F --> G{"CCDC đang thuộc mấy đơn vị?"}
+    G -- "Một đơn vị" --> G1["Đơn vị bàn giao hiện dạng<br/>văn bản chỉ đọc"]
+    G -- "Nhiều đơn vị" --> G2["Combogrid chỉ liệt kê đơn vị<br/>thực tế đang giữ CCDC này<br/>Mặc định đơn vị đầu theo tên A-Z"]
+    G1 --> H["Chọn Đơn vị tiếp nhận<br/>trong các đơn vị đang hoạt động"]
+    G2 --> H
+    H --> I["Nhập Số lượng điều chuyển<br/>Số nguyên dương · tối đa =<br/>Số lượng đang dùng của đơn vị giao"]
+    I --> J{"Còn CCDC cần điều chuyển?"}
+    J -- "Còn" --> D
+    J -- "Hết" --> K{"Cần đổi hệ phân bổ chi phí?"}
+    K -- "Có" --> K1["Bấm Thay đổi phân bổ"]
+    K -- "Không" --> L(["Bấm Lưu"])
+    K1 --> L
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class G2 warn;
+</pre>
+    </div>
+    <figcaption><b>Một dòng chi tiết là một cặp đơn vị, không phải một CCDC.</b> Cùng một CCDC không được xuất hiện hai lần trong phiếu, nên muốn tách số lượng cho hai đơn vị tiếp nhận thì phải lập hai phiếu — ràng buộc trùng mã CCDC ở <span class="chip c-msg">MSG_008</span> chặn ngay tại UI.</figcaption>
+  </figure>
+
+  <h3>Trường trên form</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Vùng</th><th>Trường</th><th>Control</th><th class="mono">Field</th><th>Bắt buộc</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="5">Header</td><td>Số chứng từ</td><td>TextField</td><td class="mono">SoChungTu</td><td><span class="chip c-warn">Y</span></td><td>Tối đa 50 ký tự, nhập tay, không tự sinh <span class="chip c-br">BR20</span></td></tr>
+      <tr><td>Ngày chứng từ</td><td>DatePicker</td><td class="mono">NgayChungTu</td><td><span class="chip c-warn">Y</span></td><td><span class="f">dd/MM/yyyy</span>, mặc định ngày hiện tại; là trục của ràng buộc <a href="#s6">tuần tự thời gian</a></td></tr>
+      <tr><td>Lý do điều chuyển</td><td>TextArea</td><td class="mono">LyDoDieuChuyen</td><td>N</td><td>Tối đa 500; trim đầu cuối <span class="chip c-br">BR43</span></td></tr>
+      <tr><td>Người bàn giao</td><td>TextField</td><td class="mono">NguoiBanGiao</td><td>N</td><td>Tối đa 255, văn bản tự do — <b>không</b> tham chiếu danh mục nhân sự</td></tr>
+      <tr><td>Người tiếp nhận</td><td>TextField</td><td class="mono">NguoiTiepNhan</td><td>N</td><td>Tối đa 255, văn bản tự do</td></tr>
+      <tr><td rowspan="7">Chi tiết</td><td>STT</td><td>Text</td><td class="mono">—</td><td>N</td><td>Tự đánh số lại sau mỗi lần chèn hoặc xóa dòng <span class="chip c-br">BR21</span></td></tr>
+      <tr><td>Mã CCDC</td><td>Combogrid</td><td class="mono">CongCuDungCuId</td><td><span class="chip c-warn">Y</span></td><td>Tìm nhanh theo Mã và Tên; loại CCDC Đã ghi giảm</td></tr>
+      <tr><td>Tên CCDC</td><td>Text</td><td class="mono">CongCuDungCu.Ten</td><td>N</td><td>Chỉ đọc, tự điền</td></tr>
+      <tr><td>Đơn vị bàn giao</td><td>Combogrid</td><td class="mono">DonViHienTaiId</td><td><span class="chip c-warn">Y</span></td><td>Tự điền; đổi dạng control theo dữ liệu từng dòng — xem <a href="#s5">mục 05</a></td></tr>
+      <tr><td>Số lượng đang dùng</td><td>Text</td><td class="mono">—</td><td>N</td><td>Chỉ đọc; suy ra từ <span class="f">ccdc_don_vi_quan_ly_ccdc.SoLuong</span> theo các phiếu đã lưu</td></tr>
+      <tr><td>Đơn vị tiếp nhận</td><td>Combogrid</td><td class="mono">DonViTiepNhanId</td><td><span class="chip c-warn">Y</span></td><td>Đơn vị đang hoạt động, khác đơn vị bàn giao của chính dòng đó</td></tr>
+      <tr><td>Số lượng điều chuyển</td><td>TextField</td><td class="mono">SoLuongDieuChuyen</td><td><span class="chip c-warn">Y</span></td><td>Số nguyên, từ 1 tới Số lượng đang dùng</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — BR04 · BR_07</span>
+  <h2>Chuỗi Lưu: hai tầng, không được gộp</h2>
+  <p class="lede">BR04 màn Thêm mới quy định rõ hai bước tuần tự — UI chặn trước, Server kiểm sau. Bước 1 sai thì <strong>không gửi request</strong>; bước 2 tồn tại vì dữ liệu có thể đã đổi giữa lúc mở form và lúc bấm Lưu.</p>
+
+  <h3>Tầng 1 — kiểm tại UI, chưa chạm mạng</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Bấm Lưu"]) --> U1{"Trường bắt buộc đã nhập đủ?"}
+    U1 -- "Thiếu" --> X1["MSG_005"]
+    U1 -- "Đủ" --> U2{"Bảng chi tiết có ít nhất 1 dòng?"}
+    U2 -- "Trống" --> X2["MSG_007"]
+    U2 -- "Có dòng" --> U3{"Mã CCDC trùng giữa các dòng?"}
+    U3 -- "Trùng" --> X3["MSG_008"]
+    U3 -- "Không trùng" --> U4{"Đơn vị tiếp nhận khác đơn vị bàn giao?"}
+    U4 -- "Trùng nhau" --> X4["MSG_014<br/>cảnh báo đỏ ngay tại control"]
+    U4 -- "Khác nhau" --> U5{"Số lượng là nguyên và lớn hơn 0?"}
+    U5 -- "Âm · 0 · thập phân · trống" --> X5["MSG_009"]
+    U5 -- "Hợp lệ" --> U6{"Số lượng ≤ Số lượng đang dùng?"}
+    U6 -- "Vượt" --> X6["MSG_010"]
+    U6 -- "Trong biên" --> OK(["Gửi request lên Server"])
+    X1 --> R["Chặn không gửi request<br/>Hiện lỗi dưới từng ô sai<br/>Cuộn và focus ô lỗi đầu tiên"]
+    X2 --> R
+    X3 --> R
+    X4 --> R
+    X5 --> R
+    X6 --> R
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class X1,X2,X3,X4,X5,X6 err;
+    class R warn;
+    class OK ok;
+</pre>
+    </div>
+    <figcaption><b>Sáu chốt UI đều là mức Block.</b> Không có cảnh báo mềm nào ở màn này — mọi lỗi đều chặn lưu. <span class="chip c-msg">MSG_009</span> và <span class="chip c-msg">MSG_010</span> còn hiện ngay khi rời focus khỏi ô, không đợi tới lúc bấm Lưu.</figcaption>
+  </figure>
+
+  <h3>Tầng 2 — kiểm tại Server rồi mới ghi</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Server nhận payload"]) --> B{"Có quyền Create?"}
+    B -- "Không" --> B1["MSG_011"]
+    B -- "Có" --> C{"Số chứng từ đã tồn tại<br/>trong cùng Tenant?"}
+    C -- "Đã tồn tại" --> C1["MSG_006"]
+    C -- "Chưa có" --> D{"Số lượng khả dụng trong DB<br/>còn đủ tại thời điểm này?"}
+    D -- "Không đủ" --> D1["MSG_010<br/>dữ liệu đã đổi từ lúc mở form"]
+    D -- "Còn đủ" --> E{"Có chứng từ CCDC nào<br/>phát sinh sau ngày chứng từ?"}
+    E -- "Có" --> E1["MSG_103 — chặn theo BR_07"]
+    E -- "Không" --> F["Ghi ccdc_phieu_dieu_chuyen_ccdc"]
+    F --> G["Ghi ccdc_phieu_dieu_chuyen_ccdc_chi_tiet"]
+    G --> H["Cập nhật số lượng theo đơn vị"]
+    H --> I["Cập nhật hệ số phân bổ"]
+    I --> J{"Toàn bộ ghi thành công?"}
+    J -- "Không" --> J1["MSG_013<br/>Giữ nguyên popup · không lưu gì"]
+    J -- "Có" --> K(["MSG_001 · đóng popup · tải lại danh sách"])
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class B1,C1,D1,E1,J1 err;
+    class K ok;
+</pre>
+    </div>
+    <figcaption><b>Bốn bước ghi phải nằm trong một giao dịch.</b> UC ghi hậu điều kiện là cả header, chi tiết, số lượng theo đơn vị và hệ phân bổ đều phải thành công; hỏng giữa chừng thì <span class="chip c-msg">MSG_013</span> và <em>không lưu bất kỳ thay đổi nào</em> — trạng thái nửa vời làm sai tồn CCDC vĩnh viễn.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Vì sao MSG_010 xuất hiện ở cả hai tầng</span>
+    <p>Bảng Validate của màn Thêm mới xếp riêng ràng buộc số lượng vào loại <span class="f">Server &amp; UI</span> — đây là chốt duy nhất được kiểm hai lần. Lý do: <em>Số lượng đang dùng</em> hiển thị trên form là ảnh chụp tại lúc chọn Mã CCDC, còn con số thật ở <span class="f">ccdc_don_vi_quan_ly_ccdc</span> có thể đã bị một phiếu khác trừ mất trong lúc người dùng đang nhập.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — Quan hệ dữ liệu</span>
+  <h2>Một lần Lưu chạm vào những bảng nào</h2>
+  <p class="lede">Điều chuyển CCDC không sinh bút toán, nhưng nó <em>vẫn</em> ghi vào bốn bảng và đọc thêm ba bảng nữa. Bỏ sót bảng nào cũng làm số liệu quản lý tài sản lệch mà không có sổ cái để đối chiếu phát hiện.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    R1["ccdc_cong_cu_dung_cu<br/>mst_don_vi<br/>mst_he_thong_tai_khoan"] -. "chỉ đọc" .-> A
+    A(["Lưu phiếu điều chuyển"]) --> B["ccdc_phieu_dieu_chuyen_ccdc<br/>1 bản ghi header"]
+    A --> C["ccdc_phieu_dieu_chuyen_ccdc_chi_tiet<br/>N dòng, mỗi dòng 1 CCDC"]
+    A --> D["ccdc_don_vi_quan_ly_ccdc<br/>số lượng CCDC theo từng đơn vị"]
+    A --> E["ccdc_he_so_phan_bo_cong_cu_dung_cu<br/>tỷ lệ và tài khoản chi phí"]
+    D --> D1{"Đơn vị bàn giao còn lại bao nhiêu?"}
+    D1 -- "Còn lớn hơn 0" --> D2["Cập nhật số lượng còn lại"]
+    D1 -- "Về đúng 0" --> D3["Xóa dòng quản lý của đơn vị đó<br/>Không giữ dòng số lượng 0"]
+    A -. "không sinh bút toán" .-> G["Sổ cái: không bản ghi nào"]
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    classDef gone fill:#faf8f3,stroke:#cdc7b9,color:#6f6a61;
+    class D3 warn;
+    class G,R1 gone;
+</pre>
+    </div>
+    <figcaption><b>Điều chuyển hết số lượng thì xóa dòng, không để số 0.</b> Hậu điều kiện UC Thêm mới ghi thẳng: <em>“Nếu điều chuyển hết số lượng, hệ thống xóa dòng quản lý của đơn vị bàn giao đó — không giữ dòng số lượng 0.”</em> Đây cũng là lý do BR05 chỉ liệt kê được các đơn vị <em>thực tế đang giữ</em> CCDC.</figcaption>
+  </figure>
+
+  <h3>Ma trận CRUD theo use case</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Entity</th><th>Danh sách</th><th>Thêm mới</th><th>Chi tiết</th><th>Chỉnh sửa</th><th>Xóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">ccdc_phieu_dieu_chuyen_ccdc</td><td>R</td><td>C</td><td>R</td><td>U</td><td>D</td></tr>
+      <tr><td class="mono">ccdc_phieu_dieu_chuyen_ccdc_chi_tiet</td><td>R</td><td>C</td><td>R</td><td>U</td><td>D</td></tr>
+      <tr><td class="mono">ccdc_he_so_phan_bo_cong_cu_dung_cu</td><td>R</td><td>C</td><td>R</td><td>U</td><td>D</td></tr>
+      <tr><td class="mono">ccdc_cong_cu_dung_cu</td><td>R</td><td>R</td><td>R</td><td>R</td><td>R</td></tr>
+      <tr><td class="mono">mst_don_vi</td><td>R</td><td>R</td><td>R</td><td>R</td><td>—</td></tr>
+      <tr><td class="mono">mst_he_thong_tai_khoan</td><td>R</td><td>R</td><td>R</td><td>R</td><td>—</td></tr>
+      <tr><td class="mono">ccdc_don_vi_quan_ly_ccdc</td><td colspan="5"><span class="chip c-warn">Không có trong ma trận CRUD của BA</span> — nhưng UC Thêm mới · Chỉnh sửa · Xóa đều mô tả ghi vào bảng này (trừ, cộng, xóa dòng). Xem mục <a href="#s12">tra cứu</a>.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — BR01 · BR05</span>
+  <h2>Dây chuyền tự điền và reset trong một dòng</h2>
+  <p class="lede">Hai ô trên lưới đóng vai trò <em>ô kích hoạt</em>: Mã CCDC và Đơn vị bàn giao. Đổi một trong hai đều làm <strong>xóa rỗng</strong> hai ô phía sau — cố tình, để người dùng không lưu nhầm số lượng của đơn vị cũ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Chọn hoặc đổi Mã CCDC ở một dòng"]) --> B["Tự điền Tên CCDC<br/>Tự điền Số lượng đang dùng<br/>Tự điền Đơn vị bàn giao"]
+    B --> C["Xóa rỗng Đơn vị tiếp nhận<br/>Xóa rỗng Số lượng điều chuyển"]
+    C --> D{"CCDC này đang thuộc mấy đơn vị?"}
+    D -- "Đúng 1 đơn vị" --> E["Đơn vị bàn giao hiện dạng<br/>văn bản chỉ đọc, không đổi được"]
+    D -- "Từ 2 đơn vị trở lên" --> F["Hiện Combogrid tìm kiếm<br/>Chỉ liệt kê đơn vị đang giữ CCDC<br/>Mặc định đơn vị đầu theo tên A-Z"]
+    F --> G(["Người dùng đổi Đơn vị bàn giao"])
+    G --> H["Nạp lại Số lượng đang dùng<br/>theo đúng đơn vị vừa chọn"]
+    H --> I["Xóa rỗng Đơn vị tiếp nhận<br/>Xóa rỗng Số lượng điều chuyển"]
+    E --> J["Nhập Đơn vị tiếp nhận<br/>rồi nhập Số lượng điều chuyển"]
+    I --> J
+    F --> J
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class C,I warn;
+</pre>
+    </div>
+    <figcaption><b>Đơn vị bàn giao đổi <em>dạng control</em>, không chỉ đổi giá trị.</b> Một CCDC ở một đơn vị thì ô là text chỉ đọc; ở nhiều đơn vị thì ô là combogrid. Điều kiện này tính theo <strong>dữ liệu của từng dòng</strong>, nên hai dòng cùng lưới có thể hiển thị hai kiểu control khác nhau.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Mâu thuẫn nhẹ trong tài liệu</span>
+    <p>Bảng trường ghi <em>Đơn vị bàn giao — Cho phép sửa = Y</em>, còn BR05 ghi <em>hiển thị readonly khi CCDC chỉ thuộc 1 đơn vị</em>. Ma trận ẩn/hiện của epic chọn cách hiểu: trạng thái chung là <span class="f">Show</span>, readonly là điều kiện mức dòng — và đánh dấu đây là điểm <strong>cần BA xác nhận</strong>. Trước khi code nên chốt để không đoán nhầm sang “disable toàn cột”.</p>
+  </div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — BR_07</span>
+  <h2>Tuần tự thời gian: chốt chặn thay chỗ ghi sổ</h2>
+  <p class="lede">Vì không có ghi sổ để “khóa” chứng từ, epic dùng một luật khác để giữ toàn vẹn lịch sử CCDC: <strong>không được chèn phiếu vào quá khứ</strong> nếu CCDC đó đã có chứng từ phát sinh sau đó.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Server nhận Ngày chứng từ<br/>và danh sách CCDC trên phiếu"]) --> B["Lặp qua từng dòng chi tiết"]
+    B --> C["Phạm vi quét: cùng Tenant<br/>và cùng đúng một CCDC"]
+    C --> D["Loại chứng từ được quét:<br/>điều chuyển CCDC · điều chỉnh CCDC<br/>phân bổ CCDC · ghi giảm CCDC"]
+    D --> E{"Tồn tại chứng từ có Ngày chứng từ<br/>lớn hơn hoặc bằng ngày đang lập?"}
+    E -- "Không có" --> F["Dòng này qua chốt"]
+    E -- "Có ít nhất một" --> G{"Đang ở ngữ cảnh nào?"}
+    G -- "Thêm mới" --> H["MSG_103 — kèm Tên CCDC<br/>Yêu cầu xóa chứng từ liên quan<br/>rồi mới tạo được"]
+    G -- "Chỉnh sửa" --> I["MSG_105 — kèm Tên CCDC<br/>Yêu cầu xóa chứng từ liên quan<br/>rồi mới sửa được"]
+    F --> J{"Còn dòng chi tiết chưa quét?"}
+    J -- "Còn" --> B
+    J -- "Hết" --> K(["Cho phép ghi dữ liệu"])
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class H,I err;
+    class F,K ok;
+</pre>
+    </div>
+    <figcaption><b>Điều kiện là “lớn hơn <em>hoặc bằng</em>”.</b> BR_07 chặn cả chứng từ cùng ngày, không chỉ chứng từ ngày sau. Chốt này chạy ở Server, theo từng CCDC, và chỉ khác nhau ở mã thông báo giữa Thêm mới và Chỉnh sửa.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Chiều</th><th>Quy định của BR_07</th></tr></thead>
+    <tbody>
+      <tr><td>Phạm vi so sánh</td><td>Cùng Tenant · cùng một CCDC cụ thể. Không so chéo giữa các CCDC trên cùng phiếu.</td></tr>
+      <tr><td>Loại chứng từ tính vào</td><td>Điều chuyển CCDC, điều chỉnh CCDC, phân bổ CCDC, ghi giảm CCDC — bốn loại, không hơn.</td></tr>
+      <tr><td>Toán tử</td><td><span class="f">Ngày chứng từ khác ≥ Ngày chứng từ đang lập/sửa</span></td></tr>
+      <tr><td>Nơi kiểm</td><td>Server (bảng Validate xếp mức Block, phân loại Server)</td></tr>
+      <tr><td>Cách gỡ</td><td>Người dùng phải xóa các chứng từ liên quan phát sinh sau — hệ thống không tự đẩy ngày.</td></tr>
+      <tr><td>Áp cho thao tác Xóa?</td><td><span class="chip c-warn">Tài liệu không quy định</span> — cả UC Xóa lẫn SCR Xóa đều không nhắc BR_07.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — BR06</span>
+  <h2>Thiết lập hệ phân bổ: cấu hình chờ, ghi theo phiếu</h2>
+  <p class="lede">Nút <em>Thay đổi phân bổ</em> mở popup thuộc epic khác (<span class="f">PMKT-E-01707 · SCR_CongCuDungCu_ThietLapPhanBo</span>). Điểm cần nhớ: bấm Lưu trong popup đó <strong>chưa</strong> ghi vào cơ sở dữ liệu.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Thay đổi phân bổ"]) --> B["Truyền Đơn vị tiếp nhận sang popup<br/>để cấu hình cho đơn vị mới"]
+    B --> C["Mở SCR_CongCuDungCu_ThietLapPhanBo<br/>thuộc epic PMKT-E-01707"]
+    C --> D["Cấu hình tỷ lệ phân bổ<br/>và tài khoản chi phí"]
+    D --> E{"Bấm Lưu trên popup phân bổ?"}
+    E -- "Không" --> E1["Giữ nguyên hệ phân bổ hiện có"]
+    E -- "Có" --> F["Cấu hình mới đang ở trạng thái chờ<br/>Chưa ghi vào cơ sở dữ liệu"]
+    F --> G{"Phiếu điều chuyển đã Lưu hoàn tất?"}
+    G -- "Chưa · người dùng bấm Hủy" --> G1["Cấu hình phân bổ mất theo popup phiếu"]
+    G -- "Đã Lưu xong" --> H["Ghi ccdc_he_so_phan_bo_cong_cu_dung_cu<br/>tạo mới hoặc cập nhật"]
+    H --> I["Hiệu lực từ kỳ phân bổ kế tiếp<br/>sau ngày điều chuyển"]
+    I --> J["Các kỳ phân bổ trước đó<br/>giữ nguyên theo hệ phân bổ cũ"]
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class F,G1 warn;
+    class I,J ok;
+</pre>
+    </div>
+    <figcaption><b>Hai nút Lưu, một điểm ghi.</b> BR06 ghi rõ hệ phân bổ chỉ được cập nhật <em>“khi phiếu điều chuyển được Lưu hoàn tất”</em> — bấm Hủy trên popup phiếu là mất luôn cấu hình vừa thiết lập, dù popup phân bổ đã báo lưu thành công.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Ranh giới hiệu lực theo kỳ</span>
+    <p>Hệ phân bổ mới áp dụng <strong>từ kỳ phân bổ kế tiếp sau ngày điều chuyển</strong>; các kỳ trước giữ nguyên hệ cũ. Nghĩa là chi phí kỳ đang dở <em>không</em> bị tính lại — kết hợp với <a href="#s6">BR_07</a> (không cho chèn phiếu vào trước một chứng từ phân bổ đã có), hai luật này giữ cho các kỳ đã phân bổ luôn bất biến.</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — UC_DieuChuyenCCDC_ChinhSua</span>
+  <h2>Chỉnh sửa: sửa gì cũng được, nhưng phải revert trước</h2>
+  <p class="lede">Không có trạng thái ghi sổ nên không có gì khóa phiếu — sửa Header, sửa Detail, thêm và xóa dòng đều mở. Đổi lại, phần ghi dữ liệu phức tạp hơn hẳn Thêm mới.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Chỉnh sửa — cần quyền Edit"]) --> B["Đọc header và các dòng chi tiết theo Id"]
+    B --> C{"Phiếu còn tồn tại?"}
+    C -- "Đã bị người khác xóa" --> C1["MSG_012<br/>Đóng popup · tải lại danh sách"]
+    C -- "Còn" --> D["Mở SCR_DieuChuyenCCDC_CapNhat<br/>Điền sẵn toàn bộ dữ liệu hiện tại"]
+    D --> E["Sửa Header hoặc Detail<br/>Thêm · sửa · xóa dòng chi tiết<br/>Hệ thống tính toán lại theo dòng"]
+    E --> F{"Bấm nút nào?"}
+    F -- "Hủy" --> F1["Đóng popup · không lưu thay đổi"]
+    F -- "Lưu" --> G["Chạy lại toàn bộ validate của Thêm mới"]
+    G --> H{"Validate qua hết?"}
+    H -- "Không" --> H1["Hiện lỗi tương ứng<br/>Focus trường lỗi đầu tiên"]
+    H -- "Có" --> I{"Ngày chứng từ có bị đổi?"}
+    I -- "Có đổi" --> J{"Có chứng từ CCDC phát sinh<br/>sau ngày mới?"}
+    J -- "Có" --> J1["MSG_105"]
+    J -- "Không" --> K["Ghi dữ liệu: revert rồi apply"]
+    I -- "Không đổi" --> K
+    K --> L{"Cập nhật thành công?"}
+    L -- "Không" --> L1["MSG_013 · giữ nguyên popup"]
+    L -- "Có" --> M(["MSG_002 · đóng popup · tải lại danh sách"])
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class C1,H1,J1,L1 err;
+    class M ok;
+</pre>
+    </div>
+    <figcaption><b>Validate của Chỉnh sửa = validate Thêm mới + một chốt.</b> SCR Cập nhật không định nghĩa lại luật nào, chỉ tham chiếu nguyên bộ BR01–BR_07 của màn Thêm mới và bổ sung kiểm tuần tự thời gian khi Ngày chứng từ đổi, với mã <span class="chip c-msg">MSG_105</span> thay vì 103.</figcaption>
+  </figure>
+
+  <h3>Revert-then-apply: hai bước, không được rút gọn thành hiệu số</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Lưu bản chỉnh sửa"]) --> B["<b>Bước 1 — Revert</b><br/>hoàn nguyên dữ liệu cũ"]
+    B --> B1["Cộng trả số lượng<br/>cho đơn vị bàn giao cũ"]
+    B --> B2["Trừ số lượng đã ghi nhận<br/>tại đơn vị tiếp nhận cũ"]
+    B --> B3["Tính lại hệ phân bổ từ<br/>lịch sử chứng từ còn hiệu lực"]
+    B1 --> C["<b>Bước 2 — Apply</b><br/>áp dụng dữ liệu mới"]
+    B2 --> C
+    B3 --> C
+    C --> C1["Trừ số lượng điều chuyển mới<br/>tại đơn vị bàn giao mới"]
+    C --> C2["Cộng số lượng điều chuyển mới<br/>vào đơn vị tiếp nhận mới"]
+    C --> C3["Cập nhật hệ phân bổ<br/>theo thiết lập mới"]
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class B warn;
+    class C ok;
+</pre>
+    </div>
+    <figcaption><b>Vì sao không tính hiệu số.</b> Người dùng có thể đổi <em>cả</em> đơn vị bàn giao lẫn đơn vị tiếp nhận trong một lần sửa — khi đó bốn đơn vị khác nhau cùng bị tác động. Chỉ có tách hai bước mới xử lý đúng; lấy hiệu số lượng chỉ đúng khi cặp đơn vị giữ nguyên.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — UC_DieuChuyenCCDC_Xoa</span>
+  <h2>Xóa: xóa mềm rồi tính lại từ lịch sử</h2>
+  <p class="lede">Xóa là thao tác duy nhất <strong>không</strong> dùng phép cộng trừ ngược. Hệ thống bỏ phiếu ra khỏi lịch sử còn hiệu lực rồi <em>tính lại</em> số lượng và hệ phân bổ từ các chứng từ còn lại.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Xóa trên dòng — cần quyền Delete"]) --> B["Đọc phiếu theo Id"]
+    B --> C{"Phiếu còn tồn tại?"}
+    C -- "Đã bị xóa trước đó" --> C1["MSG_012 · tải lại danh sách"]
+    C -- "Còn" --> D["Popup xác nhận xóa<br/>Nêu đúng Số chứng từ<br/>Focus mặc định vào nút Hủy"]
+    D --> E{"Người dùng chọn gì?"}
+    E -- "Hủy · ESC · click ra overlay" --> E1["Đóng popup · giữ nguyên dữ liệu"]
+    E -- "Xác nhận" --> F{"Server kiểm lại phiếu tồn tại?"}
+    F -- "Không còn" --> C1
+    F -- "Còn" --> G["Xóa mềm header và toàn bộ chi tiết<br/>DaXoa = true · giữ lại để truy vết"]
+    G --> H["Tính lại số lượng CCDC theo đơn vị<br/>từ lịch sử chứng từ còn hiệu lực"]
+    H --> I["Tính lại hệ phân bổ chi phí<br/>từ lịch sử chứng từ còn hiệu lực"]
+    I --> J{"Xóa thành công?"}
+    J -- "Không" --> J1["MSG_013 · hủy thao tác xóa<br/>Giữ nguyên popup xác nhận"]
+    J -- "Có" --> K(["MSG_003 · đóng popup · tải lại danh sách"])
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class C1,J1 err;
+    class K ok;
+</pre>
+    </div>
+    <figcaption><b>Không có điều kiện chặn xóa nào ngoài “phiếu phải tồn tại”.</b> Không kiểm trạng thái ghi sổ (không có), không kiểm chứng từ phát sinh sau. Bảng Validate của SCR Xóa chỉ liệt kê đúng một dòng — <span class="chip c-msg">MSG_012</span>.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Khoảng trống cần BA chốt</span>
+    <p>BR_07 chặn <em>tạo</em> và <em>sửa</em> phiếu khi CCDC đã có chứng từ phát sinh sau, nhưng <strong>không</strong> nói gì về <em>xóa</em>. Xóa một phiếu điều chuyển nằm giữa chuỗi lịch sử sẽ làm mọi chứng từ phân bổ · điều chỉnh · ghi giảm phía sau tính trên nền số lượng khác. Tài liệu BA hiện không quy định — không được tự đặt luật chặn.</p>
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — UC_DieuChuyenCCDC_ChiTiet</span>
+  <h2>Xem chi tiết: chỉ đọc và là bàn đạp sang Sửa · Xóa</h2>
+  <p class="lede">Popup chi tiết dùng đúng layout màn Thêm mới nhưng toàn bộ control ở trạng thái disable, bỏ nút thao tác lưới, và <strong>không tô màu trạng thái</strong> — vì không có trạng thái nào để tô.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Xem chi tiết — quyền View.Detail"]) --> B{"Phiếu còn tồn tại?"}
+    B -- "Không" --> B1["MSG_012 · tải lại danh sách"]
+    B -- "Có" --> C["Đọc header và chi tiết<br/>Mở popup chế độ chỉ đọc"]
+    C --> D["Mọi trường Disable<br/>Ẩn Thêm dòng và Xóa dòng<br/>Không áp màu trạng thái"]
+    D --> E{"Nút nào được bấm?"}
+    E -- "Đóng" --> E1["Đóng popup · về danh sách"]
+    E -- "Chỉnh sửa" --> E2["Kiểm quyền Edit<br/>Mở popup Cập nhật tại chỗ"]
+    E -- "Xóa" --> E3["Kiểm quyền Delete<br/>Mở popup xác nhận xóa"]
+    E2 --> F["Lưu hoặc Hủy xong<br/>quay lại đúng màn chi tiết"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class B1 err;
+    class F ok;
+</pre>
+    </div>
+    <figcaption><b>Sửa từ màn Xem quay lại màn Xem.</b> Theo <span class="chip c-br">BR34</span>, đóng popup Chỉnh sửa mở từ màn chi tiết phải trả về màn chi tiết với dữ liệu đã cập nhật — không tự nhảy về danh sách.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Lỗi tải dữ liệu thì không mở popup</span>
+    <p>Luồng ngoại lệ của UC ghi rõ: gặp lỗi tải dữ liệu khi xem thì hiển thị <span class="chip c-msg">MSG_013</span> và <strong>không mở popup</strong> — không mở popup rỗng rồi báo lỗi bên trong.</p>
+  </div>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — Ma trận Ẩn/Hiện/Disable</span>
+  <h2>Ba chế độ màn hình, một bảng trạng thái tĩnh</h2>
+  <p class="lede">Cả ba popup của epic đều <strong>không có ma trận động</strong>: không input nào ở mức form làm ẩn/hiện trường khác. BR01 chỉ autofill và reset <em>giá trị</em>; BR05 đổi dạng control theo <em>dữ liệu từng dòng</em>, là điều kiện mức dòng chứ không phải chiều cột.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thành phần</th><th>Thêm mới</th><th>Chỉnh sửa</th><th>Xem chi tiết</th></tr></thead>
+    <tbody>
+      <tr><td>Số CT · Ngày CT · Lý do · Người bàn giao · Người tiếp nhận</td><td><span class="chip c-ok">Show</span></td><td><span class="chip c-ok">Show</span></td><td><span class="chip c-perm">Disable</span></td></tr>
+      <tr><td>STT · Tên CCDC · Số lượng đang dùng</td><td><span class="chip c-perm">Disable</span></td><td><span class="chip c-perm">Disable</span></td><td><span class="chip c-perm">Disable</span></td></tr>
+      <tr><td>Mã CCDC · Đơn vị bàn giao · Đơn vị tiếp nhận · Số lượng điều chuyển</td><td><span class="chip c-ok">Show</span></td><td><span class="chip c-ok">Show</span></td><td><span class="chip c-perm">Disable</span></td></tr>
+      <tr><td>Thêm dòng · Xóa dòng chi tiết</td><td><span class="chip c-ok">Show</span></td><td><span class="chip c-ok">Show</span></td><td><span class="chip c-msg">Hide</span></td></tr>
+      <tr><td>Lưu · Hủy</td><td><span class="chip c-ok">Show</span></td><td><span class="chip c-ok">Show</span></td><td>—</td></tr>
+      <tr><td>Chỉnh sửa · Xóa · Đóng</td><td>—</td><td>—</td><td><span class="chip c-ok">Show</span> theo quyền</td></tr>
+      <tr><td>Thay đổi phân bổ</td><td><span class="chip c-ok">Show</span></td><td><span class="chip c-warn">Show (suy luận)</span></td><td><span class="chip c-warn">Hide (suy luận)</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Hai ô suy luận, chưa có câu chữ</span>
+    <p>Nút <strong>Thay đổi phân bổ</strong> không được liệt kê trong bảng Chức năng của SCR Cập nhật lẫn SCR Chi tiết. Ma trận suy luận <span class="f">Show</span> ở màn Chỉnh sửa (vì layout giống Thêm mới và tham chiếu đầy đủ BR01–BR_07 gồm BR06) và <span class="f">Hide</span> ở màn Chi tiết (vì màn chỉ xem không thay đổi hệ phân bổ). Cả hai đều <strong>cần BA xác nhận</strong> và bổ sung vào tài liệu gốc.</p>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Vì sao không có cột trạng thái</span>
+    <p>Ma trận của các epic chứng từ khác thường có hai cột <em>Chưa ghi sổ</em> / <em>Đã ghi sổ</em>. Ở đây BR01 màn danh sách khẳng định bộ nút <em>“không phụ thuộc vào trạng thái ghi sổ (do điều chuyển CCDC không áp dụng ghi sổ)”</em>, nên không có chiều tổ hợp nào để lên cột — bảng tĩnh một cột cho mỗi chế độ là đúng, không phải làm ẩu.</p>
+  </div>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — Tra cứu</span>
+  <h2>Điều kiện chặn, mã thông báo và quyền</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> trong các sơ đồ trên. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-01735_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện chặn</th><th class="mono">Mã</th><th>Tầng kiểm</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="7">Lưu — Thêm mới</td><td>Thiếu trường bắt buộc (Số CT · Ngày CT · Mã CCDC · Đơn vị bàn giao · Đơn vị tiếp nhận · Số lượng)</td><td class="mono">005</td><td>UI</td></tr>
+      <tr><td>Bảng chi tiết không có dòng nào</td><td class="mono">007</td><td>UI</td></tr>
+      <tr><td>Trùng Mã CCDC giữa các dòng chi tiết</td><td class="mono">008</td><td>UI</td></tr>
+      <tr><td>Đơn vị tiếp nhận trùng Đơn vị bàn giao của cùng dòng</td><td class="mono">014</td><td>UI</td></tr>
+      <tr><td>Số lượng điều chuyển không phải số nguyên dương (âm · 0 · thập phân · trống)</td><td class="mono">009</td><td>UI</td></tr>
+      <tr><td>Số lượng điều chuyển vượt Số lượng đang dùng của đơn vị bàn giao</td><td class="mono">010</td><td>UI + Server</td></tr>
+      <tr><td>Số chứng từ đã tồn tại trong cùng Tenant</td><td class="mono">006</td><td>Server</td></tr>
+      <tr><td>Thêm mới — tuần tự thời gian</td><td>Tồn tại chứng từ điều chuyển · điều chỉnh · phân bổ · ghi giảm của cùng CCDC có Ngày CT ≥ ngày đang lập</td><td class="mono">103</td><td>Server</td></tr>
+      <tr><td rowspan="2">Lưu — Chỉnh sửa</td><td>Toàn bộ chốt của Thêm mới (005 · 007 · 008 · 014 · 009 · 010 · 006)</td><td class="mono">như trên</td><td>UI + Server</td></tr>
+      <tr><td>Ngày chứng từ mới xung đột với chứng từ CCDC phát sinh sau</td><td class="mono">105</td><td>Server</td></tr>
+      <tr><td>Chỉnh sửa · Xóa · Xem chi tiết</td><td>Phiếu đã bị người khác xóa trước đó</td><td class="mono">012</td><td>Server</td></tr>
+      <tr><td>Mọi màn</td><td>Không có quyền truy cập chức năng</td><td class="mono">011</td><td>Server</td></tr>
+      <tr><td>Mọi thao tác ghi</td><td>Lỗi hệ thống / lỗi kết nối — giữ nguyên popup, không lưu gì</td><td class="mono">013</td><td>Server</td></tr>
+      <tr><td>Danh sách</td><td>Không có dữ liệu hoặc lọc không ra kết quả — hiện giữa lưới, không phải toast</td><td class="mono">004</td><td>UI</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Thông báo thành công</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Mã</th><th>Nội dung</th><th>Sau đó</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">001</td><td>Thêm mới phiếu điều chuyển CCDC thành công</td><td>Đóng popup · tải lại danh sách</td></tr>
+      <tr><td class="mono">002</td><td>Cập nhật phiếu điều chuyển CCDC thành công</td><td>Đóng popup · tải lại danh sách (từ màn chi tiết thì về màn chi tiết — <span class="chip c-br">BR34</span>)</td></tr>
+      <tr><td class="mono">003</td><td>Xóa phiếu điều chuyển CCDC thành công</td><td>Đóng popup xác nhận · tải lại danh sách, giữ nguyên trang hiện tại <span class="chip c-br">BR29.4</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">DieuChuyenCCDC.View</td><td>Vào màn danh sách; thiếu thì ẩn khỏi menu và chặn cả truy cập bằng URL</td></tr>
+      <tr><td class="mono">DieuChuyenCCDC.View.Detail</td><td>Nút Xem chi tiết <b>và</b> khu vực chi tiết dưới lưới — kiểm ở server trước khi trả dữ liệu</td></tr>
+      <tr><td class="mono">DieuChuyenCCDC.Create</td><td>Nút Thêm mới · hành động Lưu ở popup thêm mới</td></tr>
+      <tr><td class="mono">DieuChuyenCCDC.Edit</td><td>Nút Chỉnh sửa trên dòng và trên popup chi tiết</td></tr>
+      <tr><td class="mono">DieuChuyenCCDC.Delete</td><td>Nút Xóa trên dòng và trên popup chi tiết</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>BR chung: cái nào áp, cái nào không</h3>
+  <p>Epic không nhắc lại BR chung không có nghĩa là bỏ. Ngược lại, ba BR quen thuộc của chứng từ <strong>không</strong> áp ở đây vì thiếu tiền đề.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nhóm</th><th>BR áp dụng</th></tr></thead>
+    <tbody>
+      <tr><td>Danh sách</td><td><span class="chip c-br">BR1</span> phân trang 20/trang · <span class="chip c-br">BR2</span> STT liên tục, sticky header, cột Chức năng ghim phải · <span class="chip c-br">BR11</span> tìm kiếm và lọc theo cột · <span class="chip c-br">BR31</span> dòng tổng cho cột số lượng · <span class="chip c-br">BR44</span> cắt văn bản dài</td></tr>
+      <tr><td>Popup &amp; form</td><td><span class="chip c-br">BR3</span> ESC và click overlay = hủy · <span class="chip c-br">BR13.2</span> bộ nút theo chế độ · <span class="chip c-br">BR14</span> ba chế độ form, focus ô đầu, chặn nhập quá maxLength · <span class="chip c-br">BR15</span> border đỏ, lỗi dưới ô, cuộn tới lỗi đầu · <span class="chip c-br">BR21</span> chèn dòng và đánh lại STT · <span class="chip c-br">BR34</span> sửa từ màn xem</td></tr>
+      <tr><td>Dữ liệu</td><td><span class="chip c-br">BR5</span> combogrid Mã CCDC và Đơn vị · <span class="chip c-br">BR7</span> precision số lượng · <span class="chip c-br">BR19.1</span> trùng số chứng từ · <span class="chip c-br">BR20</span> số chứng từ nhập tay, tối đa 50 ký tự · <span class="chip c-br">BR28</span> lọc theo Tenant · <span class="chip c-br">BR29</span> chỉ xóa mềm, cascade sang chi tiết, giữ nguyên trang · <span class="chip c-br">BR43</span> trim · <span class="chip c-br">BR46</span> trường hệ thống</td></tr>
+      <tr><td>Quyền &amp; thông báo</td><td><span class="chip c-br">BR25</span> ẩn nút chứ không disable, chặn URL · <span class="chip c-br">BR26</span> toast góc phải trên</td></tr>
+      <tr><td><b>Không áp dụng</b></td><td><span class="chip c-msg">BR12</span> trạng thái chứng từ · <span class="chip c-msg">BR33</span> màu trạng thái · <span class="chip c-msg">BR36</span> ghi bút toán vào sổ cái · <span class="chip c-msg">BR42</span> bỏ ghi sổ — epic không có nghiệp vụ ghi sổ. Trường <span class="f">NguoiGhiSoId</span> · <span class="f">ThoiGianGhiSo</span> của BR46 vẫn khai báo nhưng để <span class="f">null</span>.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Bốn khoảng trống tài liệu chưa lấp</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Khoảng trống</th><th>Vì sao quan trọng</th></tr></thead>
+    <tbody>
+      <tr><td><b>BR09 chưa có mã loại chứng từ</b> cho Phiếu điều chuyển CCDC — bảng mã chứng từ chỉ có PPC (phân bổ CCDC) và PGC (ghi giảm CCDC)</td><td>BR_07 quét chéo bốn loại chứng từ CCDC; thiếu mã định danh thì không có khóa chuẩn để nhận diện loại khi truy vấn.</td></tr>
+      <tr><td><b><span class="f">ccdc_don_vi_quan_ly_ccdc</span> vắng mặt trong ma trận CRUD</b> dù ba UC đều ghi vào nó</td><td>Đây là bảng giữ số lượng thật; không khai trong CRUD dễ bị bỏ qua khi thiết kế API và phân quyền dữ liệu.</td></tr>
+      <tr><td><b>Xóa phiếu không bị chặn theo tuần tự thời gian</b> — BR_07 chỉ áp cho tạo và sửa</td><td>Xóa một mắt xích giữa chuỗi làm mọi chứng từ CCDC phía sau tính trên nền số lượng khác.</td></tr>
+      <tr><td><b>Bộ lọc thời gian mặc định chưa nêu</b> — UC chỉ liệt kê lọc theo Số CT · Ngày CT · Mã CCDC · Lý do, không nói tới mặc định “Đầu tháng tới hiện tại” của BR11.2.1</td><td>Đây là danh sách chứng từ có yếu tố ngày nên BR11.2.1 áp mặc định; cần BA xác nhận có giữ mặc định đó không.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-01735 · Điều chuyển CCDC</span>
+  <span>Dựng từ 5 UC · 5 Activity Diagram · 5 màn hình · 3 ma trận ẩn/hiện · 16 mã MSG</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

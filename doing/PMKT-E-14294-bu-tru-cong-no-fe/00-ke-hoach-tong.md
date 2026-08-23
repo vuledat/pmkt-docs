@@ -10,7 +10,7 @@
 | **Module FE** | `client/src/features/tongHop/buTruCongNo/` |
 | **Domain** | `tongHop` (đã có route contribution — `client/src/features/tongHop/routes.tsx`) |
 | **i18n namespace** | `buTruCongNo` (MỘT namespace cho cả module) |
-| **API phụ thuộc** | ❌ **chưa có gì ở BE** — `cell-app/src/main/java/vn/dopai/pmkt/cell/` không có module `bu_tru_cong_no` lẫn `phieu_ke_toan_tong_hop` (xem §2) |
+| **API phụ thuộc** | ❌ **chưa có gì ở BE** — `cell-app/src/main/java/vn/vtt/pmkt/cell/` không có module `bu_tru_cong_no` lẫn `phieu_ke_toan_tong_hop` (xem §2) |
 
 ## Bản đồ UC · màn hình · file con
 
@@ -267,7 +267,7 @@ grep -rniE "butru" client/src --include="*.ts" --include="*.tsx" -l
 #   → 0 kết quả   (chỉ có `doiTru` — nghiệp vụ KHÁC, xem ghi chú dưới)
 
 # 3) BE đã có chưa
-ls cell-app/src/main/java/vn/dopai/pmkt/cell/
+ls cell-app/src/main/java/vn/vtt/pmkt/cell/
 #   → accounting_core · chung_tu_ban_hang · chung_tu_mua_hang · common · core
 #     integration_ops · master_data · platform_iam · quan_he_chung_tu · reporting
 #   → KHÔNG có bu_tru_cong_no, KHÔNG có phieu_ke_toan_tong_hop
@@ -467,7 +467,7 @@ export const PHIEU_KE_TOAN_PERM = {
 ```
 
 Cả hai mã chức năng **đã có trong catalog BE**
-(`cell-app/src/main/java/vn/dopai/pmkt/cell/common/constant/MaChucNang.java:354,366`), nhưng **chưa có
+(`cell-app/src/main/java/vn/vtt/pmkt/cell/common/constant/MaChucNang.java:354,366`), nhưng **chưa có
 controller nào tiêu thụ** ⇒ tên động từ (`.Create`, `.Post`, …) vẫn là **giả định theo tài liệu BA**,
 phải đối chiếu lại khi BE lên.
 

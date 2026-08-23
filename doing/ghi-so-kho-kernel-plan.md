@@ -7,7 +7,7 @@
 | Mục | Nội dung |
 |---|---|
 | Mục tiêu | Dựng kernel ghi sổ kho ĐỐI XỨNG với kernel ghi sổ cái đang có (`accounting_core/hach_toan`) |
-| Module BE | `cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/ton_kho/` (tạo mới) |
+| Module BE | `cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/ton_kho/` (tạo mới) |
 | Bảng DB | `acc_so_xuat_nhap_tong_hop` (đã có, V245 — thiếu cột idempotency) · `inv_ton_kho` (đã có, V69) · `inv_cau_hinh_ton_kho` (đã có, V152) |
 | Migration | `V353` (bổ sung idempotency + chốt chặn cho sổ kho) |
 | Không đụng | `master_data/**` (vùng đóng băng), engine tính giá xuất kho V71 |
@@ -71,7 +71,7 @@ grep -rn "coAnhHuongTonKho\|apDungTonKho\|hoanTacTonKho" --include="*.java" . | 
 ```
 
 Kết luận: **không có chứng từ nào override `coAnhHuongTonKho()`** ⇒ bước `capNhatTonKho` tại
-[ChungTuTemplate.java:510](../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java) **chưa từng chạy một lần nào**. Chúng ta đang xây trên đất trống, không có hồi quy để lo.
+[ChungTuTemplate.java:510](../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/service/ChungTuTemplate.java) **chưa từng chạy một lần nào**. Chúng ta đang xây trên đất trống, không có hồi quy để lo.
 
 Khung đã có sẵn (chỉ là chỗ cắm, chưa có ruột):
 

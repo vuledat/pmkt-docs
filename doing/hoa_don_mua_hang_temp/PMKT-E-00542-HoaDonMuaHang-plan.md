@@ -7,7 +7,7 @@
 | Use case | PMKT-E-00542 — Hóa đơn mua hàng |
 | Màn hình | SCR_HDMH_DanhSach, SCR_HDMH_ThemMoi, SCR_HDMH_ChinhSua, SCR_HDMH_PopupChonChungTu, SCR_HDMH_XemChiTiet, vv. |
 | Tài liệu nguồn | pmkt-docs/ba/PMKT-E-00542-HoaDonMuaHang/ |
-| Module BE | cell-app/src/main/java/vn/dopai/pmkt/cell/mua_hang/hoa_don_mua/ |
+| Module BE | cell-app/src/main/java/vn/vtt/pmkt/cell/mua_hang/hoa_don_mua/ |
 | Bảng DB | ENT_HoaDonMua, ENT_ChiTietHoaDon, ENT_ChungTuNhanHoaDon, ENT_ChiTietChungTuMuaHang |
 
 ---
@@ -63,8 +63,8 @@ File migration sẽ là `V...__init_hoa_don_mua.sql`
 
 | Cần | Đã có ở base | Vị trí |
 |---|---|---|
-| API Chứng từ Base | BaseChungTuController | `../../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/controller/BaseChungTuController.java` |
-| Service Chứng từ Base | AbstractChungTuCrudService | `../../../cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/service/AbstractChungTuCrudService.java` |
+| API Chứng từ Base | BaseChungTuController | `../../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/controller/BaseChungTuController.java` |
+| Service Chứng từ Base | AbstractChungTuCrudService | `../../../cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/service/AbstractChungTuCrudService.java` |
 
 ---
 

@@ -1,0 +1,853 @@
+<title>Luồng Báo cáo tổng hợp TSCĐ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-10700 · Phân hệ Tài sản cố định — Báo cáo</p>
+  <h1>Luồng xử lý Báo cáo tổng hợp TSCĐ</h1>
+  <p>Báo cáo tổng hợp TSCĐ là chức năng <em>chỉ đọc</em>: cả chín entity trong CRUD matrix đều mang chữ <span class="f">R</span>, không có ghi sổ, không có xóa. Bốn mắt xích quyết định đúng sai của nó là <strong>tham số lọc</strong>, <strong>điều kiện truy vấn</strong>, <strong>công thức từng chỉ tiêu tính đến đầu kỳ</strong>, và <strong>đường kết xuất</strong>. Mỗi sơ đồ dưới đây bám đúng hai Activity Diagram, hai màn hình và bộ BR-BC-01…BR-BC-10 trong tài liệu BA.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 2 use case · 2 activity diagram · 2 màn hình · 6 message</span>
+    <span><b>Entity gốc:</b> fa_tai_san_co_dinh</span>
+    <span><b>Quyền:</b> BCTongHopTSCD.View · .Export · .Print</span>
+    <span><b>Lối vào:</b> Tài sản cố định → Báo cáo tổng hợp TSCĐ</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Bản đồ một lần xem</a></li>
+    <li><a href="#s1"><span>01</span>Ba cổng quyền</a></li>
+    <li><a href="#s2"><span>02</span>Popup chọn tham số</a></li>
+    <li><a href="#s3"><span>03</span>Validate tham số</a></li>
+    <li><a href="#s4"><span>04</span>Nguồn dữ liệu &amp; bốn điều kiện lọc</a></li>
+    <li><a href="#s5"><span>05</span>Mốc đầu kỳ báo cáo</a></li>
+    <li><a href="#s6"><span>06</span>Sáu công thức đến đầu kỳ</a></li>
+    <li><a href="#s7"><span>07</span>GTKH hàng tháng &amp; Mức KH ĐVSP</a></li>
+    <li><a href="#s8"><span>08</span>Hai chế độ hiển thị</a></li>
+    <li><a href="#s9"><span>09</span>Dựng bảng cha-con</a></li>
+    <li><a href="#s10"><span>10</span>Cảnh báo dòng &amp; rỗng dữ liệu</a></li>
+    <li><a href="#s11"><span>11</span>Kết xuất &amp; in</a></li>
+    <li><a href="#s12"><span>12</span>Tra cứu &amp; khoảng trống</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Bản đồ một lần xem báo cáo</h2>
+  <p class="lede">Epic có <strong>hai use case</strong> — <span class="f">UC_ChonThamSo_TongHopTSCD</span> và <span class="f">UC_XemBaoCao_TongHopTSCD</span> — nối thành một vòng qua hai màn hình. Từ màn kết quả người dùng quay ngược về popup tham số mà không rời báo cáo.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    M(( )) -- "TSCĐ → Báo cáo tổng hợp TSCĐ" --> G
+    G{"Có quyền<br/>BCTongHopTSCD.View?"}
+    G -- "Không" --> GX["MSG_PMKT-E-10700_301<br/>Không có quyền truy cập trang"]:::err
+    G -- "Có" --> P["<b>POPUP THAM SỐ</b><br/>Khoảng thời gian · Từ ngày<br/>Đến ngày · Loại TSCĐ<br/>Bộ phận quản lý · Trạng thái<br/>Chi tiết từng Nguồn vốn"]
+    P -- "Hủy" --> M
+    P -- "Xem báo cáo · validate qua" --> Q["<b>TRUY VẤN</b><br/>TSCĐ · nguồn vốn · khấu hao<br/>ghi giảm · loại TSCĐ · đơn vị"]
+    Q -- "Không có dòng nào" --> QE["MSG_PMKT-E-10700_302<br/>Không tìm thấy dữ liệu"]:::err
+    Q -- "Có dữ liệu" --> R["<b>KẾT QUẢ</b><br/>Bảng cha-con TSCĐ · nguồn vốn<br/>Dòng Tổng cộng cuối báo cáo"]
+    R -- "Chọn tham số" --> P
+    R -- "Xuất Excel · In" --> O["Kết xuất ra ngoài hệ thống"]:::ok
+    R -- "Đóng" --> M
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Không trạng thái nào bị thay đổi.</b> CRUD matrix ghi chữ <span class="f">R</span> cho toàn bộ chín entity — không có nhánh ghi sổ, bỏ ghi sổ hay xóa. Rủi ro của epic nằm ở <em>số liệu tính sai</em>, không phải ở <em>dữ liệu hỏng</em>.</figcaption>
+  </figure>
+
+  <h3>Hai màn hình, chín entity chỉ đọc</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thành phần</th><th class="mono">Định danh</th><th>Vai trò trong luồng</th></tr></thead>
+    <tbody>
+      <tr><td>Popup tham số</td><td class="mono">SCR_TongHopTSCD_ChonThamSo</td><td>Thu 6 tham số, chặn trước khi truy vấn</td></tr>
+      <tr><td>Màn kết quả</td><td class="mono">SCR_TongHopTSCD_KetQua</td><td>Dựng bảng cha-con, giữ 4 nút thao tác</td></tr>
+      <tr><td>Tài sản cố định</td><td class="mono">ENT_fa_tai_san_co_dinh</td><td>Mã, tên, ngày ghi tăng, TGSD, SL, tổng SL thiết kế, giá trị tính KH</td></tr>
+      <tr><td>Nguồn vốn chi tiết</td><td class="mono">ENT_fa_nguon_von_tai_san_co_dinh_chi_tiet</td><td>Dòng con: nguyên giá, giá trị còn lại, HMLK theo từng nguồn</td></tr>
+      <tr><td>Nguồn vốn</td><td class="mono">ENT_mst_nguon_von</td><td>Tên nguồn vốn hiển thị ở cột <span class="f">Nguồn</span></td></tr>
+      <tr><td>Chứng từ ghi giảm</td><td class="mono">ENT_fa_chung_tu_ghi_giam_tai_san_co_dinh</td><td>Giá trị còn lại khi ghi giảm, ngày ghi giảm</td></tr>
+      <tr><td>Ghi giảm chi tiết</td><td class="mono">ENT_fa_ghi_giam_tai_san_co_dinh_chi_tiet</td><td>Có trong CRUD matrix, chưa được màn kết quả gọi tên</td></tr>
+      <tr><td>Khấu hao</td><td class="mono">ENT_fa_khau_hao_tai_san_co_dinh</td><td>Chứng từ tính khấu hao</td></tr>
+      <tr><td>Khấu hao chi tiết</td><td class="mono">ENT_fa_khau_hao_tai_san_co_dinh_chi_tiet</td><td>Chi tiết trích khấu hao để tính HMLK</td></tr>
+      <tr><td>Loại TSCĐ</td><td class="mono">ENT_mst_loai_tai_san_co_dinh</td><td>Nguồn combogrid và điều kiện lọc Loại TSCĐ</td></tr>
+      <tr><td>Đơn vị</td><td class="mono">ENT_mst_don_vi</td><td>Bộ phận quản lý (lọc) và Bộ phận sử dụng (hiển thị)</td></tr>
+      <tr><td>Hệ thống tài khoản</td><td class="mono">ENT_mst_he_thong_tai_khoan</td><td>Có trong CRUD matrix, chưa có cột nào trên báo cáo dùng tới</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Hai entity lệch giữa hai tài liệu</span>
+    <p>CRUD matrix liệt kê <span class="f">ENT_mst_he_thong_tai_khoan</span> và <span class="f">ENT_fa_ghi_giam_tai_san_co_dinh_chi_tiet</span> nhưng bảng nguồn dữ liệu <span class="chip c-br">BR-BC-01</span> của màn kết quả <strong>không</strong> nhắc tới. Ngược lại <span class="f">ENT_mst_nguon_von</span> có trong bảng nguồn dữ liệu và trong use case nhưng <strong>không</strong> có trong CRUD matrix. Hai hướng lệch này cần BA chốt trước khi dựng truy vấn.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — UC_ChonThamSo · UC_XemBaoCao</span>
+  <h2>Ba cổng quyền, chỉ một cổng có mã lỗi</h2>
+  <p class="lede">Quyền vào chức năng là <span class="f">BCTongHopTSCD.View</span> và nó có mã chặn riêng. Hai quyền còn lại — <span class="f">.Export</span> và <span class="f">.Print</span> — được use case gọi tên nhưng bộ message của epic <strong>không</strong> khai mã cho nhánh bị chặn.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Người dùng đã đăng nhập"]) --> B{"Có quyền<br/>BCTongHopTSCD.View?"}
+    B -- "Không" --> B1["MSG_PMKT-E-10700_301<br/>Không có quyền truy cập trang<br/>Liên hệ quản trị viên"]:::err
+    B -- "Có" --> C["Mở popup chọn tham số"]:::ok
+    C --> D["Màn kết quả báo cáo"]
+    D -- "Bấm Xuất Excel" --> E{"Có quyền<br/>BCTongHopTSCD.Export?"}
+    E -- "Không" --> E1["Tài liệu chưa khai mã chặn"]:::warn
+    E -- "Có" --> E2["Xuất file · MSG_001"]:::ok
+    D -- "Bấm In" --> F{"Có quyền<br/>BCTongHopTSCD.Print?"}
+    F -- "Không" --> F1["Tài liệu chưa khai mã chặn"]:::warn
+    F -- "Có" --> F2["In báo cáo · MSG_002"]:::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Quyền cấp chức năng không thay được quyền cấp dữ liệu.</b> <span class="chip c-br">BR25</span> chia bốn cấp — menu, trang, chức năng, dữ liệu. Epic khai đủ ba cấp đầu; cấp dữ liệu (phạm vi đơn vị người dùng được nhìn) <strong>chưa được tài liệu nêu</strong>, dù mọi entity đều thuộc phạm vi đa thuê theo <span class="chip c-br">BR28</span>.</figcaption>
+  </figure>
+
+  <h3>Ma trận quyền của epic</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th><th>Chặn thì báo</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">BCTongHopTSCD.View</td><td>Vào chức năng · mở popup tham số · xem kết quả</td><td><span class="chip c-msg">MSG_301</span></td></tr>
+      <tr><td class="mono">BCTongHopTSCD.Export</td><td>Nút Xuất Excel trên màn kết quả</td><td>Chưa có mã</td></tr>
+      <tr><td class="mono">BCTongHopTSCD.Print</td><td>Nút In trên màn kết quả</td><td>Chưa có mã</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — SCR_TongHopTSCD_ChonThamSo</span>
+  <h2>Popup tham số: sáu ô, không ô nào gác ô nào</h2>
+  <p class="lede">Đã rà toàn bộ trường trên popup: <strong>không input nào tác động ẩn/hiện hay disable của trường khác</strong>. Chúng chỉ đổi <em>giá trị</em> (Khoảng thời gian → Từ/Đến ngày), đổi <em>phạm vi lọc</em> (Loại TSCĐ · BP quản lý · Trạng thái), hoặc đổi <em>chế độ trình bày ở màn khác</em> (checkbox Nguồn vốn).</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Popup mở ở trạng thái mặc định"]) --> B["Khoảng thời gian = Tháng này<br/>Từ ngày · Đến ngày tự fill BR8"]
+    A --> C["Loại TSCĐ = Tất cả<br/>Bộ phận quản lý = Tất cả<br/>Trạng thái = Tất cả"]
+    A --> D["Chi tiết từng Nguồn vốn<br/>không tích"]
+    B --> E{"Người dùng chạm vào đâu?"}
+    C --> E
+    D --> E
+    E -- "Đổi Khoảng thời gian" --> E1["Fill lại Từ ngày · Đến ngày"]
+    E -- "Sửa Từ ngày hoặc Đến ngày" --> E2["Khoảng thời gian = Tùy chỉnh"]
+    E -- "Xóa Khoảng thời gian" --> E3["Giữ nguyên Từ ngày · Đến ngày"]
+    E -- "Đổi Loại TSCĐ · BP · Trạng thái" --> E4["Chỉ thu hẹp phạm vi lọc<br/>Không đổi ẩn hiện trường nào"]
+    E -- "Tích Chi tiết từng Nguồn vốn" --> E5["Chỉ đổi chế độ trình bày<br/>ở màn kết quả"]
+    E -- "Xóa bộ lọc" --> A
+    E1 --> Z(["Bấm Xem báo cáo · sang mục 03"])
+    E2 --> Z
+    E3 --> Z
+    E4 --> Z
+    E5 --> Z
+    E -- "Hủy" --> X["Đóng popup, không thực hiện"]:::warn
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Đồng bộ hai chiều nhưng không đối xứng.</b> Chọn kỳ thì fill ngày; sửa ngày thì kỳ về <em>Tùy chỉnh</em>; nhưng <em>xóa</em> kỳ thì <strong>không</strong> xóa ngày đã fill <span class="chip c-br">BR8</span>.</figcaption>
+  </figure>
+
+  <h3>Bảng trạng thái tĩnh của popup</h3>
+  <p>Ma trận ẩn/hiện của màn này là <strong>bảng một cột</strong> — không tồn tại chiều tổ hợp vì không có input động nào điều khiển trường khác.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Khu vực</th><th>Trường</th><th>Control</th><th>Trạng thái</th><th>Bắt buộc</th><th>Mặc định</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="6">Form tham số</td><td>Khoảng thời gian</td><td class="mono">SelectSearch</td><td><span class="chip c-ok">Show</span></td><td><b>Có</b></td><td>Tháng này</td></tr>
+      <tr><td>Từ ngày – Đến ngày</td><td class="mono">DatePicker</td><td><span class="chip c-ok">Show</span></td><td><b>Có</b></td><td>Fill theo kỳ</td></tr>
+      <tr><td>Loại TSCĐ</td><td class="mono">CombogridSearchFlatGrid</td><td><span class="chip c-ok">Show</span></td><td>Không</td><td>Tất cả</td></tr>
+      <tr><td>Bộ phận quản lý</td><td class="mono">CombogridSearchFlatGrid</td><td><span class="chip c-ok">Show</span></td><td>Không</td><td>Tất cả</td></tr>
+      <tr><td>Trạng thái</td><td class="mono">Select</td><td><span class="chip c-ok">Show</span></td><td><b>Có</b></td><td>Tất cả</td></tr>
+      <tr><td>Chi tiết từng Nguồn vốn</td><td class="mono">CheckBox</td><td><span class="chip c-ok">Show</span></td><td>Không</td><td>Không chọn</td></tr>
+      <tr><td rowspan="3">Nút</td><td>Xem báo cáo</td><td>Button</td><td><span class="chip c-ok">Show</span></td><td colspan="2">Xác nhận tham số, mở màn kết quả</td></tr>
+      <tr><td>Xóa bộ lọc</td><td>Button</td><td><span class="chip c-ok">Show</span></td><td colspan="2">Khôi phục toàn bộ giá trị mặc định</td></tr>
+      <tr><td>Hủy</td><td>Button</td><td><span class="chip c-ok">Show</span></td><td colspan="2">Đóng popup, không thực hiện <span class="chip c-br">BR3</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Sáu giá trị của trường Trạng thái</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Giá trị</th><th>Cách xác định TSCĐ thuộc trạng thái</th></tr></thead>
+    <tbody>
+      <tr><td>Tất cả</td><td>Không thu hẹp theo trạng thái</td></tr>
+      <tr><td>Hoạt động</td><td>TSCĐ đang hoạt động</td></tr>
+      <tr><td>Đã ghi giảm</td><td>Đã có phiếu Ghi giảm chọn TSCĐ đó</td></tr>
+      <tr><td>Thôi khấu hao</td><td>Đã có phiếu Thôi khấu hao chọn TSCĐ đó</td></tr>
+      <tr><td>Tạm dừng khấu hao</td><td>Đã có phiếu Tạm ngừng khấu hao chọn TSCĐ đó</td></tr>
+      <tr><td>Hoàn thành khấu hao</td><td>Giá trị còn lại của TSCĐ bằng 0</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note stop">
+    <span class="lbl">Một trạng thái, hai tên gọi</span>
+    <p>Popup tham số ghi <strong>“Tạm dừng khấu hao”</strong> còn điều kiện lọc trên màn kết quả ghi <strong>“Tạm ngừng kh”</strong>. Cùng một trạng thái nhưng khác chữ — tài liệu chưa chuẩn hóa, không được tự chọn một trong hai làm chuẩn.</p>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — BR-BC-01 màn tham số</span>
+  <h2>Validate tham số: một phép so sánh ngày</h2>
+  <p class="lede">Toàn bộ hàng rào trước truy vấn chỉ gồm các trường bắt buộc và điều kiện <strong>Đến ngày ≥ Từ ngày</strong>. Vi phạm thì <strong>không mở màn kết quả</strong> và popup giữ nguyên tham số đang nhập.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Bấm Xem báo cáo"]) --> V1{"Khoảng thời gian · Từ ngày<br/>Đến ngày · Trạng thái đã có?"}
+    V1 -- "Chưa" --> X1["Trường bắt buộc còn trống<br/>Chặn xem báo cáo"]:::err
+    V1 -- "Rồi" --> V2{"Đến ngày ≥ Từ ngày?"}
+    V2 -- "Không" --> X2["Ngày đến không được<br/>trước ngày từ<br/>Message chung BR8 · BR15.3"]:::err
+    V2 -- "Có" --> Q(["Chạy truy vấn · sang mục 04"]):::ok
+    X1 --> R["Giữ nguyên popup và tham số<br/>Không đóng popup<br/>Không mở màn kết quả"]:::warn
+    X2 --> R
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Nhánh này không có mã message riêng.</b> Epic tham chiếu nguyên văn message chung <em>“Ngày đến không được trước ngày từ”</em> của <span class="chip c-br">BR8</span>, không khai mã <span class="f">MSG_PMKT-E-10700_*</span> cho nó.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Hai điểm tài liệu tự mâu thuẫn</span>
+    <p><strong>1 · Nút Xem báo cáo.</strong> Use case ghi <em>“Nút Xem báo cáo chỉ khả dụng khi tham số hợp lệ”</em> — tức disable theo trạng thái nhập liệu. Ma trận ẩn/hiện lại ghi nút này luôn <span class="chip c-ok">Show</span> và validate chạy <em>sau</em> khi bấm. Hai cách hành xử khác nhau, chưa được chốt.</p>
+    <p><strong>2 · Tên nút đóng popup.</strong> Activity Diagram gọi nút là <strong>“Đóng”</strong>, màn hình gọi là <strong>“Hủy”</strong>. Hành vi thì trùng nhau: đóng popup, không thực hiện gì.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — BR-BC-01 mục b màn kết quả</span>
+  <h2>Nguồn dữ liệu và bốn điều kiện lọc</h2>
+  <p class="lede">Truy vấn chạy trên <span class="f">fa_tai_san_co_dinh</span> với đúng bốn điều kiện: một điều kiện thời gian luôn áp, ba điều kiện còn lại chỉ thu hẹp khi người dùng chọn giá trị cụ thể.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    P["Tham số đã qua validate"] --> F1["Lọc 1 · TaiSanCoDinh.NgayGhiTang<br/>≤ Đến ngày"]
+    F1 --> F2{"Có chọn Loại TSCĐ?"}
+    F2 -- "Tất cả" --> F3
+    F2 -- "Có chọn" --> F2a["LoaiTaiSanId thuộc danh sách chọn"]
+    F2a --> F3{"Có chọn Bộ phận quản lý?"}
+    F3 -- "Tất cả" --> F4
+    F3 -- "Có chọn" --> F3a["BoPhanQuanLyId thuộc danh sách"]
+    F3a --> F4{"Trạng thái đã chọn?"}
+    F4 -- "Tất cả" --> G
+    F4 -- "Hoạt động · Đã ghi giảm<br/>Thôi KH · Tạm ngừng KH" --> F4a["Lọc theo phiếu tương ứng<br/>đã lập cho TSCĐ đó"]
+    F4 -- "Hoàn thành khấu hao" --> F4b["Lọc TSCĐ có<br/>Giá trị còn lại bằng 0"]
+    F4a --> G
+    F4b --> G
+    G["Tập TSCĐ của báo cáo"]:::ok
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Điều kiện thời gian cắt theo Đến ngày, số liệu lại tính đến đầu kỳ.</b> Lọc lấy mọi TSCĐ ghi tăng tới <em>Đến ngày</em>, nhưng <span class="chip c-br">BR-BC-08</span> và <span class="chip c-br">BR-BC-09</span> tính mọi chỉ tiêu tới thời điểm <em>ngay trước Từ ngày</em>. Tài sản ghi tăng <em>trong kỳ</em> vì thế vẫn nằm trong danh sách nhưng mang giá trị đầu kỳ bằng không — tài liệu chưa nói cách trình bày các dòng này.</figcaption>
+  </figure>
+
+  <h3>Trường nào lấy từ đâu</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột trên báo cáo</th><th class="mono">Nguồn</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td>STT</td><td>—</td><td>Số thứ tự dòng cha <span class="chip c-br">BR2</span></td></tr>
+      <tr><td>Mã TSCĐ</td><td class="mono">TaiSanCoDinh.MaTaiSan</td><td>Ví dụ <span class="f">MMTB001</span>, là link xem chi tiết</td></tr>
+      <tr><td>Tên TSCĐ</td><td class="mono">TaiSanCoDinh.TenTaiSan</td><td>Ví dụ <span class="f">Máy phát điện</span></td></tr>
+      <tr><td>Nguồn</td><td class="mono">NguonVon.TenNguonVon</td><td>Qua <span class="f">TaiSanCoDinh_NguonVon.NguonVonId</span>; nhiều nguồn thì nhiều dòng con</td></tr>
+      <tr><td>Ngày ghi tăng</td><td class="mono">TaiSanCoDinh.NgayGhiTang</td><td>Định dạng <span class="f">DD/MM/YYYY</span>; cũng là trường lọc và sắp xếp</td></tr>
+      <tr><td>Nguyên giá</td><td class="mono">TaiSanCoDinh_NguonVon.NguyenGia</td><td>Tính đến đầu kỳ; tổng dòng con bằng nguyên giá TSCĐ</td></tr>
+      <tr><td>Giá trị còn lại</td><td class="mono">TaiSanCoDinh_NguonVon.GiaTriConLai</td><td>Tính đến đầu kỳ</td></tr>
+      <tr><td>HMLK</td><td class="mono">TaiSanCoDinh_NguonVon.GiaTriDaKhauHao</td><td>Tính đến đầu kỳ</td></tr>
+      <tr><td>Thời gian SD còn lại</td><td class="mono">TaiSanCoDinh.ThoiGianSuDungConLai</td><td>Số tháng còn lại tính đến kỳ báo cáo</td></tr>
+      <tr><td>TGSD ban đầu</td><td class="mono">TaiSanCoDinh.ThoiGianSuDung</td><td>Số tháng khi ghi tăng, không đổi theo kỳ</td></tr>
+      <tr><td>SL còn lại</td><td class="mono">TaiSanCoDinh.SanLuongConLai</td><td>Chỉ hiển thị khi <span class="f">phuongPhapKH = 2</span></td></tr>
+      <tr><td>Tổng SL thiết kế</td><td class="mono">TaiSanCoDinh.TongSanLuongThietKe</td><td>Để trống nếu không áp dụng phương pháp sản lượng</td></tr>
+      <tr><td>Giá trị tính KH</td><td class="mono">TaiSanCoDinh.GiaTriTinhKhauHao</td><td>Căn cứ tính khấu hao trong kỳ</td></tr>
+      <tr><td>GTCL khi ghi giảm</td><td class="mono">GiaTriConLai</td><td>Trên chứng từ Ghi giảm TSCĐ <span class="f">02547</span> đã ghi sổ; trống nếu chưa ghi giảm</td></tr>
+      <tr><td>BP sử dụng</td><td class="mono">DonVi.TenDonVi</td><td>Qua <span class="f">TaiSanCoDinh.BoPhanQuanLyId</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — BR-BC-08</span>
+  <h2>Mốc đầu kỳ: hai bộ lọc chồng lên nhau</h2>
+  <p class="lede">Mọi con số trên báo cáo là số <strong>tính đến đầu kỳ</strong> — thời điểm ngay trước mốc <em>Từ ngày</em>. Một chứng từ chỉ được cộng vào lũy kế khi thỏa <strong>cả hai</strong> điều kiện: đúng trạng thái và đúng mốc thời gian.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Từ ngày do người dùng chọn"] --> B["Đầu kỳ báo cáo = thời điểm<br/>ngay trước mốc Từ ngày"]
+    B --> C{"Chứng từ đang xét"}
+    C -- "Ngày hạch toán từ Từ ngày trở đi" --> C1["Không đưa vào tính toán"]:::err
+    C -- "Ngày hạch toán trước Từ ngày" --> D{"Trạng thái chứng từ?"}
+    D -- "Chưa ghi sổ" --> D1["Bỏ qua hoàn toàn"]:::err
+    D -- "Đã ghi sổ" --> E["Cộng vào lũy kế đầu kỳ"]:::ok
+    E --> E1["Ghi tăng TSCĐ"]
+    E --> E2["Tính khấu hao"]
+    E --> E3["Điều chỉnh TSCĐ 02569"]
+    E --> E4["Ghi giảm TSCĐ 02547"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Chứng từ nháp không tồn tại với báo cáo này.</b> Chỉ chứng từ ở trạng thái <em>Đã ghi sổ</em> mới được tính — nên một phiếu khấu hao vừa lập nhưng chưa ghi sổ sẽ không làm đổi bất kỳ con số nào trên báo cáo.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — BR-BC-09</span>
+  <h2>Sáu chỉ tiêu tính đến đầu kỳ</h2>
+  <p class="lede">Sáu công thức, mỗi công thức một cách xử lý điều chỉnh khác nhau. <strong>Nguyên giá bất biến</strong>, <strong>HMLK là số dẫn xuất</strong> chứ không cộng trực tiếp từ chứng từ khấu hao — hai điểm này quyết định tính cân của dòng tổng cộng.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Chứng từ đã ghi sổ<br/>trước mốc Từ ngày"] --> B["1 · Nguyên giá đầu kỳ<br/>= Nguyên giá lúc Ghi tăng"]
+    A --> C["2 · Giá trị tính KH đầu kỳ<br/>= GT tính KH ban đầu<br/>+ Tổng chênh lệch điều chỉnh"]
+    A --> D["3 · GTCL đầu kỳ<br/>= GTCL ban đầu<br/>trừ Tổng KH đã trích<br/>cộng Tổng điều chỉnh GTCL"]
+    A --> F["5 · TGSD còn lại đầu kỳ<br/>= TGSD ban đầu<br/>trừ Số kỳ đã trích KH<br/>cộng Số kỳ đổi do ĐC 02569"]
+    A --> G["6 · SL còn lại đầu kỳ<br/>= SL ban đầu<br/>trừ Tổng SL đã tính KH<br/>cộng Điều chỉnh SL"]
+    D --> D1{"Có Ghi giảm toàn bộ<br/>trước Từ ngày?"}
+    D1 -- "Có" --> D2["GTCL đầu kỳ = 0"]:::warn
+    D1 -- "Không" --> E["4 · HMLK đầu kỳ<br/>= GT tính KH đầu kỳ<br/>trừ GTCL đầu kỳ"]
+    C --> E
+    F --> F1["Không tính các kỳ<br/>bị Tạm dừng KH 02606"]:::warn
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>HMLK không phải tổng số đã trích khấu hao.</b> Công thức là <em>Giá trị tính KH đầu kỳ − GTCL đầu kỳ</em>. Khi có phiếu Điều chỉnh, hai vế này đã hấp thụ phần chênh lệch nên HMLK tự khớp — cộng trực tiếp từ chứng từ khấu hao sẽ ra số khác.</figcaption>
+  </figure>
+
+  <h3>Bảng công thức</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Chỉ tiêu đến đầu kỳ</th><th>Công thức</th><th>Chứng từ tham gia</th></tr></thead>
+    <tbody>
+      <tr><td>Nguyên giá</td><td>Nguyên giá ban đầu</td><td>Ghi tăng TSCĐ</td></tr>
+      <tr><td>Giá trị tính khấu hao</td><td>GT tính KH ban đầu + Tổng giá trị chênh lệch</td><td>Ghi tăng · Điều chỉnh</td></tr>
+      <tr><td>Giá trị còn lại</td><td>GTCL ban đầu − Tổng KH đã trích + Tổng điều chỉnh GTCL</td><td>Ghi tăng · Tính KH · Điều chỉnh <span class="f">02569</span></td></tr>
+      <tr><td>Hao mòn lũy kế</td><td>Giá trị tính KH đầu kỳ − GTCL đầu kỳ</td><td>Dẫn xuất từ hai chỉ tiêu trên</td></tr>
+      <tr><td>Thời gian SD còn lại</td><td>TGSD ban đầu − Số kỳ đã trích KH + Số kỳ đổi do điều chỉnh</td><td>Ghi tăng · Tính KH · Tạm dừng KH <span class="f">02606</span> · Điều chỉnh <span class="f">02569</span></td></tr>
+      <tr><td>Sản lượng còn lại</td><td>SL ban đầu − Tổng SL đã tính KH + Điều chỉnh SL</td><td>Ghi tăng · Tính KH · Điều chỉnh</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Ghi giảm toàn bộ đè lên công thức</span>
+    <p>Nếu có phiếu <strong>Ghi giảm toàn bộ</strong> đã ghi sổ trước mốc <em>Từ ngày</em> thì <span class="f">GTCL đầu kỳ = 0</span>, bất kể kết quả phép cộng trừ ở trên. Giá trị còn lại tại thời điểm ghi giảm được giữ riêng ở cột <em>Giá trị còn lại khi ghi giảm</em> trên dòng cha.</p>
+  </div>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — BR-BC-10</span>
+  <h2>Hai cột khấu hao loại trừ nhau theo phương pháp</h2>
+  <p class="lede">Cả hai công thức đều lấy <strong>Giá trị còn lại đầu kỳ</strong> làm tử số — đó là điều khiến báo cáo vẫn đúng sau khi tài sản đã trải qua nghiệp vụ Điều chỉnh. Mẫu số thì tùy phương pháp: thời gian hay sản lượng.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Dòng nguồn vốn đang dựng"] --> B{"Phương pháp khấu hao?"}
+    B -- "Đường thẳng · Số dư giảm dần" --> C["GTKH hàng tháng<br/>= GTCL đầu kỳ<br/>chia TGSD còn lại đầu kỳ"]:::ok
+    C --> C1["Mức KH ĐVSP để trống"]
+    C --> C2["SL còn lại để trống"]
+    C --> C3["Tổng SL thiết kế để trống"]
+    B -- "Sản lượng · phuongPhapKH = 2" --> D["Mức KH ĐVSP<br/>= GTCL đầu kỳ<br/>chia SL còn lại đầu kỳ"]:::ok
+    D --> D1["GTKH hàng tháng để trống"]
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Không dòng nào có đủ cả hai cột.</b> Một dòng nguồn vốn hoặc mang <span class="f">GTKH hàng tháng</span>, hoặc mang <span class="f">Mức KH ĐVSP</span> — cột còn lại luôn để trống. Ba cột sản lượng cũng để trống với tài sản không khấu hao theo sản lượng.</figcaption>
+  </figure>
+
+  <h3>Hai case kiểm chứng của BA</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Bước</th><th>Case 1 — không điều chỉnh</th><th>Case 2 — điều chỉnh giảm 10tr tại T03</th></tr></thead>
+    <tbody>
+      <tr><td>Ghi tăng</td><td colspan="2">T01/2025 · Nguyên giá 120.000.000đ · TGSD 12 tháng · GTKH ban đầu 10.000.000đ/tháng</td></tr>
+      <tr><td>Diễn biến trong kỳ</td><td>Trích đều 10tr/tháng từ T01</td><td>T01–T02 trích 10tr; đầu T03 GTCL 100tr, điều chỉnh giảm 10tr còn 90tr; T03–T04 trích 9tr/tháng</td></tr>
+      <tr><td>GTCL đầu kỳ T05</td><td class="num">120tr − 40tr = <b>80.000.000đ</b></td><td class="num">90tr − 18tr = <b>72.000.000đ</b></td></tr>
+      <tr><td>TGSD còn lại đầu kỳ T05</td><td class="num">12 − 4 = <b>8 tháng</b></td><td class="num">10 − 2 = <b>8 tháng</b></td></tr>
+      <tr><td>GTKH hàng tháng trên báo cáo</td><td class="num">80tr / 8 = <b>10.000.000đ</b></td><td class="num">72tr / 8 = <b>9.000.000đ</b></td></tr>
+      <tr><td>Ý nghĩa</td><td>Trùng mức trích ban đầu</td><td>Trùng mức trích <em>hiện tại</em> sau điều chỉnh</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Chưa có quy định</span>
+    <p>Cả hai công thức đều là phép chia. Tài liệu <strong>không</strong> nói xử lý ra sao khi mẫu số bằng 0 — TSCĐ đã hết thời gian sử dụng (<span class="f">TGSD còn lại = 0</span>) hay đã dùng hết sản lượng (<span class="f">SL còn lại = 0</span>) vẫn nằm trong danh sách nếu thỏa điều kiện lọc. Số chữ số thập phân của hai cột này cũng chưa được nêu, phải theo <span class="chip c-br">BR7</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — Chế độ hiển thị · checkbox Nguồn vốn</span>
+  <h2>Một checkbox, hai hình dạng báo cáo</h2>
+  <p class="lede">Checkbox <em>Chi tiết từng Nguồn vốn</em> không lọc bớt dữ liệu — nó đổi <strong>nơi đặt các con số</strong>. Không tích thì mọi giá trị được cộng lên dòng TSCĐ; tích thì giá trị nằm ở dòng nguồn vốn và dòng TSCĐ để trắng.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Tham số Chi tiết từng Nguồn vốn"]) --> B{"Checkbox được tích?"}
+    B -- "Không · mặc định" --> C["<b>CHẾ ĐỘ 1</b><br/>Chỉ dòng TSCĐ<br/>Không có dòng con"]
+    C --> C1["Nguyên giá · GTCL · HMLK<br/>= Tổng mọi nguồn vốn<br/>đưa lên dòng TSCĐ"]
+    C1 --> C2["GTKH hàng tháng<br/>= Tổng GTCL chia TGSD còn lại"]
+    C2 --> C3["Dòng Tổng cộng lấy<br/>trên dòng TSCĐ"]:::ok
+    B -- "Có" --> D["<b>CHẾ ĐỘ 2</b><br/>Bảng cha-con đầy đủ"]
+    D --> D1["Dòng cha = TSCĐ<br/>Dòng con = từng nguồn vốn"]
+    D1 --> D2["Cột giá trị chỉ có ở dòng con<br/>Cột nhận dạng chỉ có ở dòng cha"]
+    D2 --> D3["Dòng Tổng cộng lấy<br/>trên dòng Nguồn vốn"]:::ok
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Đổi chế độ là đổi cả cách cộng dòng tổng.</b> Chế độ 1 cộng trên dòng cha, chế độ 2 cộng trên dòng con — cộng nhầm cấp sẽ nhân đôi số liệu, vì dòng cha ở chế độ 2 vốn để trắng còn dòng cha ở chế độ 1 đã là tổng.</figcaption>
+  </figure>
+
+  <h3>Chế độ 1 — mười ba cột trên một dòng phẳng</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột</th><th>Giá trị hiển thị</th></tr></thead>
+    <tbody>
+      <tr><td>STT</td><td>Số thứ tự <span class="chip c-br">BR2</span></td></tr>
+      <tr><td>Mã TSCĐ · Tên TSCĐ · Ngày ghi tăng</td><td>Lấy thẳng từ <span class="f">TaiSanCoDinh</span></td></tr>
+      <tr><td>Nguyên giá</td><td><b>Tổng</b> <span class="f">NguyenGia</span> của tất cả nguồn vốn</td></tr>
+      <tr><td>Giá trị còn lại</td><td><b>Tổng</b> <span class="f">GiaTriConLai</span> của tất cả nguồn vốn</td></tr>
+      <tr><td>HMLK</td><td><b>Tổng</b> <span class="f">GiaTriDaKhauHao</span> của tất cả nguồn vốn</td></tr>
+      <tr><td>Thời gian SD còn lại · SL còn lại · Giá trị tính KH</td><td>Lấy thẳng từ <span class="f">TaiSanCoDinh</span></td></tr>
+      <tr><td>GTKH hàng tháng</td><td>Tổng Giá trị còn lại / Thời gian SD còn lại</td></tr>
+      <tr><td>Mức KH ĐVSP</td><td>Tổng Giá trị còn lại / SL còn lại</td></tr>
+      <tr><td>BP sử dụng</td><td><span class="f">DonVi.TenDonVi</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Chế độ 2 — cột nào thuộc cấp nào</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Dòng</th><th>Cột có giá trị</th><th>Cột để trống</th></tr></thead>
+    <tbody>
+      <tr><td><b>Dòng cha</b><br/>một TSCĐ</td><td>STT · Mã TSCĐ · Tên TSCĐ · Ngày ghi tăng · Thời gian SD còn lại · TGSD ban đầu · Tổng SL thiết kế · Giá trị còn lại khi ghi giảm</td><td>Nguồn · Nguyên giá · Giá trị còn lại · HMLK · SL còn lại · Giá trị tính KH · GTKH hàng tháng · Mức KH ĐVSP · BP sử dụng</td></tr>
+      <tr><td><b>Dòng con</b><br/>một nguồn vốn</td><td>Nguồn · Nguyên giá · Giá trị còn lại · HMLK · SL còn lại · Giá trị tính KH · GTKH hàng tháng · Mức KH ĐVSP · BP sử dụng</td><td>STT · Mã TSCĐ · Tên TSCĐ · Ngày ghi tăng · Thời gian SD còn lại · TGSD ban đầu · Tổng SL thiết kế · Giá trị còn lại khi ghi giảm</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Ba chỗ hai chế độ không khớp nhau</span>
+    <p>Chế độ 1 khai cột <em>Giá trị tính KH</em> và <em>BP sử dụng</em> lấy thẳng từ <span class="f">TaiSanCoDinh</span> / <span class="f">DonVi</span>, còn chế độ 2 xếp đúng hai cột đó vào <strong>cấp con</strong>. Chế độ 1 cũng <strong>không</strong> có ba cột <em>TGSD ban đầu</em>, <em>Tổng SL thiết kế</em>, <em>Giá trị còn lại khi ghi giảm</em> — tài liệu không nói là cố ý bỏ hay thiếu sót. Riêng cột <em>Nguồn</em> hiển nhiên không có ở chế độ 1.</p>
+  </div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — BR-BC-02 · BR-BC-03 · BR-BC-05 · BR-BC-07</span>
+  <h2>Dựng bảng cha-con: sắp xếp, gom nhóm, cộng tổng</h2>
+  <p class="lede">Thứ tự mặc định của báo cáo <strong>khác</strong> thứ tự mặc định của màn danh sách chứng từ: ở đây là <em>Ngày ghi tăng tăng dần</em>, cùng ngày mới xếp theo mã. Cuối chuỗi có một phép kiểm tự cân.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Tập TSCĐ đã lọc"] --> B["Sắp xếp Ngày ghi tăng tăng dần"]
+    B --> C["Cùng ngày xếp theo<br/>Mã TSCĐ alphabet"]
+    C --> D["Dựng dòng cha cho mỗi TSCĐ"]
+    D --> E["Gắn dòng con theo từng nguồn vốn"]
+    E --> F["Mặc định mở rộng mọi dòng cha<br/>BR38 mục 38.4"]
+    F --> G["Phân trang theo BR1<br/>Mặc định 20 dòng mỗi trang"]
+    G --> H["Dòng Tổng cộng cuối báo cáo<br/>Nguyên giá · GTCL · HMLK"]
+    H --> I{"Tổng GTCL bằng<br/>Tổng Nguyên giá trừ Tổng HMLK?"}
+    I -- "Không" --> I1["Số liệu chưa cân<br/>phải rà lại công thức đầu kỳ"]:::err
+    I -- "Có" --> I2["Báo cáo cân"]:::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Phép kiểm cân là công thức nghiệm thu, không phải nhánh giao diện.</b> <span class="chip c-br">BR-BC-03</span> nêu <span class="f">Tổng GTCL = Tổng Nguyên giá − Tổng HMLK</span> như điều kiện luôn phải đúng; tài liệu không quy định hệ thống làm gì khi nó sai, nên đây là tiêu chí QA chứ chưa phải cảnh báo cho người dùng.</figcaption>
+  </figure>
+
+  <h3>Hành vi trên màn kết quả</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Hành vi</th><th>Quy tắc</th><th>Căn cứ</th></tr></thead>
+    <tbody>
+      <tr><td>Thứ tự mặc định</td><td>Ngày ghi tăng tăng dần, cùng ngày theo mã TSCĐ alphabet</td><td><span class="chip c-br">BR-BC-02</span></td></tr>
+      <tr><td>Mở rộng / thu gọn</td><td>Mặc định mở rộng tất cả; click icon cạnh Mã TSCĐ để ẩn dòng con, click lần nữa để mở lại</td><td><span class="chip c-br">BR-BC-05</span> · <span class="chip c-br">BR38</span></td></tr>
+      <tr><td>Dòng tổng cộng</td><td>Chế độ 1 cộng ở dòng cha, chế độ 2 cộng ở dòng con; tính trên toàn bộ tập dữ liệu sau lọc</td><td><span class="chip c-br">BR-BC-03</span> · <span class="chip c-br">BR31</span></td></tr>
+      <tr><td>Phân trang</td><td>Mặc định 20 dòng/trang, chọn được 10 · 20 · 50 · 100</td><td><span class="chip c-br">BR-BC-07</span> · <span class="chip c-br">BR1</span></td></tr>
+      <tr><td>Tìm kiếm · lọc · sắp xếp cột</td><td>Theo quy chuẩn chung trên các cột dữ liệu của báo cáo</td><td><span class="chip c-br">BR11</span></td></tr>
+      <tr><td>Link Mã TSCĐ</td><td>Click mở popup xem chi tiết tài sản — tài liệu ghi kèm điều kiện <em>“nếu có chức năng này”</em></td><td><span class="chip c-br">BR-BC-04</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Khối thông tin đầu trang</h3>
+  <p>Trên bảng dữ liệu là khối nhận dạng gồm tiêu đề <span class="f">Báo cáo tổng hợp TSCĐ</span>, dòng kỳ báo cáo, và bốn tham số đã chọn.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Dòng</th><th>Nội dung hiển thị</th></tr></thead>
+    <tbody>
+      <tr><td>Kỳ — Tháng này · Tháng trước</td><td><b>Tháng X, Năm YYYY</b></td></tr>
+      <tr><td>Kỳ — Quý này · Quý trước</td><td><b>Quý X, Năm YYYY</b></td></tr>
+      <tr><td>Kỳ — Năm nay · Năm trước</td><td><b>Năm YYYY</b></td></tr>
+      <tr><td>Kỳ — các giá trị còn lại, gồm Tùy chỉnh</td><td><b>Từ ngày DD/MM/YYYY đến ngày DD/MM/YYYY</b></td></tr>
+      <tr><td>Loại TSCĐ · BP quản lý</td><td>Giá trị đã chọn, nếu có</td></tr>
+      <tr><td>Trạng thái</td><td>Giá trị đã chọn</td></tr>
+      <tr><td>Chi tiết từng Nguồn vốn</td><td><b>Có</b> hoặc <b>Không</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — BR-BC-06 · LF1</span>
+  <h2>Rỗng dữ liệu chặn cả báo cáo, cảnh báo chỉ đánh dấu dòng</h2>
+  <p class="lede">Ba message của nhóm này hành xử khác nhau: <span class="chip c-msg">MSG_302</span> nói cả tập dữ liệu trống, còn <span class="chip c-warn">MSG_401</span> và <span class="chip c-warn">MSG_402</span> chỉ gắn biểu tượng vào <strong>đúng dòng</strong> có số liệu bất thường — báo cáo vẫn hiển thị bình thường.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Truy vấn đã chạy xong"] --> B{"Có dòng dữ liệu nào không?"}
+    B -- "Rỗng" --> B1["MSG_PMKT-E-10700_302<br/>Không tìm thấy dữ liệu<br/>trong khoảng thời gian đã chọn"]:::err
+    B -- "Có dòng" --> C{"Nguyên giá bằng 0?"}
+    C -- "Có" --> C1["Biểu tượng cảnh báo tại dòng<br/>MSG_PMKT-E-10700_402<br/>Nguyên giá bằng 0 nhưng<br/>vẫn còn trong danh sách"]:::warn
+    C -- "Không" --> D
+    C1 --> D{"Giá trị còn lại âm?"}
+    D -- "Có" --> D1["Biểu tượng cảnh báo tại dòng<br/>MSG_PMKT-E-10700_401<br/>Giá trị còn lại âm<br/>Vui lòng kiểm tra lại"]:::warn
+    D -- "Không" --> E["Hiển thị dòng bình thường"]:::ok
+    D1 --> E
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hai cảnh báo có thể cùng bật trên một dòng.</b> Chúng kiểm hai đại lượng độc lập — <span class="f">Nguyên giá</span> và <span class="f">Giá trị còn lại</span> — nên một dòng vừa có nguyên giá 0 vừa có giá trị còn lại âm sẽ dính cả hai. Tài liệu chưa nói ưu tiên hiển thị biểu tượng nào trước.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Chưa có quy định</span>
+    <p>Không rõ hai cảnh báo được kiểm ở <strong>cấp dòng cha hay dòng con</strong> — Activity Diagram đặt chúng ngay sau bước tính toán, còn <span class="chip c-br">BR-BC-06</span> chỉ nói <em>“tại dòng tương ứng”</em>. Ở chế độ 2 hai đại lượng này nằm ở dòng con, ở chế độ 1 lại nằm ở dòng cha, nên cần BA chốt phạm vi kiểm.</p>
+  </div>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — Chức năng màn kết quả</span>
+  <h2>Kết xuất, in và quay lại tham số</h2>
+  <p class="lede">Màn kết quả có <strong>bốn nút</strong>. Chỉ nhánh Xuất Excel có quy tắc đầy đủ; nhánh In là điểm tài liệu tự mâu thuẫn rõ nhất của epic.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Màn kết quả · 4 nút"] --> B["Xuất Excel"]
+    A --> C["In"]
+    A --> D["Chọn tham số"]
+    A --> E["Đóng"]
+    D --> D1["Mở lại popup tham số<br/>với giá trị hiện tại · về mục 02"]
+    E --> E1["Đóng báo cáo"]
+    B --> B1{"Có quyền<br/>BCTongHopTSCD.Export?"}
+    B1 -- "Không" --> B2["Tài liệu chưa khai mã chặn"]:::warn
+    B1 -- "Có" --> B3["Dựng file theo BR39<br/>Chỉ cột đang hiển thị, đúng thứ tự<br/>Header tên báo cáo · tham số lọc<br/>Freeze dòng tiêu đề · bật Filter<br/>Dòng Tổng cộng in đậm"]
+    B3 --> B4["MSG_PMKT-E-10700_001<br/>Xuất Excel báo cáo thành công"]:::ok
+    C --> C1["Màn kết quả ghi Xử lý sau<br/>Use case ghi quyền Print<br/>và MSG_PMKT-E-10700_002"]:::warn
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Nút Chọn tham số giữ nguyên tham số cũ.</b> Nó mở lại popup <em>với giá trị hiện tại</em>, không trả về mặc định — muốn về mặc định phải bấm tiếp <span class="f">Xóa bộ lọc</span> trong popup.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nút</th><th>Hành vi</th><th>Quyền</th><th>Thông báo</th></tr></thead>
+    <tbody>
+      <tr><td>Xuất Excel</td><td>Kết xuất theo quy tắc export dùng chung <span class="chip c-br">BR39</span></td><td class="mono">BCTongHopTSCD.Export</td><td><span class="chip c-ok">MSG_001</span></td></tr>
+      <tr><td>In</td><td>Màn hình ghi <em>“Xử lý sau”</em>; use case ghi in báo cáo</td><td class="mono">BCTongHopTSCD.Print</td><td><span class="chip c-ok">MSG_002</span></td></tr>
+      <tr><td>Chọn tham số</td><td>Mở lại popup tham số với giá trị hiện tại</td><td>—</td><td>—</td></tr>
+      <tr><td>Đóng</td><td>Đóng báo cáo</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>File Excel đặt tên theo <span class="f">[Tên báo cáo]_[Ngày xuất]_[Giờ xuất].xlsx</span>, giữ nguyên định dạng Number / Date và cách làm tròn như trên web; dòng Tổng cộng cũng được xuất và làm nổi bật <span class="chip c-br">BR39</span>.</p>
+
+  <div class="note stop">
+    <span class="lbl">Nút In: hai tài liệu nói hai đằng</span>
+    <p>Bảng chức năng của <span class="f">SCR_TongHopTSCD_KetQua</span> ghi nút In là <strong>“Xử lý sau”</strong>, trong khi <span class="f">1.function-breakdown</span>, use case (LF5, quyền <span class="f">BCTongHopTSCD.Print</span>), Activity Diagram và <span class="chip c-msg">MSG_002</span> đều mô tả In như chức năng đã có. Chưa có mẫu in, khổ giấy, phần lặp đầu trang, hay việc in có tôn trọng phân trang lưới không.</p>
+  </div>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — Tra cứu</span>
+  <h2>Điều kiện chặn, thông báo và khoảng trống tài liệu</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> và <em>cảnh báo</em> trong các sơ đồ trên. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-10700_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện</th><th class="mono">Mã</th><th>Loại</th></tr></thead>
+    <tbody>
+      <tr><td>Vào chức năng</td><td>Thiếu quyền <span class="f">BCTongHopTSCD.View</span></td><td class="mono">301</td><td>Error</td></tr>
+      <tr><td rowspan="2">Xem báo cáo</td><td>Trường bắt buộc còn trống</td><td>Không có mã riêng</td><td>Validation</td></tr>
+      <tr><td>Đến ngày trước Từ ngày</td><td>Message chung <span class="chip c-br">BR8</span></td><td>Validation</td></tr>
+      <tr><td>Xem báo cáo</td><td>Truy vấn không trả về dòng nào</td><td class="mono">302</td><td>Error</td></tr>
+      <tr><td>Hiển thị dòng</td><td>Giá trị còn lại âm</td><td class="mono">401</td><td>Warning</td></tr>
+      <tr><td>Hiển thị dòng</td><td>Nguyên giá bằng 0</td><td class="mono">402</td><td>Warning</td></tr>
+      <tr><td>Xuất Excel</td><td>Kết xuất thành công</td><td class="mono">001</td><td>Success</td></tr>
+      <tr><td>In báo cáo</td><td>In thành công</td><td class="mono">002</td><td>Success</td></tr>
+      <tr><td>Xuất Excel · In</td><td>Thiếu quyền <span class="f">.Export</span> / <span class="f">.Print</span></td><td>Chưa có mã</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Quy chuẩn chung đã áp vào epic</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">BR</th><th>Áp ở đâu</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">BR1</td><td>Phân trang bảng kết quả — 20 dòng mặc định, chọn 10 · 20 · 50 · 100 <span class="chip c-br">BR-BC-07</span></td></tr>
+      <tr><td class="mono">BR2</td><td>Cột STT và quy tắc hiển thị danh sách; thứ tự sắp xếp thì theo <span class="chip c-br">BR-BC-02</span> đặc thù báo cáo</td></tr>
+      <tr><td class="mono">BR3</td><td>Popup tham số: nút Hủy đóng popup, không thực hiện gì</td></tr>
+      <tr><td class="mono">BR7</td><td>Precision và làm tròn cho các cột tiền và cột thương số khấu hao</td></tr>
+      <tr><td class="mono">BR8</td><td>Khoảng thời gian, autofill hai chiều, validate Đến ngày ≥ Từ ngày, cách hiển thị kỳ trên báo cáo</td></tr>
+      <tr><td class="mono">BR11</td><td>Tìm kiếm, lọc và sắp xếp trên các cột dữ liệu của báo cáo</td></tr>
+      <tr><td class="mono">BR25</td><td>Ba mã quyền <span class="f">View</span> · <span class="f">Export</span> · <span class="f">Print</span> gác ba lối vào khác nhau</td></tr>
+      <tr><td class="mono">BR26</td><td>Bốn message thành công / lỗi hiển thị dạng toast</td></tr>
+      <tr><td class="mono">BR28</td><td>Toàn bộ chín entity thuộc phạm vi đa thuê, truy vấn phải lọc theo tenant</td></tr>
+      <tr><td class="mono">BR31</td><td>Dòng Tổng cộng tính trên toàn bộ tập dữ liệu sau lọc <span class="chip c-br">BR-BC-03</span></td></tr>
+      <tr><td class="mono">BR38</td><td>Mục 38.4 — mặc định mở rộng mọi dòng cha <span class="chip c-br">BR-BC-05</span></td></tr>
+      <tr><td class="mono">BR39</td><td>Xuất Excel: cột đang hiện, header tham số lọc, freeze, filter, tên file, dòng tổng</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Khoảng trống cần BA chốt</h3>
+  <ul>
+    <li><strong>Nút In</strong> — màn hình ghi “Xử lý sau” nhưng function breakdown, use case, AD và <span class="chip c-msg">MSG_002</span> đều coi là chức năng đã có.</li>
+    <li><strong>Nút Xem báo cáo</strong> — use case ghi “chỉ khả dụng khi tham số hợp lệ”, ma trận ghi luôn hiện và enable.</li>
+    <li><strong>Chặn thiếu quyền Export / Print</strong> — hai quyền có tên nhưng bộ message không có mã cho nhánh bị chặn.</li>
+    <li><strong>Mẫu số bằng 0</strong> — GTKH hàng tháng và Mức KH ĐVSP đều là phép chia, chưa có quy định khi TGSD còn lại hoặc SL còn lại bằng 0.</li>
+    <li><strong>Cấp kiểm cảnh báo 401 / 402</strong> — chưa rõ kiểm ở dòng cha hay dòng con, và ưu tiên hiển thị khi cả hai cùng bật.</li>
+    <li><strong>TSCĐ ghi tăng trong kỳ</strong> — lọt bộ lọc <span class="f">NgayGhiTang ≤ Đến ngày</span> nhưng mọi chỉ tiêu đầu kỳ bằng 0; chưa có cách trình bày.</li>
+    <li><strong>Ba cột thiếu ở chế độ 1</strong> — TGSD ban đầu, Tổng SL thiết kế, Giá trị còn lại khi ghi giảm chỉ xuất hiện ở chế độ 2.</li>
+    <li><strong>Lệch entity giữa CRUD matrix và bảng nguồn dữ liệu</strong> — <span class="f">mst_he_thong_tai_khoan</span>, <span class="f">fa_ghi_giam_tai_san_co_dinh_chi_tiet</span>, <span class="f">mst_nguon_von</span>.</li>
+    <li><strong>Tên trạng thái</strong> — “Tạm dừng khấu hao” ở popup so với “Tạm ngừng kh” ở điều kiện lọc.</li>
+    <li><strong>Link Mã TSCĐ</strong> — <span class="chip c-br">BR-BC-04</span> kèm điều kiện “nếu có chức năng này”, chưa chỉ đích màn hình cụ thể.</li>
+    <li><strong>Phân quyền cấp dữ liệu</strong> — tài liệu không nêu phạm vi đơn vị mà người dùng được nhìn, dù báo cáo lọc theo bộ phận quản lý.</li>
+    <li><strong>Cột Field của bảng trường popup</strong> — để trống toàn bộ, chưa có field mapping.</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-10700 · Báo cáo tổng hợp TSCĐ</span>
+  <span>Dựng từ 2 UC · 2 Activity Diagram · 2 màn hình · 10 BR đặc thù · 6 message</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

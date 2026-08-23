@@ -90,7 +90,7 @@ family thứ hai. Việc còn lại:
 
 ### D3 — Mã quyền là mã THẬT
 
-`cell-app/src/main/java/vn/dopai/pmkt/cell/common/constant/MaChucNang.java:217` khai
+`cell-app/src/main/java/vn/vtt/pmkt/cell/common/constant/MaChucNang.java:217` khai
 `BAN_DICH_VU = "BanDichVu"` với chú thích *"hành động: View, View.Detail, Create, Edit, Delete, Post,
 Unpost"* — khớp **1:1** với các UC.
 
@@ -200,7 +200,7 @@ helpers/anHien.ts:94:export function laDichVu(line …)   ← ⚠ "DÒNG hàng l
 $ grep -n "LOAI_NGHIEP_VU" -A6 client/src/features/banHang/chungTuBanHang/constants/constants.ts
 20:export const LOAI_NGHIEP_VU = { … }      ← hiện chỉ 2 giá trị, thiếu 'Bán dịch vụ' (D6)
 
-$ ls cell-app/src/main/java/vn/dopai/pmkt/cell/
+$ ls cell-app/src/main/java/vn/vtt/pmkt/cell/
 accounting_core  chung_tu_ban_hang  chung_tu_mua_hang  common  core
 integration_ops  master_data  platform_iam  quan_he_chung_tu  reporting
 

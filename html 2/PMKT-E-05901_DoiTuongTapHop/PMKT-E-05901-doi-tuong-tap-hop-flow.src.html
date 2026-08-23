@@ -1,0 +1,810 @@
+<title>Luồng Đối tượng tập hợp chi phí</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-05901 · Danh mục kế toán chi phí</p>
+  <h1>Luồng xử lý Đối tượng tập hợp chi phí</h1>
+  <p>Toàn bộ vòng đời một bản ghi danh mục Đối tượng tập hợp chi phí — xem danh sách, thêm mới theo hai hình dạng form, chỉnh sửa, bật/tắt trạng thái ngay trên lưới, xóa mềm, xem chi tiết — cùng những nơi danh mục này được dùng lại. Mỗi sơ đồ bám đúng Activity Diagram và BR trong bộ tài liệu BA.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 5 use case · 5 AD · 5 màn hình · 15 message</span>
+    <span><b>Entity gốc:</b> DoiTuongTapHopChiPhi</span>
+    <span><b>Entity con:</b> DoiTuongTapHopChiPhi_VatTu</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Vòng đời bản ghi</a></li>
+    <li><a href="#s1"><span>01</span>Xem danh sách</a></li>
+    <li><a href="#s2"><span>02</span>Loại đối tượng chia đôi form</a></li>
+    <li><a href="#s3"><span>03</span>Thêm mới — nhập liệu</a></li>
+    <li><a href="#s4"><span>04</span>Thêm mới — validate &amp; ghi</a></li>
+    <li><a href="#s5"><span>05</span>Lưới Danh sách vật tư</a></li>
+    <li><a href="#s6"><span>06</span>Chỉnh sửa</a></li>
+    <li><a href="#s7"><span>07</span>Đổi trạng thái tại lưới</a></li>
+    <li><a href="#s8"><span>08</span>Xóa</a></li>
+    <li><a href="#s9"><span>09</span>Xem chi tiết</a></li>
+    <li><a href="#s10"><span>10</span>Quan hệ dữ liệu &amp; nơi dùng</a></li>
+    <li><a href="#s11"><span>11</span>Tra cứu &amp; điểm chưa chốt</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Vòng đời một bản ghi danh mục</h2>
+  <p class="lede">Đây là <strong>danh mục</strong>, không phải chứng từ: không có <em>Chưa ghi sổ / Đã ghi sổ</em>, không có kỳ kế toán, không sinh bút toán. Trục trạng thái duy nhất là công tắc <span class="f">TrangThai</span> — và nó <strong>không</strong> gác bất kỳ nút thao tác nào.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(( )) -- "Lưu — cần quyền Thêm mới" --> A
+    A["<b>HOẠT ĐỘNG</b><br/>Mặc định khi thêm mới<br/>Sửa · Xóa · Xem đều mở"]:::ok
+    B["<b>NGỪNG HOẠT ĐỘNG</b><br/>Vẫn sửa · xóa · xem được<br/>Tô xám và xếp cuối danh sách"]:::warn
+    D["<b>ĐÃ XÓA MỀM</b><br/>DaXoa = true<br/>Biến khỏi mọi danh sách"]:::err
+    A -- "Tắt toggle ngay trên lưới" --> B
+    B -- "Bật toggle ngay trên lưới" --> A
+    A -- "Xóa — nếu chưa phát sinh" --> D
+    B -- "Xóa — nếu chưa phát sinh" --> D
+    D -. "tài liệu không có luồng khôi phục" .-> A
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Trạng thái là dữ liệu, không phải cổng thao tác.</b> Bản ghi <em>Ngừng hoạt động</em> vẫn sửa được, vẫn xóa được, vẫn xem được — nó chỉ đổi cách hiển thị trên lưới và cách được chọn ở nghiệp vụ phát sinh mới. Thứ thật sự chặn xóa là <em>đã phát sinh nghiệp vụ</em>, xem <a href="#s8">mục 08</a>.</figcaption>
+  </figure>
+
+  <h3>Trường của bản ghi</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th class="mono">Field</th><th>Ràng buộc</th><th>Ai gán</th></tr></thead>
+    <tbody>
+      <tr><td>Loại đối tượng</td><td class="mono">LoaiDoiTuongTapHop</td><td>Bắt buộc · enum 4 giá trị <span class="chip c-br">BR1</span></td><td>Người dùng chọn</td></tr>
+      <tr><td>Mã đối tượng</td><td class="mono">Code</td><td>Bắt buộc · duy nhất theo <span class="f">TenantId</span> trên bản ghi chưa xóa mềm <span class="chip c-br">BR3</span></td><td>Nhập tay, hoặc hệ thống gán = Mã sản phẩm khi Loại = Sản phẩm</td></tr>
+      <tr><td>Tên đối tượng</td><td class="mono">Ten</td><td>Bắt buộc · tối đa 255</td><td>Nhập tay, hoặc gán = Tên sản phẩm khi Loại = Sản phẩm</td></tr>
+      <tr><td>Diễn giải</td><td class="mono">DienGiai</td><td>Không bắt buộc · tối đa 500</td><td>Người dùng nhập</td></tr>
+      <tr><td>Trạng thái</td><td class="mono">TrangThai</td><td>Mặc định <em>Hoạt động</em> <span class="chip c-br">BR8 · BR23</span></td><td>Người dùng gạt toggle</td></tr>
+      <tr><td>Danh sách vật tư</td><td class="mono">DoiTuongTapHopChiPhi_VatTu</td><td>Khóa duy nhất <span class="f">DoiTuongTapHopChiPhiId + VatTuId</span></td><td>Người dùng chọn trên lưới / combogrid</td></tr>
+      <tr><td>Phạm vi &amp; vết</td><td class="mono">TenantId · ChiNhanhId · DaXoa · NguoiTaoId…</td><td>Không hiển thị trên form nhập <span class="chip c-br">BR46</span></td><td>Hệ thống tự gán</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Ba con số độ dài mã đang chỏi nhau</span>
+    <p>Bảng trường màn Thêm mới ghi <span class="f">Max length = 255</span> cho Mã đối tượng; <span class="chip c-br">BR3</span> của chính màn đó ghi <em>“tối đa 100 ký tự”</em>; màn Danh sách <span class="chip c-br">BR3</span> cũng ghi 100; còn <span class="chip c-br">BR20</span> chung quy định Mã danh mục tối đa <strong>50 ký tự</strong> và cấm ký tự tiếng Việt có dấu. Tài liệu epic chưa chốt — không tự chọn một con số, phải hỏi BA.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — PMKT-U-05902 · UC_DoiTuongTapHop_DanhSach</span>
+  <h2>Xem danh sách: màn điều phối mọi thao tác</h2>
+  <p class="lede">Màn <span class="f">SCR_DoiTuongTapHop_DanhSach</span> là cửa vào duy nhất của epic — bốn thao tác còn lại đều mở popup từ đây. Chuỗi kiểm chạy theo đúng thứ tự của AD: <strong>quyền → có dữ liệu → có kết quả tìm kiếm</strong>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Mở menu Đối tượng tập hợp"]) --> B{"Có quyền xem danh sách?"}
+    B -- "Không" --> B1["Ẩn menu · vào bằng URL thì 403<br/>MSG_002"]:::err
+    B -- "Có" --> C["Truy vấn DoiTuongTapHopChiPhi<br/>lọc TenantId và ChiNhanhId<br/>bỏ bản ghi DaXoa = true"]
+    C --> D{"Có bản ghi nào?"}
+    D -- "Không" --> D1["MSG_001 — Không có dữ liệu"]:::warn
+    D -- "Có" --> E["Lưới phân trang<br/>Ngừng hoạt động tô xám<br/>và xếp xuống cuối"]
+    E --> F{"Nhập từ khóa tìm kiếm?"}
+    F -- "Không" --> G(["Danh sách sẵn sàng thao tác"]):::ok
+    F -- "Có" --> F1["Lọc trên Mã · Tên<br/>Loại · Trạng thái"]
+    F1 --> F2{"Có kết quả?"}
+    F2 -- "Không" --> D1
+    F2 -- "Có" --> G
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Danh sách trống và tìm không ra dùng chung một message.</b> <span class="chip c-msg">MSG_001</span> phục vụ cả hai nhánh — không có message riêng cho “tìm kiếm không có kết quả”.</figcaption>
+  </figure>
+
+  <h3>Bốn cột tìm được, hai cột sắp được</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột</th><th>Control</th><th>Tìm kiếm</th><th>Sắp xếp</th></tr></thead>
+    <tbody>
+      <tr><td>STT</td><td>Text</td><td><span class="chip c-perm">N</span></td><td><span class="chip c-perm">N</span></td></tr>
+      <tr><td>Mã đối tượng</td><td>Text — hyperlink mở màn Xem chi tiết</td><td><span class="chip c-ok">Y</span></td><td><span class="chip c-ok">Y</span></td></tr>
+      <tr><td>Tên đối tượng</td><td>Text</td><td><span class="chip c-ok">Y</span></td><td><span class="chip c-ok">Y</span></td></tr>
+      <tr><td>Loại đối tượng</td><td>Text — nhãn tiếng Việt của enum</td><td><span class="chip c-ok">Y</span></td><td><span class="chip c-perm">N</span></td></tr>
+      <tr><td>Diễn giải</td><td>Text — cắt 2 dòng <span class="chip c-br">BR44</span></td><td><span class="chip c-perm">N</span></td><td><span class="chip c-perm">N</span></td></tr>
+      <tr><td>Trạng thái</td><td>Toggle — đổi ngay tại lưới, xem <a href="#s7">mục 07</a></td><td><span class="chip c-ok">Y</span></td><td><span class="chip c-perm">N</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Luật gác nút: chỉ có quyền, không có trạng thái</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    T["Thanh công cụ"] --> G4{"Quyền Thêm mới?"}
+    D["Một dòng trên lưới"] --> G1{"Quyền Xem chi tiết?"}
+    D --> G2{"Quyền Chỉnh sửa?"}
+    D --> G3{"Quyền Xóa?"}
+    G4 -- "Có" --> A4["Nút Thêm mới"]
+    G4 -- "Không" --> H4["Ẩn nút"]:::err
+    G1 -- "Có" --> A1["Icon con mắt<br/>và Mã đối tượng bấm được"]
+    G1 -- "Không" --> H1["Ẩn nút"]:::err
+    G2 -- "Có" --> A2["Icon bút chì<br/>và toggle Trạng thái đổi được"]
+    G2 -- "Không" --> H2["Ẩn nút"]:::err
+    G3 -- "Có" --> A3["Icon thùng rác"]
+    G3 -- "Không" --> H3["Ẩn nút"]:::err
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Không có nút nào gác theo trạng thái bản ghi.</b> <span class="chip c-br">BR13.1</span> chung gác Sửa / Xóa theo <em>Chưa ghi sổ</em>, nhưng mệnh đề đó có điều kiện <em>“nếu có field trạng thái ghi sổ”</em> — danh mục này không có, nên bốn nút chỉ phụ thuộc quyền. Thiếu quyền là <strong>ẩn nút</strong>, không disable <span class="chip c-br">BR25.2</span>.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Lệch quy chuẩn chung — cần chốt</span>
+    <p>Luồng chính của UC ghi <em>“phân trang mặc định 10 bản ghi/trang”</em>, trong khi <span class="chip c-br">BR1</span> chung quy định mặc định <strong>20 bản ghi/trang</strong>. Epic thắng trong phạm vi epic, nhưng đây là lệch có chủ ý hay sót thì tài liệu không nói — báo BA trước khi code.</p>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — BR1 · SCR_DoiTuongTapHop_ThemMoi</span>
+  <h2>Loại đối tượng chia đôi mọi màn hình</h2>
+  <p class="lede">Một lựa chọn duy nhất — <span class="f">LoaiDoiTuongTapHop</span> — quyết định form nào hiện, trường nào khóa, có lưới vật tư hay không, và bộ validate nào chạy. Đây là trục xuyên suốt cả bốn popup của epic.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    L{"Loại đối tượng"} -- "SanPham" --> P
+    L -- "PhanXuong" --> X
+    L -- "QuyTrinhSanXuat" --> X
+    L -- "NhomSanPham" --> X
+    P["<b>Khối Sản phẩm</b><br/>Mã sản phẩm là combogrid<br/>Mã và Tên đối tượng bị khóa"]
+    X["<b>Khối PX · QTSX · NSP</b><br/>Mã và Tên đối tượng nhập tay<br/>kèm lưới Danh sách vật tư"]
+    P --> P1["Gắn đúng 1 vật tư<br/>thiếu thì MSG_107"]:::warn
+    X --> X1["Gắn n vật tư, tối thiểu 1<br/>thiếu thì MSG_111"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Ba loại sau dùng chung một hình dạng form.</b> Phân xưởng, Quy trình sản xuất và Nhóm sản phẩm không có khác biệt ẩn/hiện/disable nào trong tài liệu — chúng gộp thành một cột duy nhất trên ma trận.</figcaption>
+  </figure>
+
+  <h3>Ma trận ẩn/hiện theo Loại đối tượng</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Khối</th><th>Trường</th><th>Loại = Sản phẩm</th><th>Loại = PX · QTSX · NSP</th></tr></thead>
+    <tbody>
+      <tr><td>Thông tin chính</td><td>Loại đối tượng · Trạng thái</td><td>Hiện</td><td>Hiện</td></tr>
+      <tr><td>Khối Sản phẩm</td><td>Mã đối tượng · Tên đối tượng · Tên sản phẩm</td><td>Hiện, khóa sửa</td><td>Ẩn</td></tr>
+      <tr><td>Khối Sản phẩm</td><td>Mã sản phẩm · Diễn giải</td><td>Hiện, nhập được</td><td>Ẩn</td></tr>
+      <tr><td>Khối PX · QTSX · NSP</td><td>Mã đối tượng · Tên đối tượng · Diễn giải</td><td>Ẩn</td><td>Hiện, nhập được</td></tr>
+      <tr><td>Lưới vật tư</td><td>Mã sản phẩm</td><td>Ẩn</td><td>Hiện, nhập được</td></tr>
+      <tr><td>Lưới vật tư</td><td>Tên sản phẩm</td><td>Ẩn</td><td>Hiện, khóa sửa</td></tr>
+      <tr><td>Lưới vật tư</td><td>Nút Thêm dòng · Xóa dòng</td><td>Ẩn</td><td>Hiện</td></tr>
+      <tr><td>Bộ nút</td><td>Lưu · Đóng</td><td>Hiện</td><td>Hiện</td></tr>
+      <tr><td>Bộ nút</td><td>Lưu và thêm mới</td><td colspan="2">Chỉ có ở màn Thêm mới — màn Chỉnh sửa không có</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Chú ý cặp trường <strong>Mã đối tượng</strong> và <strong>Tên đối tượng</strong> ở khối Sản phẩm: <em>khóa sửa nhưng không ẩn</em> — vẫn hiển thị xám để người dùng thấy giá trị hệ thống vừa gán, theo <span class="chip c-br">BR2</span>.</p>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — PMKT-U-05903 · UC_DoiTuongTapHop_ThemMoi</span>
+  <h2>Thêm mới: chuỗi nhập liệu</h2>
+  <p class="lede">Sau khi chọn Loại đối tượng, hai nhánh nhập liệu tách hẳn nhau. Nhánh <em>Sản phẩm</em> gần như không phải gõ gì — combogrid Mã sản phẩm tự điền ba trường còn lại.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Thêm mới trên danh sách"]) --> B["Mở popup Thêm mới<br/>Trạng thái mặc định Hoạt động"]
+    B --> C{"Chọn Loại đối tượng"}
+    C -- "Sản phẩm" --> D1["Chọn Mã sản phẩm từ combogrid<br/>nguồn VatTu — BR5"]
+    D1 --> D2["Auto-fill Tên sản phẩm<br/>Mã đối tượng = Mã sản phẩm<br/>Tên đối tượng = Tên sản phẩm"]
+    D2 --> D3["Nhập Diễn giải — tối đa 500"]
+    C -- "PX · QTSX · NSP" --> E1["Nhập Mã đối tượng<br/>và Tên đối tượng"]
+    E1 --> E2["Thêm dòng lưới vật tư<br/>chọn Mã sản phẩm mỗi dòng"]
+    E2 --> E3["Tên sản phẩm tự điền<br/>không lưu xuống CSDL"]
+    E3 --> E4["Nhập Diễn giải — tối đa 500"]
+    D3 --> F(["Bấm Lưu hoặc Lưu và thêm mới"])
+    E4 --> F
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Auto-fill của khối Sản phẩm ghi đè cả Mã lẫn Tên đối tượng.</b> Nghĩa là với loại này, mã danh mục <em>chính là</em> mã vật tư — kiểm trùng mã ở bước lưu vì thế thực chất là kiểm “vật tư này đã được lập đối tượng chưa”.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Chưa có quy định</span>
+    <p>Trạng thái form <strong>trước khi</strong> người dùng chọn Loại đối tượng không được mô tả ở bất kỳ đâu. Ma trận ẩn/hiện suy luận cả hai khối đều ẩn, chỉ hiện Thông tin chính — đây là <em>suy luận</em>, chưa có câu chữ trong BA. Cách khác là mặc định sẵn một loại. Cần BA chốt.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — BR7 · Validate</span>
+  <h2>Thêm mới: validate rồi mới ghi</h2>
+  <p class="lede">Hai nút <strong>Lưu</strong> và <strong>Lưu và thêm mới</strong> chạy <em>đúng cùng một</em> bộ validate và cùng một chuỗi ghi dữ liệu; chúng chỉ khác nhau ở bước cuối cùng — đóng popup hay giữ popup.</p>
+
+  <h3>Chuỗi validate</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Bấm Lưu / Lưu và thêm mới"]) --> T["Trim đầu cuối mọi ô văn bản<br/>BR43 chạy trước mọi kiểm tra"]
+    T --> V1{"Loại đối tượng có giá trị?"}
+    V1 -- "Không" --> X1["MSG_103"]:::err
+    V1 -- "Có" --> V2{"Mã đối tượng có giá trị?"}
+    V2 -- "Không" --> X2["MSG_104"]:::err
+    V2 -- "Có" --> V3{"Tên đối tượng có giá trị?"}
+    V3 -- "Không" --> X3["MSG_106"]:::err
+    V3 -- "Có" --> V4{"Mã đã tồn tại trong Tenant?"}
+    V4 -- "Có" --> X4["MSG_105"]:::err
+    V4 -- "Không" --> V5{"Loại = Sản phẩm?"}
+    V5 -- "Có" --> V6{"Đã chọn Mã sản phẩm?"}
+    V6 -- "Không" --> X5["MSG_107"]:::err
+    V6 -- "Có" --> OK(["Sang bước ghi dữ liệu"]):::ok
+    V5 -- "Không" --> V7{"Lưới có ít nhất 1 vật tư?"}
+    V7 -- "Không" --> X6["MSG_111"]:::err
+    V7 -- "Có" --> V8{"Có vật tư trùng trong lưới?"}
+    V8 -- "Có" --> X7["Chặn theo khóa duy nhất<br/>chưa có mã MSG riêng"]:::err
+    V8 -- "Không" --> OK
+    X1 --> R["Giữ nguyên popup<br/>viền đỏ ô lỗi · không ghi gì"]:::warn
+    X2 --> R
+    X3 --> R
+    X4 --> R
+    X5 --> R
+    X6 --> R
+    X7 --> R
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Kiểm trùng mã chỉ xét bản ghi chưa xóa mềm, trong phạm vi <span class="f">TenantId</span>.</b> Bản ghi đã <span class="f">DaXoa = true</span> không chiếm mã — xóa xong lập lại cùng mã là hợp lệ.</figcaption>
+  </figure>
+
+  <h3>Chuỗi ghi dữ liệu</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    W(["Validate qua hết"]) --> W1["Mở một giao dịch duy nhất"]
+    W1 --> W2["Ghi DoiTuongTapHopChiPhi<br/>TenantId · ChiNhanhId<br/>NguoiTaoId · NgayTao"]
+    W2 --> W3{"Loại = Sản phẩm?"}
+    W3 -- "Có" --> W4["Ghi 1 dòng vật tư<br/>chính là vật tư đã chọn"]
+    W3 -- "Không" --> W5["Ghi n dòng vật tư<br/>theo lưới Danh sách vật tư"]
+    W4 --> C1{"Giao dịch thành công?"}
+    W5 --> C1
+    C1 -- "Không" --> E1["Rollback toàn bộ<br/>MSG_003 · giữ nguyên popup"]:::err
+    C1 -- "Có" --> S1["MSG_101 — Thêm mới thành công"]:::ok
+    S1 --> B{"Nút nào vừa bấm?"}
+    B -- "Lưu" --> B1["Đóng popup<br/>tải lại danh sách"]
+    B -- "Lưu và thêm mới" --> B2["Giữ popup · làm trống form<br/>quay lại bước chọn Loại"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Bản ghi cha và các dòng vật tư ghi trong cùng một giao dịch.</b> Không có trạng thái trung gian “đã có đối tượng nhưng chưa có vật tư” trong CSDL — vì thế <span class="chip c-msg">MSG_111</span> phải chặn ở tầng validate, không phải ở tầng ghi.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Phạm vi MSG_111 chưa rõ</span>
+    <p>Bảng Validate ghi điều kiện là <em>“đối tượng loại (PX/QTSX) không có vật tư”</em>, nhưng lưới Danh sách vật tư lại hiển thị cho cả <strong>Nhóm sản phẩm</strong>. Chưa rõ loại Nhóm sản phẩm có bắt buộc tối thiểu 1 vật tư hay không. Sơ đồ trên vẽ theo nhánh rộng (áp cho cả ba loại) vì lưới hiện chung — cần BA chốt lại ở tài liệu gốc.</p>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — BR6 · BR21</span>
+  <h2>Lưới Danh sách vật tư</h2>
+  <p class="lede">Lưới chỉ tồn tại ở nhánh Phân xưởng / Quy trình sản xuất / Nhóm sản phẩm. Mỗi dòng là một bản ghi <span class="f">DoiTuongTapHopChiPhi_VatTu</span>; cột <em>Tên sản phẩm</em> chỉ để nhìn — không lưu xuống CSDL.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Thêm dòng"]) --> B{"Có dòng đang focus?"}
+    B -- "Có" --> B1["Chèn ngay dưới dòng focus"]
+    B -- "Không" --> B2["Thêm vào cuối bảng"]
+    B1 --> C["Đánh lại STT toàn lưới<br/>focus vào ô Mã sản phẩm"]
+    B2 --> C
+    C --> D["Chọn Mã sản phẩm<br/>combogrid nguồn VatTu"]
+    D --> E{"Vật tư đã có trong lưới?"}
+    E -- "Có" --> E1["Chặn theo khóa duy nhất<br/>DoiTuongId + VatTuId"]:::err
+    E -- "Không" --> F["Tên sản phẩm tự điền<br/>khóa sửa · không lưu CSDL"]
+    F --> G(["Dòng hợp lệ"]):::ok
+    H(["Bấm Xóa dòng"]) --> H1["Xóa ngay, không hỏi xác nhận"]
+    H1 --> H2{"Lưới còn dòng nào?"}
+    H2 -- "Có" --> G
+    H2 -- "Không" --> H3["Bấm Lưu sẽ bị chặn<br/>MSG_111"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Xóa dòng không hỏi xác nhận.</b> <span class="chip c-br">BR21.1</span> quy định xác nhận trước xóa dòng mặc định <em>tắt</em>; epic không bật lại. Lưới rỗng không bị chặn ngay lúc xóa — chỉ vỡ ở bước Lưu.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — PMKT-U-05904 · UC_DoiTuongTapHop_ChinhSua</span>
+  <h2>Chỉnh sửa: cùng form, khác một điều kiện trùng mã</h2>
+  <p class="lede">Popup chỉnh sửa dùng lại nguyên form Thêm mới và nguyên bộ validate, với đúng hai khác biệt: kiểm trùng mã <strong>loại trừ chính bản ghi đang sửa</strong>, và bộ nút không có <em>Lưu và thêm mới</em>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Sửa — từ lưới hoặc màn Xem"]) --> B{"Có quyền chỉnh sửa?"}
+    B -- "Không" --> B1["Ẩn nút · vào bằng URL<br/>thì MSG_002"]:::err
+    B -- "Có" --> C["Nạp toàn bộ giá trị bản ghi<br/>dựng form theo Loại đã lưu"]
+    C --> D{"Loại của bản ghi?"}
+    D -- "Sản phẩm" --> D1["Mã và Tên đối tượng vẫn khóa<br/>chỉ đổi khi chọn lại Mã sản phẩm"]
+    D -- "PX · QTSX · NSP" --> D2["Sửa Mã · Tên · Diễn giải<br/>thêm và xóa dòng lưới vật tư"]
+    D1 --> E(["Bấm Lưu"])
+    D2 --> E
+    E --> F["Chạy lại bộ validate Thêm mới<br/>trừ chính bản ghi khi kiểm trùng"]
+    F --> G{"Bản ghi còn tồn tại?"}
+    G -- "Không" --> G1["MSG_109 — đã bị người khác xóa"]:::err
+    G -- "Có" --> H{"Validate qua hết?"}
+    H -- "Không" --> H1["Báo lỗi tương ứng<br/>giữ nguyên popup"]:::err
+    H -- "Có" --> I["Cập nhật bản ghi và lưới vật tư<br/>NguoiCapNhatId · NgayCapNhat"]
+    I --> J["MSG_102 · đóng popup<br/>tải lại danh sách"]:::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Đã phát sinh nghiệp vụ vẫn sửa được.</b> <span class="chip c-br">BR29.3</span> chỉ chặn <em>xóa</em> danh mục đã dùng — cập nhật vẫn cho, và chứng từ cũ sẽ hiển thị theo thông tin mới nhất của danh mục.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Điểm mâu thuẫn giữa hai tài liệu</span>
+    <p>Acceptance criteria của UC ghi rõ <em>“Không cho phép chỉnh sửa trường Loại đối tượng”</em>, nhưng <span class="chip c-br">BR1</span> màn Chỉnh sửa không nhắc tới việc khóa, còn ma trận ẩn/hiện để trường này ở trạng thái <em>Hiện, nhập được</em> ở cả hai cột và tự ghi chú là chưa có xác nhận của BA. Hệ quả nếu cho đổi loại: chuyển khối form, dữ liệu khối cũ và lưới vật tư xử lý ra sao — <strong>không tài liệu nào mô tả</strong>. Sơ đồ trên vì thế không vẽ nhánh đổi loại.</p>
+  </div>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — SCR_DoiTuongTapHop_DanhSach · BR7</span>
+  <h2>Đổi trạng thái ngay trên lưới</h2>
+  <p class="lede">Trạng thái là trường duy nhất sửa được mà <strong>không cần mở popup Chỉnh sửa</strong> — gạt toggle ngay trên dòng. Thao tác này dùng lại quyền Chỉnh sửa và dùng lại <span class="chip c-msg">MSG_102</span> của màn Chỉnh sửa.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Gạt toggle trên dòng"]) --> B{"Có quyền chỉnh sửa?"}
+    B -- "Không" --> B1["Toggle chỉ để đọc"]:::err
+    B -- "Có" --> C{"Gạt theo chiều nào?"}
+    C -- "Bật" --> C1["TrangThai = Hoạt động"]
+    C -- "Tắt" --> C2["TrangThai = Ngừng hoạt động"]
+    C1 --> D{"Cập nhật thành công?"}
+    C2 --> D
+    D -- "Không" --> D1["MSG_003<br/>trạng thái không đổi"]:::err
+    D -- "Có" --> D2["MSG_102"]:::ok
+    D2 --> E["Dòng Ngừng hoạt động tô xám<br/>và xếp xuống cuối danh sách"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Không có popup xác nhận cho thao tác này.</b> Tài liệu chỉ mô tả đổi trực tiếp trên lưới rồi bắn toast — không nêu bước xác nhận nào.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Epic lệch BR5 chung — epic thắng trong phạm vi epic</span>
+    <p><span class="chip c-br">BR8</span> của epic viết: <em>“Đối tượng ở trạng thái Ngừng hoạt động không được chọn ở các nghiệp vụ phát sinh mới”</em> — tức là <strong>chặn</strong>. Trong khi <span class="chip c-br">BR5</span> chung quy định combogrid <em>cho chọn cả hai trạng thái</em>, chỉ hiện cảnh báo <em>“Bản ghi đang ở trạng thái Ngừng hoạt động. Bạn có chắc chắn muốn sử dụng?”</em> và <strong>không chặn</strong>. Chính BR5 chung để ngỏ: <em>“trường hợp nghiệp vụ cụ thể có quy định riêng thì theo quy định tại epic tương ứng”</em> — nên áp theo epic là chặn, nhưng phải báo BA vì đây là lệch quy chuẩn có ảnh hưởng tới mọi màn dùng combogrid này.</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — PMKT-U-05905 · UC_DoiTuongTapHop_Xoa</span>
+  <h2>Xóa: kiểm tham chiếu trước khi người dùng kịp xác nhận</h2>
+  <p class="lede">Xóa luôn là <strong>xóa mềm</strong> và luôn kéo theo toàn bộ dòng vật tư trong cùng một giao dịch. Điểm dễ vẽ sai: theo AD, hệ thống kiểm <em>đang được sử dụng</em> ngay sau khi mở popup xác nhận — <strong>trước</strong> khi người dùng bấm Xác nhận.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Xóa — từ lưới hoặc màn Xem"]) --> B{"Có quyền xóa?"}
+    B -- "Không" --> B1["Ẩn nút · vào bằng URL<br/>thì MSG_002"]:::err
+    B -- "Có" --> C["Mở popup xác nhận<br/>nội dung MSG_401"]
+    C --> D{"Đối tượng đang được dùng?"}
+    D -- "Có" --> D1["MSG_110 · đóng popup<br/>không xóa gì cả"]:::err
+    D -- "Không" --> E{"Người dùng bấm Xác nhận?"}
+    E -- "Không" --> E1["Đóng popup<br/>dữ liệu không đổi"]
+    E -- "Có" --> F{"Bản ghi còn tồn tại?"}
+    F -- "Không" --> F1["MSG_109"]:::err
+    F -- "Có" --> G["DaXoa = true<br/>NguoiXoaId · NgayXoa"]
+    G --> H["Xóa mềm mọi dòng vật tư<br/>trong cùng giao dịch"]
+    H --> I{"Giao dịch thành công?"}
+    I -- "Không" --> I1["MSG_003 · đóng popup"]:::err
+    I -- "Có" --> J["MSG_108 · giữ nguyên trang<br/>trang rỗng thì lùi 1 trang"]:::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Đã phát sinh nghiệp vụ là cửa tử, và không đảo ngược được.</b> Khác với trạng thái Hoạt động / Ngừng hoạt động vốn bật tắt tùy ý, một khi danh mục đã bị dùng trên chứng từ thì <span class="chip c-msg">MSG_110</span> chặn vĩnh viễn — cách duy nhất còn lại là chuyển sang <em>Ngừng hoạt động</em>.</figcaption>
+  </figure>
+
+  <h3>Bốn nghiệp vụ khiến bản ghi không xóa được</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nghiệp vụ đã phát sinh</th><th>Hệ quả</th></tr></thead>
+    <tbody>
+      <tr><td>Chứng từ tập hợp chi phí</td><td rowspan="4"><span class="chip c-msg">MSG_110</span> chặn xóa · <span class="chip c-ok">vẫn cho sửa</span> theo <span class="chip c-br">BR29.3</span></td></tr>
+      <tr><td>Dở dang đầu kỳ / cuối kỳ</td></tr>
+      <tr><td>Phân bổ chi phí</td></tr>
+      <tr><td>Tính giá thành</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Chưa có quy định</span>
+    <p>Tài liệu <strong>không</strong> nói nút Xóa bị ẩn hay disable sẵn khi bản ghi đã phát sinh nghiệp vụ. Theo đúng chữ trong AD thì nút vẫn hiện bình thường, người dùng bấm vào mới biết bị chặn. Nếu muốn chặn sớm hơn (disable nút, hiện tooltip lý do) thì phải xin BA bổ sung, không tự thêm.</p>
+  </div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — PMKT-U-05906 · UC_DoiTuongTapHop_XemChiTiet</span>
+  <h2>Xem chi tiết: trung tâm điều hướng thứ hai</h2>
+  <p class="lede">Màn xem chi tiết chỉ đọc toàn phần, nhưng lại là nơi thứ hai mở được Chỉnh sửa và Xóa — và theo <span class="chip c-br">BR34</span>, sửa xong phải quay về <em>chính màn xem chi tiết</em> chứ không nhảy về danh sách.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Click icon con mắt<br/>hoặc Mã đối tượng trên lưới"]) --> B{"Có quyền xem chi tiết?"}
+    B -- "Không" --> B1["Ẩn nút · vào bằng URL<br/>thì MSG_002"]:::err
+    B -- "Có" --> C["Lấy bản ghi theo Id"]
+    C --> D{"Tìm thấy bản ghi?"}
+    D -- "Không" --> D1["MSG_109"]:::err
+    D -- "Có" --> E["Dựng form theo Loại đã lưu<br/>mọi trường và lưới chỉ đọc"]
+    E --> F{"Người dùng bấm gì?"}
+    F -- "Sửa" --> F1["Mở popup Chỉnh sửa tại chỗ<br/>xong quay lại màn Xem — BR34"]
+    F -- "Xóa" --> F2["Mở popup xác nhận xóa<br/>đi tiếp theo mục 08"]
+    F -- "Đóng" --> F3(["Đóng popup"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hai nút Sửa / Xóa ở đây gác theo quyền tương ứng, không phải quyền xem.</b> Điều kiện tiên quyết của màn chỉ đòi quyền xem chi tiết; điều kiện hiển thị của từng nút đòi thêm quyền chỉnh sửa hoặc quyền xóa.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Chưa có quy định</span>
+    <p>Nút <em>Thêm dòng · Xóa dòng</em> của lưới vật tư ở màn chỉ đọc: tài liệu màn Xem chi tiết không nhắc tới. Ma trận ẩn/hiện tạm để <em>hiện xám</em> theo tiền lệ BA đã chốt cho một màn view-only khác, và tự đánh dấu là suy luận. Chưa chốt thì đừng đóng cứng hành vi này.</p>
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — Quan hệ dữ liệu</span>
+  <h2>Bản ghi liên kết và nơi danh mục được dùng lại</h2>
+  <p class="lede">Epic ghi vào đúng hai bảng và chỉ <em>đọc</em> vật tư. Chiều ngược lại — ai đọc danh mục này — mới là thứ quyết định bản ghi có xóa được hay không.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    E1["<b>DoiTuongTapHopChiPhi</b><br/>Code · Ten · Loai<br/>DienGiai · TrangThai"] -- "1 — n" --> E2["<b>DoiTuongTapHopChiPhi_VatTu</b><br/>khóa duy nhất<br/>DoiTuongId + VatTuId"]
+    E2 -- "n — 1" --> E3["<b>VatTu</b><br/>chỉ đọc, không sửa từ đây"]
+    E1 --> U["Combogrid Đối tượng tập hợp<br/>Mã · Tên · Loại · Trạng thái"]
+    U --> U1["Chứng từ tập hợp chi phí"]
+    U --> U2["Dở dang đầu kỳ · cuối kỳ"]
+    U --> U3["Phân bổ chi phí"]
+    U --> U4["Tính giá thành"]
+    U1 --> Z["Đã phát sinh thì chặn xóa<br/>MSG_110 — nhưng vẫn sửa được"]:::warn
+    U2 --> Z
+    U3 --> Z
+    U4 --> Z
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Không sinh bút toán, không ghi sổ.</b> Danh mục này chỉ được <em>tham chiếu</em> bởi các nghiệp vụ chi phí; bản thân nó không chạm sổ cái. Vì thế bộ trường vết ghi sổ <span class="f">NguoiGhiSoId · ThoiGianGhiSo</span> vẫn phải khai theo <span class="chip c-br">BR46.2</span> nhưng luôn để <span class="f">null</span>.</figcaption>
+  </figure>
+
+  <h3>Ma trận CRUD theo use case</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Entity</th><th>Xem danh sách</th><th>Xem chi tiết</th><th>Thêm mới</th><th>Chỉnh sửa</th><th>Xóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">DoiTuongTapHopChiPhi</td><td>R</td><td>R</td><td>C</td><td>U · R</td><td>D</td></tr>
+      <tr><td class="mono">VatTu</td><td>—</td><td>R</td><td>R</td><td>R</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Vật tư chỉ xuất hiện ở cột <span class="chip c-perm">R</span> — mọi màn của epic đều <strong>đọc</strong> danh mục vật tư qua combogrid, không màn nào tạo hay sửa vật tư.</p>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — Tra cứu</span>
+  <h2>Điều kiện chặn, quyền, và những chỗ chưa chốt</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> trong các sơ đồ trên. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-05901_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện</th><th class="mono">Mã</th><th>Loại</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="3">Xem danh sách</td><td>Không có quyền truy cập</td><td class="mono">002</td><td>Error</td></tr>
+      <tr><td>Danh sách trống hoặc tìm không ra</td><td class="mono">001</td><td>Info</td></tr>
+      <tr><td>Lỗi khi tải danh sách</td><td class="mono">003</td><td>Error</td></tr>
+      <tr><td rowspan="7">Thêm mới · Chỉnh sửa</td><td>Loại đối tượng để trống</td><td class="mono">103</td><td>Error</td></tr>
+      <tr><td>Mã đối tượng để trống</td><td class="mono">104</td><td>Error</td></tr>
+      <tr><td>Mã đối tượng đã tồn tại trong Tenant</td><td class="mono">105</td><td>Error</td></tr>
+      <tr><td>Tên đối tượng để trống</td><td class="mono">106</td><td>Error</td></tr>
+      <tr><td>Mã sản phẩm để trống — loại Sản phẩm</td><td class="mono">107</td><td>Error</td></tr>
+      <tr><td>Chưa chọn vật tư nào — loại PX / QTSX</td><td class="mono">111</td><td>Warning</td></tr>
+      <tr><td>Lỗi hệ thống khi lưu</td><td class="mono">003</td><td>Error</td></tr>
+      <tr><td rowspan="2">Chỉnh sửa · Xem chi tiết · Xóa</td><td>Bản ghi đã bị người khác xóa</td><td class="mono">109</td><td>Error</td></tr>
+      <tr><td>Không có quyền tương ứng</td><td class="mono">002</td><td>Error</td></tr>
+      <tr><td rowspan="2">Xóa</td><td>Đối tượng đang được sử dụng ở nghiệp vụ khác</td><td class="mono">110</td><td>Warning</td></tr>
+      <tr><td>Lỗi hệ thống khi xóa</td><td class="mono">003</td><td>Error</td></tr>
+      <tr><td>Đổi trạng thái tại lưới</td><td>Lỗi hệ thống khi cập nhật</td><td class="mono">003</td><td>Error</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Message thành công và xác nhận</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Mã</th><th>Nội dung</th><th>Bắn ở đâu</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">101</td><td>Thêm mới Đối tượng tập hợp chi phí thành công</td><td>Lưu · Lưu và thêm mới</td></tr>
+      <tr><td class="mono">102</td><td>Cập nhật Đối tượng tập hợp chi phí thành công</td><td>Lưu ở màn Chỉnh sửa · gạt toggle Trạng thái trên lưới</td></tr>
+      <tr><td class="mono">108</td><td>Xóa Đối tượng tập hợp chi phí thành công</td><td>Sau khi giao dịch xóa mềm hoàn tất</td></tr>
+      <tr><td class="mono">401</td><td>Bạn có chắc chắn muốn xóa đối tượng tập hợp chi phí này không? Thao tác này không thể hoàn tác.</td><td>Nội dung popup xác nhận xóa</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Quyền</th><th>Mở khóa</th></tr></thead>
+    <tbody>
+      <tr><td>Xem danh sách Đối tượng tập hợp chi phí</td><td>Vào menu và màn danh sách</td></tr>
+      <tr><td>Xem chi tiết Đối tượng tập hợp chi phí</td><td>Icon con mắt · liên kết trên cột Mã đối tượng</td></tr>
+      <tr><td>Thêm mới Đối tượng tập hợp chi phí</td><td>Nút Thêm mới · hành động Lưu và Lưu và thêm mới</td></tr>
+      <tr><td>Chỉnh sửa Đối tượng tập hợp chi phí</td><td>Icon bút chì · nút Sửa ở màn Xem · toggle Trạng thái trên lưới</td></tr>
+      <tr><td>Xóa Đối tượng tập hợp chi phí</td><td>Icon thùng rác · nút Xóa ở màn Xem</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Tài liệu BA gọi quyền theo <strong>tên chức năng</strong>, chưa cấp mã permission dạng <span class="f">Module.Action</span>. Khi code phải hỏi BA mã chuẩn, không tự đặt.</p>
+
+  <h3>Bảy điểm tài liệu chưa quy định</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Điểm</th><th>Tình trạng trong BA</th></tr></thead>
+    <tbody>
+      <tr><td>Độ dài tối đa của Mã đối tượng</td><td>Bảng trường ghi 255 · <span class="chip c-br">BR3</span> ghi 100 · <span class="chip c-br">BR20</span> chung ghi 50 — ba con số chỏi nhau</td></tr>
+      <tr><td>Số bản ghi mặc định mỗi trang</td><td>UC ghi 10 · <span class="chip c-br">BR1</span> chung ghi 20</td></tr>
+      <tr><td>Loại đối tượng có khóa khi Chỉnh sửa không</td><td>UC nói không cho sửa · ma trận để nhập được và tự ghi là chưa xác nhận</td></tr>
+      <tr><td>Hành vi khi đổi Loại đối tượng lúc sửa</td><td>Không mô tả — dữ liệu khối cũ và lưới vật tư xử lý ra sao đều bỏ ngỏ</td></tr>
+      <tr><td>Trạng thái form trước khi chọn Loại đối tượng</td><td>Không mô tả — ma trận suy luận là ẩn cả hai khối</td></tr>
+      <tr><td>Phạm vi <span class="chip c-msg">MSG_111</span> với loại Nhóm sản phẩm</td><td>Điều kiện chỉ ghi PX / QTSX trong khi lưới hiện cho cả ba loại</td></tr>
+      <tr><td>Nút lưới ở màn Xem chi tiết · nút Xóa khi bản ghi đã phát sinh</td><td>Không đề cập — ma trận suy luận theo tiền lệ epic khác</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Không tự đặt luật</span>
+    <p>Bảy điểm trên phải được BA chốt trước khi đóng cứng vào code. Trang này vẽ đúng những gì tài liệu BA có; chỗ nào tài liệu im lặng thì ghi là <em>chưa có quy định</em> chứ không suy diễn thành luồng.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-05901 · Đối tượng tập hợp chi phí</span>
+  <span>Dựng từ 5 UC · 5 Activity Diagram · 5 màn hình · 3 ma trận ẩn hiện · 15 message</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

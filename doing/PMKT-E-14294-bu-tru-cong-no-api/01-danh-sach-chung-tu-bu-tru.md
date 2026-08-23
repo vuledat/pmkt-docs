@@ -235,7 +235,7 @@ BR2 còn có luật "bản ghi không hoạt động xuống cuối" — **khôn
 | `PhieuKeToanTongHopSearchIT` | `summary.tongTien` = `SUM` toàn tập sau lọc, không phải trang hiện tại; tập rỗng → `0` |
 | `PhieuKtthSchemaIT` | **R9** — đọc/ghi thật một bản ghi qua entity, bắt lỗi lệch **tên cột** với schema (thứ `JpaMetamodelArchTest` không kiểm được) |
 
-> `JpaMetamodelArchTest` (`src/test/java/vn/dopai/pmkt/cell/arch/JpaMetamodelArchTest.java:25-48`) **đã có sẵn** và tự động phủ 4 entity mới ngay khi chúng mang `@Entity` — không phải viết thêm gì, nhưng cũng không thay được `PhieuKtthSchemaIT`.
+> `JpaMetamodelArchTest` (`src/test/java/vn/vtt/pmkt/cell/arch/JpaMetamodelArchTest.java:25-48`) **đã có sẵn** và tự động phủ 4 entity mới ngay khi chúng mang `@Entity` — không phải viết thêm gì, nhưng cũng không thay được `PhieuKtthSchemaIT`.
 
 ---
 

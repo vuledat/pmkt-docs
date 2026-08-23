@@ -1,0 +1,798 @@
+<title>Luồng Công nợ phải thu theo hóa đơn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-10604 · Phân hệ Bán hàng — Báo cáo</p>
+  <h1>Luồng xử lý Chi tiết công nợ phải thu theo hóa đơn</h1>
+  <p>Báo cáo này <em>chỉ đọc</em>: CRUD matrix ghi chữ R cho cả sáu entity, không có ghi sổ, không có xóa. Bốn mắt xích quyết định đúng sai của nó là tham số lọc, cơ chế nhặt dữ liệu, công thức sáu cột tiền, và đường kết xuất. Mỗi sơ đồ dưới đây bám đúng hai Activity Diagram, hai màn hình và bộ BR trong tài liệu BA.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 2 use case · 2 activity diagram · 2 màn hình · 1 ma trận</span>
+    <span><b>Entity gốc:</b> ENT_ChungTuBanHang · ENT_ChungTuBanDichVu · SoCai</span>
+    <span><b>Quyền:</b> BCChiTietCNPTTheoHD.View / .Export / .Print</span>
+    <span><b>Tài khoản mặc định:</b> 131</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Bản đồ một lần xem</a></li>
+    <li><a href="#s1"><span>01</span>Cổng quyền</a></li>
+    <li><a href="#s2"><span>02</span>Popup chọn tham số</a></li>
+    <li><a href="#s3"><span>03</span>Ba lối ra &amp; validate</a></li>
+    <li><a href="#s4"><span>04</span>Ai sinh dòng, ai cộng cột</a></li>
+    <li><a href="#s5"><span>05</span>Điều kiện lọc &amp; hiển thị</a></li>
+    <li><a href="#s6"><span>06</span>Công thức sáu cột tiền</a></li>
+    <li><a href="#s7"><span>07</span>Dựng cha – con – tổng</a></li>
+    <li><a href="#s8"><span>08</span>Đa tiền tệ</a></li>
+    <li><a href="#s9"><span>09</span>Drill-down hóa đơn PDF</a></li>
+    <li><a href="#s10"><span>10</span>Xuất Excel &amp; In</a></li>
+    <li><a href="#s11"><span>11</span>Tra cứu &amp; khoảng trống</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Bản đồ một lần xem báo cáo</h2>
+  <p class="lede">Epic có <strong>hai use case</strong> nối thành một vòng: <span class="f">PMKT-U-10605</span> thu tham số, <span class="f">PMKT-U-10606</span> dựng kết quả. Từ màn kết quả người dùng quay ngược về popup, mở PDF hóa đơn hoặc kết xuất mà không rời báo cáo.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    M(( )) -- "Báo cáo → Báo cáo bán hàng" --> G{"Có quyền<br/>BCChiTietCNPTTheoHD.View?"}
+    G -- "Không" --> GX["MSG_PMKT-E-10604_301<br/>Không có quyền truy cập"]:::err
+    G -- "Có" --> P["<b>POPUP THAM SỐ</b><br/>Kỳ · Nhóm KH · Khách hàng<br/>TK công nợ · Loại tiền"]
+    P -- "Hủy" --> M
+    P -- "Xem báo cáo · validate qua" --> Q["<b>TRUY VẤN</b><br/>Chứng từ bán hàng · bán dịch vụ<br/>SoCai · phiếu thu · giảm trừ"]
+    Q -- "Rỗng" --> QE["MSG_PMKT-E-10604_302<br/>Không tìm thấy dữ liệu"]:::err
+    Q -- "Có dữ liệu" --> R["<b>KẾT QUẢ</b><br/>Dòng khách hàng cộng dòng con<br/>Dòng Tổng cộng cuối báo cáo"]
+    R -- "Chọn tham số" --> P
+    R -- "Click Số hóa đơn" --> D["Popup xem PDF hóa đơn<br/>kèm mã QR"]
+    R -- "Xuất Excel · In" --> O["Kết xuất ra ngoài hệ thống"]:::ok
+    R -- "Đóng" --> M
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Không có trạng thái nào bị thay đổi.</b> Sáu entity trong CRUD matrix đều chỉ bị <span class="f">Read</span>, nên không có nhánh ghi sổ, bỏ ghi sổ hay xóa. Rủi ro của epic nằm ở <em>số liệu tính sai</em> và ở <em>dòng hóa đơn bị bỏ sót</em>, không phải ở <em>dữ liệu hỏng</em>.</figcaption>
+  </figure>
+
+  <h3>Hai màn hình, các entity bị đọc</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thành phần</th><th class="mono">Định danh</th><th>Vai trò trong luồng</th></tr></thead>
+    <tbody>
+      <tr><td>Popup tham số</td><td class="mono">SCR_BaoCao_CongNoPT_ChonThamSo</td><td>Thu tham số kỳ · khách hàng · TK công nợ · loại tiền</td></tr>
+      <tr><td>Màn kết quả</td><td class="mono">SCR_BaoCao_CongNoPT_KetQua</td><td>Dựng dòng khách hàng và dòng hóa đơn, giữ 4 nút thao tác</td></tr>
+      <tr><td>Chứng từ gốc</td><td class="mono">ENT_ChungTuBanHang · ENT_ChungTuBanDichVu</td><td>Nguồn duy nhất sinh ra <b>dòng hóa đơn</b>, phần ghi Nợ TK công nợ</td></tr>
+      <tr><td>Phiếu kế toán tổng hợp</td><td class="mono">SoCai</td><td>Bổ sung dòng công nợ phát sinh thủ công ngoài phân hệ Bán hàng</td></tr>
+      <tr><td>Hóa đơn bán hàng</td><td class="mono">ENT_sal_hoa_don_ban_hang</td><td>Số HĐ · Ngày HĐ · Hạn thanh toán hiển thị trên dòng con</td></tr>
+      <tr><td>Chứng từ thu tiền</td><td class="mono">ENT_cash_phieu_thu · ENT_PhieuThuTienGui · ENT_DoiTruCongNo</td><td>Cộng vào cột <em>Số đã thu</em> qua <span class="f">ChungTuGocId</span></td></tr>
+      <tr><td>Chứng từ giảm trừ</td><td class="mono">ENT_sal_chung_tu_tra_lai_hang_ban · ENT_ChungTuGiamGiaHangBan</td><td>Cộng vào cột <em>Trả lại/Giảm giá</em> qua <span class="f">ChungTuGocId</span></td></tr>
+      <tr><td>Khách hàng</td><td class="mono">ENT_KhachHang</td><td>Mã · Tên · MST cho dòng cha và cho lưới chọn khách hàng</td></tr>
+      <tr><td>Đơn vị</td><td class="mono">ENT_mst_don_vi</td><td>Thông tin đơn vị quản lý</td></tr>
+      <tr><td>Ngoại tệ</td><td class="mono">ENT_NgoaiTe</td><td>Tỷ giá và ký hiệu cho cột nguyên tệ / quy đổi</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — UC_ChonThamSo · UC_XemBaoCao</span>
+  <h2>Cổng quyền: kiểm hai lần, chặn bằng một message</h2>
+  <p class="lede">Cả hai Activity Diagram đều mở đầu bằng bước <em>kiểm quyền truy cập</em> — một lần trước khi mở popup, một lần nữa sau khi nhận tham số. Cùng dùng một mã <span class="chip c-msg">MSG_301</span>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Người dùng đã đăng nhập"]) --> B{"Có mã quyền<br/>BCChiTietCNPTTheoHD.View?"}
+    B -- "Không" --> B1["MSG_PMKT-E-10604_301<br/>Bạn không có quyền truy cập"]:::err
+    B -- "Có" --> C["Mở popup chọn tham số"]:::ok
+    C --> D["Bấm Xem báo cáo"]
+    D --> E{"Kiểm quyền lần hai<br/>trước khi truy vấn"}
+    E -- "Không đạt" --> B1
+    E -- "Đạt" --> F["Truy vấn và dựng báo cáo"]:::ok
+    B1 --> G["BR25.2 · thiếu quyền thì ẩn nút<br/>không disable<br/>Vào thẳng URL thì về trang 403"]:::warn
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Kiểm lần hai không thừa.</b> Popup và màn kết quả là hai use case tách rời; tham số có thể tới màn kết quả bằng đường khác popup, nên truy vấn vẫn phải tự kiểm quyền và tự lọc phạm vi dữ liệu theo đơn vị người dùng quản lý.</figcaption>
+  </figure>
+
+  <h3>Ma trận quyền của epic</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th><th>Chặn thì báo</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">BCChiTietCNPTTheoHD.View</td><td>Vào chức năng · mở popup tham số · xem kết quả</td><td><span class="chip c-msg">MSG_301</span></td></tr>
+      <tr><td class="mono">BCChiTietCNPTTheoHD.Export</td><td>Nút Xuất Excel</td><td>Ẩn nút theo <span class="chip c-br">BR25.2</span></td></tr>
+      <tr><td class="mono">BCChiTietCNPTTheoHD.Print</td><td>Nút In</td><td>Ẩn nút theo <span class="chip c-br">BR25.2</span></td></tr>
+      <tr><td>Phạm vi đơn vị được phân quyền</td><td>Tập dữ liệu <span class="f">ENT_mst_don_vi</span> nhìn thấy được</td><td>Không hiển thị, không báo lỗi</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note stop">
+    <span class="lbl">Chưa có quy định</span>
+    <p>Tài liệu <strong>không</strong> khai mã message riêng cho trường hợp bấm Xuất Excel / In mà thiếu quyền — chỉ nêu <em>yêu cầu quyền</em>. Theo <span class="chip c-br">BR25.2</span> thì hành vi đúng là <strong>ẩn nút</strong>, không disable và không báo lỗi. Drill-down xem PDF cũng chưa được gắn mã quyền nào.</p>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — SCR_BaoCao_CongNoPT_ChonThamSo</span>
+  <h2>Popup tham số: sáu trường, không trường nào ẩn trường nào</h2>
+  <p class="lede">Popup có sáu trường nhập được. Ma trận ẩn/hiện của màn này là <strong>bảng một cột</strong>: đã rà toàn bộ trường, không input nào điều khiển ẩn/hiện của input khác — chúng chỉ đổi <em>giá trị</em>, đổi <em>phạm vi lọc</em>, hoặc đổi <em>cách hiện cột ở màn kết quả</em>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Popup mở ở trạng thái mặc định"]) --> B["Khoảng thời gian = Tháng này<br/>Từ ngày · Đến ngày fill theo BR8"]
+    A --> C["Nhóm KH = Tất cả<br/>Danh sách KH = Tất cả<br/>TK công nợ = 131<br/>Loại tiền = Tổng hợp"]
+    B --> D{"Người dùng chạm vào đâu?"}
+    C --> D
+    D -- "Đổi Khoảng thời gian" --> D1["Fill lại Từ ngày · Đến ngày"]
+    D -- "Sửa Từ ngày hoặc Đến ngày" --> D2["Khoảng thời gian chuyển Tùy chỉnh"]
+    D -- "Xóa Khoảng thời gian" --> D3["Giữ nguyên Từ ngày · Đến ngày"]
+    D -- "Đổi Nhóm khách hàng" --> D4["Reload lưới danh sách khách hàng<br/>chỉ còn KH thuộc nhóm đó"]
+    D -- "Tích chọn khách hàng" --> D5["Thu hẹp phạm vi khách hàng lọc<br/>Lưới phân trang 20 dòng"]
+    D -- "Đổi Loại tiền" --> D6["Chỉ đổi cách hiện cột ở màn kết quả"]
+    D1 --> E(["Bấm Xem báo cáo · sang mục 03"])
+    D2 --> E
+    D3 --> E
+    D4 --> E
+    D5 --> E
+    D6 --> E
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Đồng bộ hai chiều nhưng không đối xứng.</b> Chọn kỳ thì fill ngày; sửa ngày thì kỳ về <em>Tùy chỉnh</em>; nhưng <em>xóa</em> kỳ thì <strong>không</strong> xóa ngày đã fill <span class="chip c-br">BR8</span>.</figcaption>
+  </figure>
+
+  <h3>Bảng trạng thái tĩnh của popup</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Khu vực</th><th>Trường</th><th class="mono">Field</th><th>Control</th><th>Trạng thái</th><th>Bắt buộc</th><th>Mặc định</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="2">Form tham số</td><td>Khoảng thời gian</td><td class="mono">KyBaoCao</td><td>Select</td><td><span class="chip c-ok">Show</span></td><td><b>Có</b></td><td>Tháng này</td></tr>
+      <tr><td>Từ ngày – Đến ngày</td><td class="mono">TuNgay</td><td>DatePicker</td><td><span class="chip c-ok">Show</span></td><td><b>Có</b></td><td>Fill theo kỳ</td></tr>
+      <tr><td rowspan="4">Bộ lọc</td><td>Nhóm khách hàng</td><td class="mono">NhomKhachHangId</td><td>Combogrid flat</td><td><span class="chip c-ok">Show</span></td><td>Không</td><td>Tất cả</td></tr>
+      <tr><td>Danh sách khách hàng</td><td class="mono">KhachHangId</td><td>MultiSelectSearch</td><td><span class="chip c-ok">Show</span></td><td>Không</td><td>Tất cả</td></tr>
+      <tr><td>Tài khoản công nợ</td><td class="mono">TaiKhoanNo</td><td>Combogrid tree</td><td><span class="chip c-ok">Show</span></td><td><b>Có</b></td><td>131</td></tr>
+      <tr><td>Loại tiền</td><td class="mono">LoaiTienId</td><td>Select</td><td><span class="chip c-ok">Show</span></td><td>Không</td><td>Tổng hợp</td></tr>
+      <tr><td rowspan="3">Nút</td><td>Xem báo cáo</td><td colspan="2">—</td><td><span class="chip c-ok">Show</span></td><td colspan="2">Xác nhận tham số, sang màn kết quả</td></tr>
+      <tr><td>Xóa bộ lọc</td><td colspan="2">—</td><td><span class="chip c-ok">Show</span></td><td colspan="2">Khôi phục giá trị mặc định</td></tr>
+      <tr><td>Hủy</td><td colspan="2">—</td><td><span class="chip c-ok">Show</span></td><td colspan="2">Đóng popup, không thực hiện</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Lưới khách hàng nằm trong popup</span>
+    <p><span class="chip c-br">BR02</span> yêu cầu hiển thị <strong>bảng khách hàng ngay dưới bộ lọc</strong> với bốn cột <em>Mã khách hàng · Tên khách hàng · Địa chỉ · MST</em>, chỉ lấy khách hàng <strong>đang hoạt động</strong>, phân trang 20 bản ghi/trang. Đổi <em>Nhóm khách hàng</em> thì bảng này reload — đây là quan hệ <strong>lọc trước dữ liệu</strong>, không phải quan hệ ẩn/hiện.</p>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — AD_ChonThamSo_CongNoPT</span>
+  <h2>Ba lối ra khỏi popup và một hàng rào validate</h2>
+  <p class="lede">Activity Diagram tách rõ ba nút thành ba nhánh: <em>Xóa bộ lọc</em> quay lại trạng thái mặc định mà <strong>không đóng popup</strong>, <em>Hủy</em> đóng hẳn, chỉ <em>Xem báo cáo</em> mới đi qua validate.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Đang đứng trên popup tham số"]) --> A{"Bấm nút nào?"}
+    A -- "Xóa bộ lọc" --> A1["Khôi phục toàn bộ mặc định<br/>Popup vẫn mở"]:::warn
+    A1 --> S
+    A -- "Hủy" --> A2["Đóng popup, không thực hiện"]:::warn
+    A -- "Xem báo cáo" --> V1{"Khoảng thời gian và<br/>TK công nợ đã có giá trị?"}
+    V1 -- "Chưa" --> X1["Trường bắt buộc còn trống<br/>Chặn xem báo cáo"]:::err
+    V1 -- "Rồi" --> V2{"Đến ngày ≥ Từ ngày?"}
+    V2 -- "Không" --> X2["Ngày đến không được trước ngày từ<br/>Message chung BR8 · BR15.3"]:::err
+    V2 -- "Có" --> OK["Đóng popup<br/>Chuyển sang màn kết quả"]:::ok
+    X1 --> R["Giữ nguyên popup và tham số"]:::warn
+    X2 --> R
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Nhánh sai tham số không có mã message riêng.</b> Tài liệu dẫn thẳng về <span class="chip c-br">BR8</span> và dùng nguyên văn message chung <em>“Ngày đến không được trước ngày từ”</em>; bộ <span class="f">MSG_PMKT-E-10604_*</span> không cấp mã cho nhánh này.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Mâu thuẫn tài liệu</span>
+    <p><strong>1 · Tên nút.</strong> Use case gọi nhánh đóng popup là <em>“Đóng”</em> (LF2), bảng Chức năng của màn hình gọi là <em>“Hủy”</em>. Cùng một hành vi, hai tên.</p>
+    <p><strong>2 · Trường “Tình trạng nợ”.</strong> Use case, Activity Diagram và điều kiện lọc của màn kết quả đều nhắc tham số <em>Tình trạng nợ</em> (Đã thu hết / Còn phải thu), nhưng <strong>bảng trường của popup không có trường này</strong>. Xem thêm <a href="#s5">mục 05</a>.</p>
+    <p><strong>3 · Checkbox “Cộng gộp bút toán giống nhau”.</strong> Mục Rule của popup có hẳn <span class="chip c-br">BR05</span> mô tả hành vi khi check/không check, nhưng bảng trường và bảng Chức năng đều không có checkbox nào tên như vậy — ma trận ẩn/hiện đã ghi nhận đây là điểm cần BA xác nhận (rule thừa hay bảng trường thiếu).</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — BR03 màn kết quả</span>
+  <h2>Ai sinh dòng, ai chỉ cộng vào cột</h2>
+  <p class="lede">Đây là nguyên tắc cốt lõi của cả báo cáo: <strong>chỉ chứng từ bán hàng / bán dịch vụ mới sinh ra một dòng</strong>. Mọi chứng từ trả lại, giảm giá, chiết khấu, thu tiền, đối trừ đều <em>không</em> có dòng riêng — chúng chỉ chảy vào các cột giảm trừ của dòng hóa đơn gốc.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Tập chứng từ trong phạm vi lọc"] --> B{"Chứng từ thuộc nhóm nào?"}
+    B -- "Bán hàng · Bán DV · Phiếu KTTH" --> C["<b>SINH DÒNG HÓA ĐƠN</b><br/>Ghi Nợ TK công nợ<br/>đổ vào cột Giá trị hóa đơn"]:::ok
+    C --> C1["Join ENT_sal_hoa_don_ban_hang<br/>lấy Số HĐ · Ngày HĐ<br/>và Hạn thanh toán"]
+    B -- "Trả lại · Giảm giá hàng bán" --> D["<b>KHÔNG SINH DÒNG RIÊNG</b><br/>Ghi Có TK công nợ<br/>cộng vào Trả lại/Giảm giá"]:::warn
+    B -- "Chiết khấu · Giảm trừ khác" --> E["<b>KHÔNG SINH DÒNG RIÊNG</b><br/>cộng vào Chiết khấu/Giảm trừ"]:::warn
+    B -- "Phiếu thu · Thu tiền gửi · Đối trừ" --> F["<b>KHÔNG SINH DÒNG RIÊNG</b><br/>cộng vào cột Số đã thu"]:::warn
+    D --> G{"Có ChungTuGocId trỏ về hóa đơn?"}
+    E --> G
+    F --> G
+    G -- "Không" --> G1["Không ghép được vào dòng nào<br/>Không xuất hiện trên báo cáo"]:::err
+    G -- "Có" --> H["Cộng vào đúng dòng hóa đơn gốc"]
+    C1 --> Z["Dòng hóa đơn chi tiết hoàn chỉnh"]:::ok
+    H --> Z
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b><span class="f">ChungTuGocId</span> là bản lề duy nhất.</b> Chứng từ giảm trừ hay thu tiền mà thiếu <span class="f">ChungTuGocId</span> thì không ghép được vào hóa đơn nào — số tiền đó biến mất khỏi báo cáo và kéo theo lệch số dư TK 131 ở <a href="#s6">mục 06</a>.</figcaption>
+  </figure>
+
+  <h3>Cột nào lấy từ chứng từ nào</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột trên báo cáo</th><th>Vế định khoản</th><th class="mono">Nguồn chứng từ</th><th>Điều kiện ghép</th></tr></thead>
+    <tbody>
+      <tr><td>Giá trị hóa đơn</td><td>Nợ TK công nợ</td><td class="mono">ENT_ChungTuBanHang · ENT_ChungTuBanDichVu · SoCai</td><td>Chính chứng từ gốc, phát sinh trong kỳ</td></tr>
+      <tr><td>Trả lại/Giảm giá</td><td>Có TK công nợ</td><td class="mono">ENT_sal_chung_tu_tra_lai_hang_ban · ENT_ChungTuGiamGiaHangBan</td><td><span class="f">ChungTuGocId</span> = ID chứng từ gốc, <span class="f">NgayHachToan</span> trong kỳ</td></tr>
+      <tr><td>Chiết khấu/Giảm trừ</td><td>Có TK công nợ</td><td class="mono">Chứng từ chiết khấu · giảm trừ khác</td><td><span class="f">ChungTuGocId</span> = ID chứng từ gốc, <span class="f">NgayHachToan</span> trong kỳ</td></tr>
+      <tr><td>Số đã thu</td><td>Có TK công nợ</td><td class="mono">ENT_cash_phieu_thu · ENT_PhieuThuTienGui · ENT_DoiTruCongNo</td><td><span class="f">ChungTuGocId</span> = ID chứng từ gốc, <span class="f">NgayHachToan</span> trong kỳ</td></tr>
+      <tr><td>Số HĐ · Ngày HĐ · Hạn thanh toán</td><td>—</td><td class="mono">ENT_sal_hoa_don_ban_hang</td><td>Liên kết với chứng từ bán hàng</td></tr>
+      <tr><td>Mã KH · Tên KH</td><td>—</td><td class="mono">ENT_KhachHang</td><td>Khóa nhóm của dòng cha</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Một phiếu thu, nhiều hóa đơn</span>
+    <p>Nếu một Phiếu thu thanh toán cho <strong>hai hóa đơn trở lên</strong> (qua bảng mapping chi tiết của phiếu thu), hệ thống <strong>chia số tiền thanh toán tương ứng cho từng dòng hóa đơn</strong> — không dồn hết vào một dòng, cũng không nhân đôi. Đây là chỗ dễ sai nhất khi hiện thực cột <em>Số đã thu</em>.</p>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — BR03.c màn kết quả</span>
+  <h2>Điều kiện lọc và điều kiện được lên báo cáo</h2>
+  <p class="lede">Lọc và <em>được hiển thị</em> là hai chuyện khác nhau. Sau khi qua các điều kiện lọc, một hóa đơn còn phải đạt <strong>ít nhất một</strong> trong ba điều kiện hiển thị thì mới xuất hiện — kéo theo cả dòng khách hàng của nó.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    P["Tham số đã qua validate"] --> F1["Lọc 1 · NgayHachToan trong kỳ<br/>Từ ngày đến Đến ngày"]
+    F1 --> F2["Lọc 2 · MaDoiTuongId thuộc<br/>danh sách khách hàng đã chọn"]
+    F2 --> F3["Lọc 3 · TK công nợ = TK đã chọn"]
+    F3 --> F4["Lọc 4 · LoaiTienId nếu có chọn"]
+    F4 --> F5["Lọc 5 · Tình trạng nợ<br/>Đã thu hết hoặc Còn phải thu"]:::warn
+    F5 --> H{"Hóa đơn đạt ít nhất một<br/>điều kiện hiển thị?"}
+    H -- "Số còn phải thu đầu kỳ khác 0" --> Y["Hiện dòng hóa đơn<br/>và dòng khách hàng của nó"]:::ok
+    H -- "Có hóa đơn mới trong kỳ" --> Y
+    H -- "Có thanh toán/đối trừ trong kỳ" --> Y
+    H -- "Không đạt điều kiện nào" --> N["Không hiển thị"]:::err
+    Y --> Z{"Tập kết quả rỗng?"}
+    Z -- "Rỗng" --> ZE["MSG_PMKT-E-10604_302<br/>Không tìm thấy dữ liệu"]:::err
+    Z -- "Có dữ liệu" --> ZO["Sang bước tính toán · mục 06"]:::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hóa đơn cũ chưa thu hết vẫn phải lên báo cáo.</b> Điều kiện “số còn phải thu đầu kỳ khác 0” khiến báo cáo <em>không</em> chỉ chứa phát sinh trong kỳ — đây là lý do cột <em>Số còn phải thu đầu kỳ</em> tồn tại và là điều kiện dễ bị bỏ sót nhất khi viết truy vấn.</figcaption>
+  </figure>
+
+  <h3>Năm điều kiện lọc</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Điều kiện</th><th>Áp lên</th><th>Giá trị</th></tr></thead>
+    <tbody>
+      <tr><td>Khoảng thời gian</td><td class="mono">NgayHachToan</td><td>Trong khoảng Từ ngày – Đến ngày của kỳ báo cáo</td></tr>
+      <tr><td>Khách hàng</td><td class="mono">MaDoiTuongId</td><td>Thuộc danh sách đã chọn; bỏ trống thì lấy tất cả</td></tr>
+      <tr><td>Tài khoản công nợ</td><td class="mono">TaiKhoanNo</td><td>Đúng tài khoản người dùng chọn, mặc định 131</td></tr>
+      <tr><td>Loại tiền</td><td class="mono">SoCongNo.LoaiTienId</td><td>Trùng loại tiền đã chọn; “Tổng hợp” thì không lọc</td></tr>
+      <tr><td>Tình trạng nợ</td><td class="mono">SoConPhaiThu</td><td>“Đã thu hết” = 0 · “Còn phải thu” &gt; 0</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Chưa có quy định</span>
+    <p>Điều kiện <strong>Tình trạng nợ</strong> được mô tả đầy đủ ở phần lọc dữ liệu của màn kết quả và ở cả hai use case, nhưng <strong>không có trường tương ứng trên popup tham số</strong> — người dùng không có chỗ nào để chọn nó. Cần BA chốt: bổ sung trường vào popup, hay bỏ điều kiện này khỏi phần lọc.</p>
+  </div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — BR01 màn kết quả</span>
+  <h2>Công thức sáu cột tiền và phép đối chiếu TK 131</h2>
+  <p class="lede">Một công thức duy nhất chi phối toàn báo cáo, áp cho <em>từng hóa đơn</em> rồi cộng lên dòng khách hàng và dòng tổng. Kết quả cuối cùng phải <strong>khớp số dư TK 131</strong> theo dõi chi tiết theo khách hàng.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    I["Giá trị hóa đơn gốc<br/>Nợ TK công nợ"] --> D0["Trừ mọi khoản thu và giảm trừ<br/>có NgayHachToan trước Từ ngày"]
+    D0 --> S["<b>Số còn phải thu đầu kỳ</b><br/>của riêng hóa đơn đó"]
+    S --> R["<b>SỐ CÒN PHẢI THU CUỐI KỲ</b>"]
+    I2["Giá trị hóa đơn phát sinh trong kỳ"] -- "cộng" --> R
+    T["Trả lại/Giảm giá trong kỳ"] -- "trừ" --> R
+    K["Chiết khấu/Giảm trừ trong kỳ"] -- "trừ" --> R
+    U["Số đã thu trong kỳ"] -- "trừ" --> R
+    R --> C{"Tổng Số còn phải thu khớp<br/>số dư TK 131 chi tiết KH?"}
+    C -- "Không khớp" --> C1["MSG_PMKT-E-10604_402<br/>Số dư chi tiết không khớp TK 131"]:::warn
+    C -- "Khớp" --> C2["Báo cáo đối chiếu được"]:::ok
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Số dư đầu kỳ tính theo <em>từng hóa đơn</em>, không phải theo khách hàng.</b> Tài liệu ghi rõ: số dư đầu kỳ là “số dư của riêng hóa đơn đó tại thời điểm bắt đầu kỳ”. Cộng ngược từ số dư khách hàng xuống sẽ ra sai khi một khách hàng có nhiều hóa đơn chưa thu hết.</figcaption>
+  </figure>
+
+  <h3>Sáu cột tiền, một công thức</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột</th><th>Vai trò trong công thức</th><th>Cách tính</th></tr></thead>
+    <tbody>
+      <tr><td>Số còn phải thu đầu kỳ</td><td>Điểm xuất phát</td><td>Giá trị hóa đơn trừ tổng thu / giảm trừ có <span class="f">NgayHachToan</span> &lt; Từ ngày</td></tr>
+      <tr><td>Giá trị hóa đơn</td><td>Phát sinh tăng</td><td>Tổng định khoản ghi <b>Nợ</b> TK công nợ trên chứng từ gốc</td></tr>
+      <tr><td>Trả lại/Giảm giá</td><td>Phát sinh giảm 1</td><td>Tổng ghi <b>Có</b> TK công nợ từ chứng từ trả lại · giảm giá</td></tr>
+      <tr><td>Chiết khấu/Giảm trừ</td><td>Phát sinh giảm 2</td><td>Tổng ghi <b>Có</b> TK công nợ từ chứng từ chiết khấu · giảm trừ khác</td></tr>
+      <tr><td>Số đã thu</td><td>Phát sinh giảm 3</td><td>Tổng ghi <b>Có</b> TK công nợ từ phiếu thu · thu tiền gửi · đối trừ</td></tr>
+      <tr><td><b>Số còn phải thu</b></td><td>Kết quả</td><td>Đầu kỳ + Giá trị hóa đơn − Trả lại/Giảm giá − Chiết khấu/Giảm trừ − Số đã thu</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Chưa có quy định</span>
+    <p><span class="chip c-msg">MSG_402</span> là <strong>cảnh báo</strong>, không phải lỗi chặn: tài liệu không nói báo cáo có tiếp tục hiển thị khi số dư lệch hay không, cũng không nói ngưỡng chênh lệch được coi là “khớp”. Cột <em>Giá trị hóa đơn</em> ghi “trước thuế hoặc sau thuế (tùy thiết lập)” nhưng <strong>không chỉ ra thiết lập nào</strong> quyết định điều đó.</p>
+  </div>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — BR05 · BR06 · BR08 màn kết quả</span>
+  <h2>Dựng kết quả: dòng cha, dòng con, dòng tổng</h2>
+  <p class="lede">Báo cáo không phải hai bảng lồng nhau mà là <strong>một bảng duy nhất</strong>: dòng khách hàng nằm <em>thẳng cột</em> với dòng hóa đơn, chỉ khác ở chỗ in đậm và ở cột đầu tiên.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Tập dòng hóa đơn đã tính"] --> B["Nhóm theo khách hàng"]
+    B --> C["Sắp xếp · Mã KH tăng dần<br/>rồi Ngày hạch toán giảm dần"]
+    C --> D["<b>DÒNG KHÁCH HÀNG</b> in đậm<br/>Mã KH - Tên KH kèm Số CT<br/>sáu cột tiền cộng tổng thẳng cột"]
+    D --> E["<b>DÒNG HÓA ĐƠN</b> thụt lề<br/>mặc định expand toàn bộ"]
+    E --> F{"Click Mã KH - Tên KH?"}
+    F -- "Collapse" --> F1["Ẩn dòng con<br/>Giá trị tổng vẫn hiển thị đủ"]
+    F1 -- "Click lại" --> E
+    E --> G["<b>DÒNG TỔNG CỘNG</b> cuối báo cáo<br/>cộng đủ sáu cột tiền"]:::ok
+    G --> H["Phân trang theo BR1<br/>mặc định 20 dòng mỗi trang"]
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Collapse không giấu số liệu.</b> Khi thu gọn, dòng khách hàng vẫn hiển thị đầy đủ sáu giá trị tổng — người dùng thu gọn để đọc <em>tổng theo khách hàng</em>, không phải để ẩn dữ liệu.</figcaption>
+  </figure>
+
+  <h3>Hình dạng một khối khách hàng</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Mã KH - Tên KH · Số CT</th><th class="num">Còn phải thu đầu kỳ</th><th class="num">Giá trị hóa đơn</th><th class="num">Trả lại/Giảm giá</th><th class="num">Chiết khấu/Giảm trừ</th><th class="num">Số đã thu</th><th class="num">Số còn phải thu</th></tr></thead>
+    <tbody>
+      <tr><td><b>KH-001 - Công ty TNHH ABC</b></td><td class="num"><b>0</b></td><td class="num"><b>55.000.000</b></td><td class="num"><b>0</b></td><td class="num"><b>0</b></td><td class="num"><b>10.000.000</b></td><td class="num"><b>45.000.000</b></td></tr>
+      <tr><td>1 · HĐ 0000123 · 15/08/2026</td><td class="num">0</td><td class="num">35.000.000</td><td class="num">0</td><td class="num">0</td><td class="num">10.000.000</td><td class="num">25.000.000</td></tr>
+      <tr><td>2 · HĐ 0000118 · 03/08/2026</td><td class="num">0</td><td class="num">20.000.000</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">20.000.000</td></tr>
+      <tr><td><b>Tổng cộng</b></td><td class="num"><b>0</b></td><td class="num"><b>55.000.000</b></td><td class="num"><b>0</b></td><td class="num"><b>0</b></td><td class="num"><b>10.000.000</b></td><td class="num"><b>45.000.000</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Dòng con còn có các cột mô tả không xuất hiện ở dòng cha: <span class="f">STT</span>, <span class="f">Ngày hạch toán</span>, <span class="f">Số chứng từ</span>, <span class="f">Ngày chứng từ</span>, <span class="f">Số hóa đơn</span> (hyperlink), <span class="f">Diễn giải</span>, <span class="f">Hạn thanh toán</span>.</p>
+
+  <h3>Đầu trang hiển thị lại tham số đã chọn</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Dòng</th><th>Nội dung</th><th>Quy tắc</th></tr></thead>
+    <tbody>
+      <tr><td>Header</td><td>Chi tiết công nợ phải thu theo hóa đơn</td><td>Cố định</td></tr>
+      <tr><td>Khoảng thời gian</td><td>Tháng X, Năm YYYY · Quý X, Năm YYYY · Năm YYYY · hoặc Từ ngày … đến ngày …</td><td><span class="chip c-br">BR8</span> theo kỳ đã chọn</td></tr>
+      <tr><td>Khách hàng</td><td>Hiện tên khách hàng <b>chỉ khi chọn đúng 1 KH</b>; chọn nhiều thì không hiển thị</td><td>Màn kết quả</td></tr>
+      <tr><td>Tài khoản công nợ</td><td>TK đã chọn</td><td>Màn kết quả</td></tr>
+      <tr><td>Loại tiền</td><td>Loại tiền đã chọn</td><td>Màn kết quả</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Xung đột quy tắc phân trang</span>
+    <p>Màn kết quả nói <strong>mặc định expand toàn bộ</strong> dòng khách hàng, còn <span class="chip c-br">BR40</span> (phân trang Tree Grid dùng chung) lại nói tree grid <strong>mặc định collapse</strong> và chỉ đếm phân trang theo bản ghi cấp 1. Epic thắng trong phạm vi epic — nhưng <strong>đơn vị đếm 20 dòng/trang là gì</strong> (20 khách hàng hay 20 dòng hiển thị) thì tài liệu chưa nói, cần BA chốt trước khi hiện thực.</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — BR06 tham số · BR09 kết quả</span>
+  <h2>Đa tiền tệ: tham số Loại tiền quyết định hình dạng bảng</h2>
+  <p class="lede">Một tham số duy nhất — <em>Loại tiền</em> — cùng với thực tế dữ liệu quyết định báo cáo có <strong>một cột giá trị</strong> hay <strong>cột gộp hai tầng</strong>. Không có trường nào khác trên popup tác động tới bố cục cột.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A{"Tham số Loại tiền?"}
+    A -- "Tổng hợp · không lọc" --> B{"Dữ liệu phát sinh mấy loại tiền?"}
+    B -- "Một loại trùng tiền hạch toán" --> B1["Form mặc định<br/>mỗi chỉ tiêu một cột giá trị"]:::ok
+    B -- "Nhiều loại hoặc khác tiền hạch toán" --> B2["Thêm cột Ngoại tệ"]
+    B2 --> B3["Dòng con · nguyên tệ kèm đơn vị<br/>ví dụ 4.000 USD · 3.000 EUR"]
+    B2 --> B4["Dòng cha và dòng tổng<br/>một loại thì hiện tổng kèm đơn vị<br/>từ hai loại trở lên thì để trống"]:::warn
+    A -- "Trùng tiền hạch toán" --> C["Một cột giá trị như bình thường"]:::ok
+    A -- "Khác tiền hạch toán" --> D["Cột gộp hai tầng header<br/>tầng trên là tên chỉ tiêu<br/>tầng dưới là Giá trị và Quy đổi"]
+    D --> D1["Giá trị = theo loại tiền gốc<br/>Quy đổi = đồng tiền hạch toán"]
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Ô tổng để trống là hành vi <em>đúng</em>, không phải lỗi.</b> Khi một khách hàng phát sinh từ hai loại ngoại tệ trở lên, cột Ngoại tệ ở dòng cha và dòng tổng <strong>bỏ trống</strong> — cộng hai loại tiền khác nhau vào một ô là vô nghĩa.</figcaption>
+  </figure>
+
+  <h3>Sáu cột tiền khi ở chế độ cột gộp</h3>
+  <div class="tw">
+  <table>
+    <thead>
+      <tr><th rowspan="2">Chỉ tiêu</th><th colspan="2">Cột gộp (merged header)</th><th rowspan="2">Áp cho dòng nào</th></tr>
+      <tr><th>Giá trị</th><th>Quy đổi</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Số còn phải thu đầu kỳ</td><td>Ngoại tệ</td><td>Đồng tiền hạch toán</td><td rowspan="6">Cả dòng khách hàng và dòng hóa đơn chi tiết</td></tr>
+      <tr><td>Giá trị hóa đơn</td><td>Ngoại tệ</td><td>Đồng tiền hạch toán</td></tr>
+      <tr><td>Trả lại/Giảm giá</td><td>Ngoại tệ</td><td>Đồng tiền hạch toán</td></tr>
+      <tr><td>Chiết khấu/Giảm trừ</td><td>Ngoại tệ</td><td>Đồng tiền hạch toán</td></tr>
+      <tr><td>Số đã thu</td><td>Ngoại tệ</td><td>Đồng tiền hạch toán</td></tr>
+      <tr><td>Số còn phải thu</td><td>Ngoại tệ</td><td>Đồng tiền hạch toán</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Hai cách mô tả cùng một thứ</span>
+    <p>Bảng trường của popup ghi <em>“hiển thị 2 cột Nguyên tệ và Quy đổi”</em>; <span class="chip c-br">BR06</span> ghi cột <strong>Ngoại tệ đứng ngay trước</strong> cột giá trị chính; <span class="chip c-br">BR09</span> của màn kết quả lại mô tả <strong>cột gộp hai tầng header</strong> với hai cột con <em>Giá trị</em> / <em>Quy đổi</em>. Ba cách diễn đạt cho cùng một bố cục — cần BA chốt một cách duy nhất trước khi dựng header.</p>
+  </div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — BR04 · LF5 · LF6</span>
+  <h2>Drill-down: từ số hóa đơn tới PDF có mã QR</h2>
+  <p class="lede">Cột <em>Số hóa đơn</em> ở dòng con là hyperlink duy nhất của báo cáo. Đích của nó không phải màn chứng từ mà là <strong>file PDF hóa đơn kèm mã QR</strong> để đối chiếu.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Click Số hóa đơn trên dòng con"]) --> B{"Tìm thấy file PDF của hóa đơn?"}
+    B -- "Không" --> B1["MSG_PMKT-E-10604_303<br/>Không tìm thấy file PDF của hóa đơn"]:::err
+    B -- "Có" --> C["Mở popup xem PDF hóa đơn<br/>kèm mã QR để đối chiếu"]:::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Chỉ dòng con mới có link.</b> Dòng khách hàng dùng cột đầu tiên cho hành vi expand/collapse, nên nó không mang hyperlink nào — hai hành vi click này không xung đột.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Chưa có quy định</span>
+    <p>Tài liệu <strong>không</strong> nêu: quyền cần có để mở PDF, nguồn lưu file PDF, hành vi khi đóng popup PDF (có giữ nguyên trang và vị trí cuộn của báo cáo không), và trường hợp một chứng từ gốc <em>chưa phát hành hóa đơn</em> thì cột Số hóa đơn hiển thị gì.</p>
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — BR07 màn kết quả · BR39</span>
+  <h2>Kết xuất, in và quay lại tham số</h2>
+  <p class="lede">Màn kết quả có bốn nút. Ba nút đi thẳng; riêng <em>Xuất Excel</em> có quy tắc dựng file rất cụ thể, còn <em>In</em> vẫn đang treo giữa hai tài liệu.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Màn kết quả · 4 nút"] --> B["Xuất Excel"]
+    A --> C["Chọn tham số"]
+    A --> D["In"]
+    A --> E["Đóng"]
+    C --> C1["Mở lại popup với giá trị hiện tại<br/>quay về mục 02"]
+    E --> E1["Đóng báo cáo"]
+    B --> F{"Có quyền .Export?"}
+    F -- "Không" --> FX["Ẩn nút theo BR25.2"]:::err
+    F -- "Có" --> G["Expand toàn bộ dòng khách hàng<br/>Đóng băng dòng header<br/>Phân cách hàng nghìn<br/>Dòng cha in đậm, dòng con thụt lề<br/>Dòng Tổng cộng ở cuối file"]
+    G --> H["MSG_PMKT-E-10604_001<br/>Xuất Excel báo cáo thành công"]:::ok
+    D --> I{"Có quyền .Print?"}
+    I -- "Không" --> FX
+    I -- "Có" --> J["MSG_PMKT-E-10604_002<br/>In báo cáo thành công"]:::ok
+    J --> K["Màn hình ghi In = Xử lý sau<br/>mẫu in chưa được quy định"]:::warn
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Excel không giữ trạng thái collapse của màn hình.</b> Quy tắc export ghi rõ <em>“tự động expand tất cả dòng khách hàng khi xuất”</em> — file luôn đầy đủ dòng con, bất kể người dùng đang thu gọn bao nhiêu khối trên giao diện.</figcaption>
+  </figure>
+
+  <h3>Bốn nút của màn kết quả</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nút</th><th>Hành vi</th><th>Quyền</th><th>Thông báo</th></tr></thead>
+    <tbody>
+      <tr><td>Xuất Excel</td><td>Xuất đủ cột theo đúng thứ tự bảng, dòng tổng ở cuối file</td><td class="mono">.Export</td><td><span class="chip c-ok">MSG_001</span></td></tr>
+      <tr><td>In</td><td>In báo cáo theo mẫu quy định</td><td class="mono">.Print</td><td><span class="chip c-ok">MSG_002</span></td></tr>
+      <tr><td>Chọn tham số</td><td>Mở lại popup, giữ nguyên giá trị đang áp dụng</td><td>—</td><td>—</td></tr>
+      <tr><td>Đóng</td><td>Đóng báo cáo</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Ngoài quy tắc riêng ở trên, file Excel còn chịu <span class="chip c-br">BR39</span> dùng chung: chỉ xuất <strong>cột đang hiển thị</strong> đúng thứ tự trên lưới, dòng đầu là tên báo cáo in hoa in đậm, bên dưới là <strong>đầy đủ tham số lọc</strong> đã chọn, bật sẵn Filter trên dòng header, tên file dạng <span class="f">[Tên báo cáo]_[Ngày xuất]_[Giờ xuất].xlsx</span>.</p>
+
+  <div class="note stop">
+    <span class="lbl">Mâu thuẫn tài liệu</span>
+    <p>Use case mô tả nút <strong>In</strong> đầy đủ: cần quyền <span class="f">BCChiTietCNPTTheoHD.Print</span>, thành công thì báo <span class="chip c-ok">MSG_002</span>. Nhưng bảng Chức năng của màn kết quả ghi nút In là <em>“Xử lý sau”</em> — chưa có mẫu in, khổ giấy, phần lặp đầu trang. Cần BA chốt In có nằm trong phạm vi đợt này hay không.</p>
+  </div>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — Tra cứu</span>
+  <h2>Điều kiện chặn, thông báo và khoảng trống tài liệu</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> và <em>cảnh báo</em> trong các sơ đồ trên. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-10604_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện</th><th class="mono">Mã</th><th>Loại</th></tr></thead>
+    <tbody>
+      <tr><td>Vào chức năng</td><td>Thiếu <span class="f">BCChiTietCNPTTheoHD.View</span></td><td class="mono">301</td><td><span class="chip c-msg">Error</span></td></tr>
+      <tr><td rowspan="2">Xem báo cáo</td><td>Trường bắt buộc còn trống</td><td>Không có mã riêng</td><td><span class="chip c-warn">Chặn</span></td></tr>
+      <tr><td>Đến ngày trước Từ ngày</td><td>Message chung <span class="chip c-br">BR8</span></td><td><span class="chip c-warn">Chặn</span></td></tr>
+      <tr><td>Truy vấn xong</td><td>Không có dữ liệu trong kỳ đã chọn</td><td class="mono">302</td><td><span class="chip c-msg">Error</span></td></tr>
+      <tr><td>Click Số hóa đơn</td><td>Không tìm thấy file PDF của hóa đơn</td><td class="mono">303</td><td><span class="chip c-msg">Error</span></td></tr>
+      <tr><td>Dựng xong báo cáo</td><td>Số dư chi tiết không khớp TK 131</td><td class="mono">402</td><td><span class="chip c-warn">Warning</span></td></tr>
+      <tr><td>Xuất Excel thành công</td><td>—</td><td class="mono">001</td><td><span class="chip c-ok">Success</span></td></tr>
+      <tr><td>In báo cáo thành công</td><td>—</td><td class="mono">002</td><td><span class="chip c-ok">Success</span></td></tr>
+      <tr><td>Xuất Excel · In</td><td>Thiếu quyền <span class="f">.Export</span> / <span class="f">.Print</span></td><td>Ẩn nút, không báo</td><td><span class="chip c-perm">BR25.2</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Quy chuẩn chung đã áp vào epic</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">BR</th><th>Áp ở đâu</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">BR1</td><td>Phân trang lưới kết quả và lưới chọn khách hàng — 20 bản ghi/trang</td></tr>
+      <tr><td class="mono">BR2</td><td>STT dòng con · thứ tự hiển thị Mã KH rồi Ngày hạch toán giảm dần</td></tr>
+      <tr><td class="mono">BR3</td><td>Popup tham số: nút Hủy đóng popup, không thực hiện gì</td></tr>
+      <tr><td class="mono">BR5</td><td>Combogrid Nhóm khách hàng và Tài khoản công nợ</td></tr>
+      <tr><td class="mono">BR7</td><td>Precision và làm tròn cho sáu cột tiền</td></tr>
+      <tr><td class="mono">BR8</td><td>Khoảng thời gian, autofill hai chiều, validate Đến ngày ≥ Từ ngày, cách hiển thị kỳ trên báo cáo</td></tr>
+      <tr><td class="mono">BR11</td><td>Tìm kiếm, lọc và sắp xếp trên các cột của lưới kết quả</td></tr>
+      <tr><td class="mono">BR18</td><td>Quy đổi ngoại tệ cho cặp cột Giá trị / Quy đổi</td></tr>
+      <tr><td class="mono">BR22 · BR40</td><td>Hiển thị và phân trang dữ liệu cha–con — xem xung đột ở <a href="#s7">mục 07</a></td></tr>
+      <tr><td class="mono">BR25</td><td>Ẩn menu và nút theo quyền, lọc dữ liệu theo phạm vi đơn vị</td></tr>
+      <tr><td class="mono">BR26</td><td>Toast cho <span class="chip c-ok">MSG_001</span> · <span class="chip c-ok">MSG_002</span></td></tr>
+      <tr><td class="mono">BR31</td><td>Dòng Tổng cộng tính trên toàn tập dữ liệu sau lọc, không tính theo trang</td></tr>
+      <tr><td class="mono">BR39</td><td>Xuất Excel: cột đang hiện, header tham số, freeze, filter, tên file, dòng tổng</td></tr>
+      <tr><td class="mono">BR46</td><td>Lọc <span class="f">TenantId</span> và phạm vi đơn vị trên mọi truy vấn</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Khoảng trống cần BA chốt</h3>
+  <ul>
+    <li><strong>Trường Tình trạng nợ</strong> — có trong use case, activity diagram và điều kiện lọc, nhưng không có trên bảng trường popup.</li>
+    <li><strong>Checkbox “Cộng gộp bút toán giống nhau”</strong> — có <span class="chip c-br">BR05</span> mô tả hành vi nhưng không có trường tương ứng trên popup.</li>
+    <li><strong>Tên nút đóng popup</strong> — use case ghi “Đóng”, màn hình ghi “Hủy”.</li>
+    <li><strong>Nút In</strong> — use case mô tả đủ quyền và message, màn hình ghi “Xử lý sau”; chưa có mẫu in, khổ giấy, phần lặp đầu trang.</li>
+    <li><strong>Đơn vị đếm phân trang</strong> — 20 dòng/trang tính theo khách hàng hay theo dòng hiển thị, khi mặc định expand toàn bộ.</li>
+    <li><strong>Bố cục cột ngoại tệ</strong> — ba cách mô tả khác nhau giữa bảng trường, <span class="chip c-br">BR06</span> và <span class="chip c-br">BR09</span>.</li>
+    <li><strong>Hành vi khi lệch TK 131</strong> — <span class="chip c-msg">MSG_402</span> là cảnh báo, chưa rõ có chặn hiển thị hay không và ngưỡng chênh lệch nào được coi là khớp.</li>
+    <li><strong>Giá trị hóa đơn trước hay sau thuế</strong> — ghi “tùy thiết lập” nhưng không chỉ ra thiết lập nào.</li>
+    <li><strong>Quyền mở PDF hóa đơn</strong> — chưa gắn mã quyền, chưa nêu nguồn lưu file.</li>
+    <li><strong>Kỳ kế toán đã khóa</strong> — không có ràng buộc nào, báo cáo đọc mọi kỳ có dữ liệu.</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-10604 · Chi tiết công nợ phải thu theo hóa đơn</span>
+  <span>Dựng từ 2 UC · 2 Activity Diagram · 2 màn hình · 1 ma trận ẩn/hiện</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

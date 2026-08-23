@@ -1,0 +1,873 @@
+<title>Luồng Khóa sổ kế toán</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-07528 · Phân hệ Tổng hợp (KTTH)</p>
+  <h1>Luồng xử lý Khóa sổ kế toán</h1>
+  <p>Toàn bộ vòng đời một mốc khóa sổ — từ thiết lập phạm vi, khóa thủ công, xử lý chứng từ còn treo, cấu hình job tự động, ghi đè bản ghi, cho tới việc lùi mốc để mở lại kỳ. Mục cuối gom ảnh hưởng của mốc khóa sổ lên năm thao tác của mọi chứng từ trong hệ thống.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 12 use case · 12 activity diagram · 8 màn hình · 25 mã MSG</span>
+    <span><b>Entity gốc:</b> close_thiet_lap_khoa_so</span>
+    <span><b>Quyền:</b> HTKhoaSo.*</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Vòng đời mốc khóa sổ</a></li>
+    <li><a href="#s1"><span>01</span>Danh sách thiết lập</a></li>
+    <li><a href="#s2"><span>02</span>Popup thiết lập</a></li>
+    <li><a href="#s3"><span>03</span>Chuỗi validate khi Lưu</a></li>
+    <li><a href="#s4"><span>04</span>Khóa sổ thủ công</a></li>
+    <li><a href="#s5"><span>05</span>Chứng từ chờ xử lý</a></li>
+    <li><a href="#s6"><span>06</span>Cấu hình khóa tự động</a></li>
+    <li><a href="#s7"><span>07</span>Job scheduler chạy</a></li>
+    <li><a href="#s8"><span>08</span>Hợp nhất &amp; ghi đè</a></li>
+    <li><a href="#s9"><span>09</span>Chỉnh sửa &amp; Xóa</a></li>
+    <li><a href="#s10"><span>10</span>Mốc muộn nhất · Mở sổ</a></li>
+    <li><a href="#s11"><span>11</span>Chặn thao tác chứng từ</a></li>
+    <li><a href="#s12"><span>12</span>Tra cứu MSG &amp; quyền</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Khóa sổ không phải trạng thái của chứng từ</h2>
+  <p class="lede">Epic này <strong>không</strong> gắn cờ nào lên chứng từ. Nó chỉ ghi ra một <em>mốc ngày</em> cho từng phạm vi đối tượng; mọi chứng từ có <span class="f">NgayHachToan</span> nhỏ hơn hoặc bằng mốc đó tự động rơi vào kỳ đã khóa. Vì vậy lùi mốc là mở sổ, đẩy mốc là khóa sổ — cùng một thao tác.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(( )) -- "Tenant bắt đầu dùng" --> D
+    D["<b>BẢN GHI MẶC ĐỊNH</b><br/>Toàn hệ thống · Thủ công<br/>Ngày bắt đầu dữ liệu trừ 1<br/>Không cho phép xóa"]:::warn
+    D --> A
+    A["<b>KỲ MỞ</b><br/>Ngày HT muộn hơn mốc<br/>Thêm · Sửa · Xóa<br/>Ghi sổ · Bỏ ghi sổ"]:::ok
+    B["<b>KỲ ĐÃ KHÓA</b><br/>Ngày HT ≤ mốc áp dụng<br/>Cả năm thao tác bị chặn<br/>MSG_026"]:::err
+    A -- "Khóa thủ công · mốc muộn hơn" --> B
+    A -- "Job tự động chạy đúng lịch" --> B
+    B -- "Chọn lại mốc sớm hơn" --> A
+    B -- "Sửa thiết lập · lùi ngày" --> A
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Một mốc, hai chiều.</b> Tài liệu không ràng buộc ngày khóa sổ phải ở quá khứ hay tương lai <span class="chip c-br">BR01</span>. Chọn ngày muộn hơn mốc hiện tại là khóa thêm; chọn ngày sớm hơn là mở lại đúng khoảng chênh lệch. Không có nút "Mở sổ" riêng.</figcaption>
+  </figure>
+
+  <h3>Ba trục cấu hình của một thiết lập</h3>
+  <p>Một bản ghi khóa sổ luôn được mô tả bởi ba trục độc lập. Tổ hợp của trục 1 và trục 2 chính là <em>phạm vi đối tượng</em> — đơn vị dùng để so trùng và ghi đè ở <a href="#s8">mục 08</a>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trục</th><th class="mono">Field</th><th>Giá trị</th><th>Ảnh hưởng</th></tr></thead>
+    <tbody>
+      <tr><td>Phạm vi chứng từ</td><td class="mono">LoaiDoiTuong</td><td>ToanHeThong · ChonChungTu</td><td>ToanHeThong ẩn cả Loại chứng từ lẫn Người dùng</td></tr>
+      <tr><td>Phạm vi người dùng</td><td class="mono">LoaiChonNguoiDung</td><td>TatCaNguoiDung · chọn cụ thể</td><td>Chỉ khả dụng khi đã chọn ChonChungTu</td></tr>
+      <tr><td>Cách sinh mốc</td><td class="mono">IsTuDong · LoaiKhoaSo</td><td>false/ThuCong · true/TuDong</td><td>Bật tự động thì disable Ngày khóa sổ, hiện cấu hình chu kỳ</td></tr>
+      <tr><td>Chu kỳ (chỉ khi tự động)</td><td class="mono">KyKhoaSo · GiaTriKy</td><td>HangNgay · HangTuan · HangThang</td><td><span class="f">GiaTriKy</span> = 32 nghĩa là ngày cuối tháng</td></tr>
+      <tr><td>Lịch chạy (chỉ khi tự động)</td><td class="mono">DoTreThucThi · GioThucThi</td><td>0–7 ngày · HH:mm</td><td>Độ trễ 0 = chạy đúng ngày chốt dữ liệu</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Ba bảng dữ liệu</span>
+    <p><span class="f">close_thiet_lap_khoa_so</span> giữ header. Hai bảng chi tiết <span class="f">…_chung_tu_chi_tiet</span> và <span class="f">…_nguoi_dung_chi_tiet</span> chỉ được ghi khi phạm vi thu hẹp, và <strong>lưu kèm snapshot tên</strong> (<span class="f">TenLoaiChungTu</span>, <span class="f">TenNguoiDung</span>) chứ không chỉ ID — danh sách hiển thị đọc thẳng từ snapshot này.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — PMKT-U-09190</span>
+  <h2>Danh sách thiết lập: nơi mọi mốc cùng hiện diện</h2>
+  <p class="lede">Màn <span class="f">SCR_XemDanhSachThietLapKhoaSo</span> trộn chung ba loại bản ghi: mốc khóa thủ công, mốc do job sinh ra, và bản ghi <em>Thiết lập</em> giữ lịch chạy. Nút Xóa chỉ mở cho loại thứ ba.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Menu Tổng hợp · Khóa sổ"]) --> B{"Có quyền HTKhoaSo.View?"}
+    B -- Không --> B1["Ẩn hẳn chức năng<br/>BR25"]:::err
+    B -- Có --> C["Tải danh sách thiết lập"]
+    C -- "Lỗi hệ thống" --> C1["MSG_002"]:::err
+    C --> D{"Danh sách có dữ liệu?"}
+    D -- Không --> D1["MSG_001"]:::warn
+    D -- Có --> E["Bản ghi Hệ thống xếp trên cùng<br/>rồi cập nhật mới đến cũ"]
+    E --> F1["Nút Khóa sổ màu đỏ<br/>mở popup thiết lập"]
+    E --> F2["Tìm kiếm theo Loại CT<br/>hoặc Người dùng · Lọc · Làm mới"]
+    E --> F3["Xem chi tiết · quyền View"]
+    E --> F4["Sửa · quyền Edit"]
+    E --> F5["Xóa · chỉ Loại = Thiết lập<br/>và không phải bản ghi mặc định"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Sắp xếp có hai tầng.</b> Tầng một là loại phạm vi — bản ghi Toàn hệ thống luôn nằm trên; tầng hai mới là thời gian cập nhật giảm dần <span class="chip c-br">BR6 chung</span>. Không phải sắp thuần theo thời gian.</figcaption>
+  </figure>
+
+  <h3>Sáu cột của lưới đều là giá trị dẫn xuất</h3>
+  <p>Không cột nào trên lưới là trường nhập trực tiếp. Tất cả đều ghép lại từ header và hai bảng chi tiết.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột</th><th>Cách dựng giá trị</th><th class="mono">BR</th></tr></thead>
+    <tbody>
+      <tr><td>Loại chứng từ</td><td><span class="f">ToanHeThong</span> hiện chữ "Hệ thống"; ngược lại ghép các <span class="f">TenLoaiChungTu</span> đã snapshot</td><td class="mono">FIELD-005</td></tr>
+      <tr><td>Người dùng</td><td><span class="f">TatCaNguoiDung</span> hiện chữ "Tất cả"; ngược lại ghép các <span class="f">TenNguoiDung</span></td><td class="mono">FIELD-006</td></tr>
+      <tr><td>Loại khóa sổ</td><td>Thủ công · Tự động — đổi theo nguồn ghi đè gần nhất</td><td class="mono">FIELD-007</td></tr>
+      <tr><td>Kỳ khóa sổ</td><td>Hàng ngày · Hàng tuần · Hàng tháng, hoặc dấu gạch nếu khóa thủ công</td><td class="mono">FIELD-008</td></tr>
+      <tr><td>Thời gian khóa sổ</td><td>Mốc chốt dữ liệu, định dạng DD/MM/YYYY HH:mm</td><td class="mono">FIELD-009</td></tr>
+      <tr><td>Thời gian thực hiện</td><td><span class="f">GioThucThi</span> ghép <span class="f">DoTreThucThi</span> thành "HH:mm, Sau N ngày"; độ trễ 0 hiện "HH:mm, Đúng ngày". Với khóa thủ công thì bằng chính thời gian khóa sổ</td><td class="mono">FIELD-010</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — PMKT-U-09187 · 09188 · 09189 · 09191</span>
+  <h2>Popup thiết lập: hai công tắc định hình cả form</h2>
+  <p class="lede">Một popup duy nhất phục vụ ba use case khóa sổ thủ công, ba use case cấu hình tự động, và cả chế độ chỉnh sửa. Cấu trúc form do đúng hai input quyết định: radio <em>Phạm vi khóa sổ</em> và switch <em>Khóa sổ tự động</em>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm nút Khóa sổ màu đỏ"]) --> B["Mở popup Thiết lập ngày khóa sổ"]
+    B --> C{"Radio Phạm vi khóa sổ"}
+    C -- "Toàn hệ thống · mặc định" --> C1["Ẩn Loại chứng từ<br/>Ẩn cả khối Người dùng"]
+    C -- "Chọn chứng từ" --> C2["Hiện trường Loại chứng từ<br/>side-tab checkbox nhiều dòng"]
+    C2 --> C3{"Radio Người dùng"}
+    C3 -- "Tất cả" --> C4["Ẩn trường Người dùng"]
+    C3 -- "Chọn người dùng" --> C5["Hiện Người dùng dạng tag<br/>danh sách lọc theo quyền loại CT"]
+    C1 --> D{"Switch Khóa sổ tự động"}
+    C4 --> D
+    C5 --> D
+    D -- "Off" --> D1["Ngày khóa sổ nhập được<br/>mặc định là ngày hiện tại"]
+    D -- "On" --> D2["Disable Ngày khóa sổ<br/>Hiện section cấu hình chu kỳ"]
+    D1 --> E(["Bấm Lưu · sang mục 03"])
+    D2 --> E
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Radio Người dùng nằm bên trong nhánh "Chọn chứng từ".</b> Không có đường nào tới nó từ phạm vi Toàn hệ thống — muốn khóa riêng theo người dùng vẫn buộc phải chọn loại chứng từ trước <span class="chip c-br">BR02</span>.</figcaption>
+  </figure>
+
+  <h3>Ma trận ẩn / hiện / disable</h3>
+  <p>Bốn cột là bốn tổ hợp của hai công tắc, đều đạt tới được. Ký hiệu: <b>Hiện</b> nhập được · <b>Ẩn</b> không render · <b>Disable</b> hiện xám giữ giá trị.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th>Hệ thống · Off</th><th>Hệ thống · On</th><th>Chọn CT · Off</th><th>Chọn CT · On</th></tr></thead>
+    <tbody>
+      <tr><td>Radio Phạm vi khóa sổ</td><td>Hiện</td><td>Hiện</td><td>Hiện</td><td>Hiện</td></tr>
+      <tr><td>Loại chứng từ</td><td>Ẩn</td><td>Ẩn</td><td>Hiện</td><td>Hiện</td></tr>
+      <tr><td>Radio Người dùng</td><td>Ẩn</td><td>Ẩn</td><td>Hiện</td><td>Hiện</td></tr>
+      <tr><td>Người dùng (tag)</td><td>Ẩn</td><td>Ẩn</td><td>Ẩn, hiện khi chọn cụ thể</td><td>Ẩn, hiện khi chọn cụ thể</td></tr>
+      <tr><td>Ngày khóa sổ</td><td>Hiện</td><td>Disable</td><td>Hiện</td><td>Disable</td></tr>
+      <tr><td>Switch Khóa sổ tự động</td><td>Hiện</td><td>Hiện</td><td>Hiện</td><td>Hiện</td></tr>
+      <tr><td>Radio chu kỳ</td><td>Ẩn</td><td>Hiện</td><td>Ẩn</td><td>Hiện</td></tr>
+      <tr><td>Giờ · Số ngày trễ</td><td>Ẩn</td><td>Hiện</td><td>Ẩn</td><td>Hiện</td></tr>
+      <tr><td>Chọn thứ</td><td>Ẩn</td><td>Chỉ khi kỳ Hàng tuần</td><td>Ẩn</td><td>Chỉ khi kỳ Hàng tuần</td></tr>
+      <tr><td>Chọn ngày trong tháng</td><td>Ẩn</td><td>Chỉ khi kỳ Hàng tháng</td><td>Ẩn</td><td>Chỉ khi kỳ Hàng tháng</td></tr>
+      <tr><td>Lưu · Hủy · Icon Đóng</td><td>Hiện</td><td>Hiện</td><td>Hiện</td><td>Hiện</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Chưa có quy định</span>
+    <p>Tài liệu ma trận còn treo bốn điểm chờ BA xác nhận, trong đó đáng chú ý: <strong>ngay sau khi bật switch mà chưa chọn chu kỳ</strong> thì hai control "Giờ" và "Số ngày" — vốn nhúng trong câu văn theo kỳ — hiển thị hay chưa. Trang này vẽ theo giả định đã chọn một kỳ; không tự đặt luật cho trạng thái trung gian đó.</p>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — Validate</span>
+  <h2>Chuỗi kiểm khi bấm Lưu</h2>
+  <p class="lede">Bảng Validation của <span class="f">SCR_ThietLapNgayKhoaSo</span> có chín dòng, nhưng chúng không cùng cấp: bốn dòng đầu kiểm phạm vi, bốn dòng sau chỉ chạy khi switch bật, và dòng cuối cùng — so trùng phạm vi — mới là chỗ quyết định tạo mới hay ghi đè.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Bấm Lưu"]) --> V1{"Chọn chứng từ mà<br/>chưa tick loại CT nào?"}
+    V1 -- Có --> E1["MSG_005"]:::err
+    V1 -- Không --> V2{"Chọn người dùng mà<br/>chưa tick user nào?"}
+    V2 -- Có --> E2["MSG_006"]:::err
+    V2 -- Không --> V3{"Switch Khóa sổ tự động"}
+    V3 -- Off --> V4{"Đã chọn Ngày khóa sổ?"}
+    V4 -- Chưa --> E3["MSG_015"]:::err
+    V4 -- Rồi --> V8
+    V3 -- On --> V5{"Đã chọn chu kỳ?"}
+    V5 -- Chưa --> E4["MSG_022"]:::err
+    V5 -- Rồi --> V6{"Kỳ đòi thêm giá trị ngày?"}
+    V6 -- "Hàng tuần · thiếu thứ" --> E5["MSG_017"]:::err
+    V6 -- "Hàng tháng · thiếu ngày" --> E6["MSG_018"]:::err
+    V6 -- "Đã đủ" --> V7{"Đã chọn giờ thực thi?"}
+    V7 -- Chưa --> E7["MSG_007"]:::err
+    V7 -- Rồi --> V8
+    V8{"So phạm vi với thiết lập đã có"}
+    V8 -- "Trùng khớp hoàn toàn" --> O1["Ghi đè bản ghi cũ · BR03"]:::ok
+    V8 -- "Giao thoa một phần" --> E8["MSG_027 · chặn lưu"]:::err
+    V8 -- "Không đụng bản ghi nào" --> O2["Sang bước quét chứng từ<br/>chưa ghi sổ · mục 04"]:::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Trùng hoàn toàn thì im lặng ghi đè, giao thoa một phần thì chặn.</b> Đây là cặp hành vi dễ cài ngược nhất của epic: cùng là "phạm vi đã tồn tại" nhưng một bên đi tiếp, một bên bắn <span class="chip c-msg">MSG_027</span> buộc người dùng gỡ thiết lập cũ trước.</figcaption>
+  </figure>
+
+  <h3>Popup chọn nguồn cũng tự kiểm</h3>
+  <p>Hai side-tab <span class="f">SCR_PopupChonLoaiChungTu</span> và <span class="f">SCR_PopupChonNguoiDung</span> chạy vòng lặp riêng: bấm Chọn mà chưa tick dòng nào thì popup <strong>vẫn mở</strong> và bắn <span class="chip c-msg">MSG_005</span> / <span class="chip c-msg">MSG_006</span> tại chỗ, không đóng rồi mới báo. Danh sách người dùng còn bị lọc trước theo quyền: chỉ hiện user được phân quyền với ít nhất một loại chứng từ đang chọn.</p>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — PMKT-U-09187</span>
+  <h2>Khóa thủ công: chứng từ treo là điều kiện chặn</h2>
+  <p class="lede">Validate xong chưa phải là khóa được. Hệ thống còn quét toàn bộ chứng từ <em>chưa ghi sổ</em> nằm trong phạm vi sắp khóa — còn một chứng từ treo là còn chưa khóa được.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Validate đạt"]) --> B["Quét chứng từ theo ba điều kiện:<br/>Ngày HT ≤ Ngày khóa sổ<br/>nằm trong phạm vi đã chọn<br/>trạng thái Chưa ghi sổ"]
+    B -- "Lỗi hệ thống" --> BE["MSG_004"]:::err
+    B --> C{"Có chứng từ chưa ghi sổ?"}
+    C -- Không --> D["Thực hiện khóa sổ ngay"]:::ok
+    C -- Có --> W["Popup cảnh báo MSG_008<br/>nêu đúng số lượng quét được"]:::warn
+    W -- "Hủy bỏ" --> X["Hủy lệnh khóa sổ<br/>hệ thống giữ nguyên"]:::err
+    W -- "Tiếp tục" --> Y["Mở Danh sách chứng từ<br/>chờ xử lý · mục 05"]
+    Y -- "Lưới đã trống" --> D
+    D --> D1["Ghi close_thiet_lap_khoa_so<br/>LoaiKhoaSo = ThuCong"]
+    D1 --> D2["Cập nhật trạng thái Đã khóa sổ"]
+    D2 --> D3["Ghi vết qua audit dùng chung"]
+    D3 --> D4(["MSG_011 · Khóa sổ thành công"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Chỉ chứng từ "Chưa ghi sổ" mới cản đường.</b> Chứng từ đã ghi sổ trong cùng khoảng thời gian không hề bị đếm vào <span class="chip c-msg">MSG_008</span> — chúng đã vào sổ cái nên khóa được ngay.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Không có lịch sử khóa sổ riêng</span>
+    <p>Cả ba UC khóa sổ đều ghi "hệ thống log lịch sử", nhưng phần Entity liên quan nói rõ: <strong>lịch sử thao tác lấy từ cơ chế audit dùng chung, không có entity nghiệp vụ riêng trong LDM Khóa sổ.</strong> Đừng dựng thêm bảng lịch sử.</p>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — PMKT-U-09192 · 09196</span>
+  <h2>Danh sách chứng từ chờ xử lý</h2>
+  <p class="lede">Popup này là một màn thao tác hàng loạt thu nhỏ đặt giữa luồng khóa sổ. Nó có ba cách làm sạch một dòng — ghi sổ, chuyển ngày hạch toán, xóa — và chỉ khi lưới trống thì lệnh khóa sổ mới chạy tiếp.</p>
+
+  <h3>Ba nhánh xử lý một dòng</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A["Lưới chứng từ chưa ghi sổ<br/>MSG_008 in ở đầu popup"] --> B{"Đã tick dòng nào chưa?"}
+    B -- Chưa --> B1["Nút Ghi sổ disable<br/>chưa hiện thanh hàng loạt"]:::warn
+    B -- "Rồi · N dòng" --> C["Thanh hàng loạt hiện Đã chọn N<br/>Xóa chứng từ · Chuyển ngày HT"]
+    C --> D1["Ghi sổ hàng loạt · mục dưới"]
+    C --> D2["Chuyển ngày hạch toán"]
+    C --> D3["Xóa chứng từ hàng loạt"]
+    A --> E1["Icon Lịch trên dòng<br/>chuyển ngày một chứng từ"]
+    A --> E2["Icon Thùng rác trên dòng"]
+    A --> E3["Số chứng từ là hyperlink<br/>mở chi tiết ở tab mới"]
+    D2 --> F["Popup ngày hạch toán mới<br/>mặc định Ngày khóa sổ cộng 1<br/>để trống thì MSG_013"]
+    E1 --> F
+    D3 --> G["Xác nhận MSG_010 rồi xóa"]
+    E2 --> G
+    F --> H["Chứng từ ra khỏi phạm vi khóa<br/>và rời khỏi lưới"]:::ok
+    G --> H
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Chuyển ngày là cách thoát mà không mất dữ liệu.</b> Ngày mặc định là <em>ngày khóa sổ cộng một</em> — vừa đủ để chứng từ rơi ra ngoài phạm vi sắp khóa, nên sau khi áp dụng nó rời lưới ngay.</figcaption>
+  </figure>
+
+  <h3>Vòng ghi sổ và màn Kết quả xử lý</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Ghi sổ cho N dòng đã tick"]) --> B["Chạy validation ghi sổ từng dòng"]
+    B --> C{"Có dòng thất bại?"}
+    C -- Không --> D["Các dòng biến khỏi lưới"]:::ok
+    C -- Có --> E["Màn Kết quả xử lý<br/>Có X trên Y bản ghi thành công"]:::warn
+    E --> E1["Lưới chỉ giữ dòng thất bại<br/>thêm cột Nguyên nhân"]
+    E1 --> E2["Sửa chứng từ qua hyperlink<br/>hoặc chuyển ngày · xóa"]
+    E2 --> A
+    D --> F{"Lưới còn dòng nào?"}
+    E1 --> F
+    F -- Còn --> A
+    F -- Trống --> G(["Quay lại popup Thiết lập<br/>điền sẵn giá trị đã nhập"]):::ok
+    G --> H["Hoàn tất khóa sổ · MSG_011"]:::ok
+    A -.-> Z["Lỗi hệ thống · MSG_003<br/>hủy hẳn lệnh khóa sổ"]:::err
+    A -.-> Y["Người dùng bấm Hủy<br/>hủy hẳn lệnh khóa sổ"]:::err
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Kết quả xử lý không phải màn mới, chỉ là lưới đã lọc.</b> Nó giữ nguyên bộ nút của Danh sách chờ xử lý <span class="chip c-br">BR03</span>, bỏ hết dòng thành công <span class="chip c-br">BR01</span>, và cũng quay về popup Thiết lập khi cạn dòng <span class="chip c-br">BR05</span>.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Ba mức thất bại của luồng này</th><th>Hệ quả</th></tr></thead>
+    <tbody>
+      <tr><td>Ghi sổ lỗi validation (thất bại tạm thời)</td><td>Sang màn Kết quả xử lý, người dùng sửa rồi ghi sổ lại. Lệnh khóa sổ vẫn sống.</td></tr>
+      <tr><td>Người dùng bấm Hủy (thất bại hoàn toàn)</td><td>Đóng popup, hủy lệnh khóa sổ. Chứng từ giữ nguyên trạng thái chưa ghi sổ.</td></tr>
+      <tr><td>Lỗi hệ thống <span class="chip c-msg">MSG_003</span> (thất bại hoàn toàn)</td><td>Khóa sổ bị hủy, không có thay đổi nào được ghi.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Đối chiếu BR45 chung</span>
+    <p>Thao tác hàng loạt chuẩn của hệ thống <strong>bỏ qua bản ghi lỗi và vẫn chạy cho bản ghi hợp lệ</strong>, rồi mở popup tổng kết "Thực hiện thành công X/Tổng. Thất bại Y" kèm bảng nguyên nhân. Màn Kết quả xử lý của epic này chính là hiện thực hóa cấu trúc đó, chỉ khác ở chỗ nó <em>ở lại</em> để người dùng xử lý tiếp thay vì đóng và reload.</p>
+  </div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — PMKT-U-09193 · 09194 · 09195</span>
+  <h2>Cấu hình khóa sổ tự động</h2>
+  <p class="lede">Switch tự động không mở ra một phạm vi mới — nó <strong>kế thừa</strong> nguyên phạm vi đang chọn ở nửa trên popup và biến phạm vi đó thành đối tượng của job <span class="chip c-br">BR05</span>. Vì thế ba use case cấu hình tự động chỉ khác nhau ở phần phạm vi đã chọn trước, phần chu kỳ hoàn toàn giống nhau.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bật Switch Khóa sổ tự động"]) --> B{"Phạm vi phía trên đã đủ?"}
+    B -- "Chọn chứng từ · chưa tick CT" --> B1["MSG_005"]:::err
+    B -- "Chọn người dùng · chưa tick" --> B2["MSG_006"]:::err
+    B -- "Đủ hoặc Toàn hệ thống" --> C["Hiện section cấu hình tự động<br/>liệt kê phạm vi kế thừa readonly<br/>disable Ngày khóa sổ"]
+    C --> D{"Radio chu kỳ"}
+    D -- "Hàng ngày" --> D1["Chốt đến hết Giờ đã chọn<br/>của chính ngày đó"]
+    D -- "Hàng tuần" --> D2["Chọn thứ 2 đến CN<br/>chốt đến hết 23:59:59"]
+    D -- "Hàng tháng" --> D3["Chọn ngày 1 đến 31<br/>hoặc ngày cuối tháng · GiaTriKy 32"]
+    D1 --> E["Số ngày trễ 0 đến 7<br/>Giờ thực thi HH:mm · mặc định 18:00"]
+    D2 --> E
+    D3 --> E
+    E --> F["Lưu cấu hình · tạo job scheduler"]:::ok
+    F --> G(["MSG_019 · thiết lập đã tạo mới"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Kỳ Hàng ngày là kỳ duy nhất chốt theo giờ.</b> Hàng tuần và Hàng tháng đều chốt tới hết 23:59:59 của ngày đã chọn; giờ trong hai kỳ đó chỉ dùng cho <em>thời điểm chạy job</em>, không phải mốc chốt dữ liệu.</figcaption>
+  </figure>
+
+  <h3>Mốc chốt dữ liệu tách khỏi thời điểm chạy</h3>
+  <p>Hai đại lượng này rất hay bị gộp làm một. Thời điểm chạy luôn là <span class="f">Ngày chốt dữ liệu + DoTreThucThi + GioThucThi</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Kỳ</th><th>Mốc chốt dữ liệu</th><th>Thời điểm job thực sự chạy</th><th>Ví dụ trong BA</th></tr></thead>
+    <tbody>
+      <tr><td>Hàng ngày</td><td>Hết <em>Giờ</em> của ngày T</td><td>T cộng độ trễ, tại <em>Giờ</em></td><td>Chốt 18:00 ngày T, trễ 1 → job chạy 18:00 ngày T+1</td></tr>
+      <tr><td>Hàng tuần</td><td>Hết 23:59:59 của <em>thứ</em> đã chọn</td><td>Ngày đó cộng độ trễ, tại <em>Giờ</em></td><td>—</td></tr>
+      <tr><td>Hàng tháng</td><td>Hết 23:59:59 của <em>ngày trong tháng</em> đã chọn</td><td>Ngày đó cộng độ trễ, tại <em>Giờ</em></td><td>Chốt hết ngày 31, trễ 3, lúc 02:00 → job chạy 02:00 ngày mùng 3</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><span class="f">DoTreThucThi</span> nhận số nguyên <span class="num">0–7</span>. Giá trị <span class="num">0</span> nghĩa là chạy đúng ngày chốt dữ liệu, không phải "không có độ trễ nào được cấu hình".</p>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — Job scheduler</span>
+  <h2>Đến giờ chạy, job vẫn có thể không làm gì</h2>
+  <p class="lede">Job không khóa sổ vô điều kiện. Nó tính mốc mới rồi so với mốc đang áp dụng cho <em>cùng phạm vi</em> — mốc mới không muộn hơn thì bỏ qua nguyên lượt chạy <span class="chip c-br">BR02</span>. Đây là cơ chế chống việc job lùi ngược một mốc đã khóa xa hơn.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Đến thời điểm chạy đã cấu hình"]) --> B["Tính mốc khóa sổ mới<br/>theo chu kỳ và giá trị kỳ"]
+    B --> C{"Mốc mới muộn hơn mốc đang<br/>áp dụng cho cùng phạm vi?"}
+    C -- Không --> C1["Bỏ qua lượt chạy<br/>không đổi dữ liệu"]:::warn
+    C -- Có --> D["Quét chứng từ chưa ghi sổ<br/>trong phạm vi tới mốc mới"]
+    D --> E{"Có chứng từ chưa ghi sổ?"}
+    E -- Có --> E1["Job không khóa được<br/>gửi notification kèm danh sách"]:::warn
+    E1 --> E2["Notification chưa hỗ trợ<br/>ở phiên bản hiện tại"]:::warn
+    E -- Không --> F["Ghi bản ghi kết quả khóa sổ<br/>LoaiKhoaSo = TuDong"]:::ok
+    F --> G["Ghi đè bản ghi cũ cùng phạm vi<br/>xem mục 08"]:::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Ví dụ nguyên văn trong BA:</b> toàn hệ thống đang khóa đến 31/05; job cấu hình khóa đến 15/05 thì không chạy vì 15/05 sớm hơn 31/05. Cùng job đó nếu tính ra 10/06 thì thực hiện.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Khoảng trống đã biết</span>
+    <p>Khi job phát hiện chứng từ chưa ghi sổ, BA quy định gửi notification cho Kế toán trưởng kèm danh sách cần xử lý — nhưng ghi rõ <strong>chức năng notification chưa hỗ trợ ở phiên bản hiện tại, sẽ phát triển sau</strong> <span class="chip c-br">BR05</span>. Trạng thái của job trong khoảng thời gian treo đó, và việc có tự chạy lại ở lượt sau hay không, tài liệu <em>chưa quy định</em> — không suy diễn.</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — BR03</span>
+  <h2>Hợp nhất bản ghi: mỗi phạm vi chỉ một mốc</h2>
+  <p class="lede">Danh sách thiết lập không tích lũy lịch sử. Mỗi tổ hợp phạm vi đối tượng chỉ giữ đúng <strong>một</strong> bản ghi khóa sổ có hiệu lực; mốc mới đè lên mốc cũ và kéo theo cả cột Loại khóa sổ đổi theo nguồn ghi đè.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Một mốc mới sắp ghi<br/>từ người dùng hoặc từ job"] --> B{"So phạm vi với bản ghi hiện có"}
+    B -- "Chưa có bản ghi nào" --> C1["Tạo bản ghi mới"]:::ok
+    B -- "Trùng khớp hoàn toàn" --> C2["Ghi đè bản ghi cũ"]:::ok
+    B -- "Giao thoa một phần tập loại CT" --> C3["Chặn · MSG_027<br/>phải gỡ thiết lập cũ trước"]:::err
+    C2 --> D["Thủ công đè Tự động<br/>cột Loại đổi thành Thủ công"]
+    C2 --> E["Job đè Thủ công<br/>cột Loại đổi thành Tự động"]
+    C1 --> F["Bản ghi Thiết lập giữ lịch chạy<br/>tồn tại độc lập với bản ghi kết quả"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hai họ bản ghi khác nhau trên cùng một lưới.</b> Bản ghi <em>kết quả khóa sổ</em> (Thủ công / Tự động) đè lẫn nhau theo phạm vi; bản ghi <em>Thiết lập</em> — thứ giữ lịch chạy job — chỉ đè lên Thiết lập cũ cùng phạm vi và là loại duy nhất được phép xóa.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trước</th><th>Tác động</th><th>Sau</th></tr></thead>
+    <tbody>
+      <tr><td>Hệ thống · Tất cả · Thủ công · 15/12/2025</td><td>Job tự động chạy, sinh mốc 28/12/2025 cùng phạm vi</td><td>Hệ thống · Tất cả · <b>Tự động</b> · 28/12/2025</td></tr>
+      <tr><td>Hệ thống · Tất cả · Tự động</td><td>Người dùng tạo khóa thủ công mới cùng phạm vi</td><td>Hệ thống · Tất cả · <b>Thủ công</b> · ngày vừa chọn</td></tr>
+      <tr><td>Loại CT {PNK, PXK} đã có thiết lập</td><td>Tạo thiết lập mới cho {PXK, HD} — giao nhau ở PXK</td><td>Chặn, giữ nguyên <span class="chip c-msg">MSG_027</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — PMKT-U-11303 · 11304</span>
+  <h2>Chỉnh sửa và Xóa thiết lập</h2>
+  <p class="lede">Sửa dùng lại đúng popup và đúng bộ validate của <a href="#s3">mục 03</a>, chỉ thay thông báo kết thúc. Xóa thì có hai cửa gác trước khi tới popup xác nhận.</p>
+
+  <h3>Chỉnh sửa</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Icon Bút trên dòng thiết lập"]) --> B{"Có quyền HTKhoaSo.Edit?"}
+    B -- Không --> B1["Ẩn nút Sửa · BR25"]:::err
+    B -- Có --> C["Mở popup, nạp sẵn dữ liệu cũ"]
+    C --> D["Sửa phạm vi · ngày<br/>bật hoặc tắt khóa tự động"]
+    D --> E{"Chạy lại bộ validate mục 03"}
+    E -- "Thiếu dữ liệu" --> E1["MSG_015 · 005 · 006<br/>007 · 022 · 017 · 018"]:::err
+    E -- "Lỗi hệ thống" --> E2["MSG_025"]:::err
+    E -- Đạt --> F["Ghi đè bản ghi cũ"]:::ok
+    F --> G(["MSG_020 · cập nhật danh sách"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Sửa là con đường mở sổ chính thức.</b> Lùi ngày trên một thiết lập đang có hiệu lực chính là cách bỏ khóa cho khoảng chênh lệch — xem <a href="#s10">mục 10</a>. Tài liệu không có thao tác "Bỏ khóa sổ" tách riêng.</figcaption>
+  </figure>
+
+  <h3>Xóa</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Icon Thùng rác trên dòng"]) --> B{"Loại khóa sổ = Thiết lập?"}
+    B -- Không --> B1["Nút Xóa để disable"]:::warn
+    B -- Có --> C{"Là bản ghi mặc định?"}
+    C -- Có --> C1["MSG_023 · không thể xóa"]:::err
+    C -- Không --> D["Popup xác nhận MSG_009"]
+    D -- Hủy --> D1["Đóng popup, không đổi gì"]
+    D -- Xóa --> E["Xóa mềm bản ghi thiết lập"]:::ok
+    E -- "Lỗi hệ thống" --> Z["MSG_024"]:::err
+    E --> F["Xóa lan hai bảng chi tiết<br/>loại chứng từ và người dùng"]:::ok
+    F --> G(["MSG_021 · giữ nguyên trang đang xem"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hai cửa gác khác nhau.</b> Cửa một là <em>loại bản ghi</em> — mốc kết quả khóa sổ không xóa được, chỉ bản ghi Thiết lập mới xóa được. Cửa hai là <em>bản ghi mặc định</em> do hệ thống sinh lúc khởi tạo tenant <span class="chip c-br">BR04</span>.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Áp BR29 chung</span>
+    <p>Xóa ở đây là <strong>xóa mềm</strong>, không xóa vật lý; dữ liệu con của thiết lập bị xóa lan cũng ở dạng xóa mềm. Sau khi xóa, danh sách <strong>giữ nguyên trang đang xem</strong>, chỉ lùi về trang trước nếu trang hiện tại cạn bản ghi <span class="chip c-br">BR29.4</span>. Bản ghi mặc định là ngoại lệ cứng: nó tồn tại vĩnh viễn.</p>
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — BR01</span>
+  <h2>Mốc muộn nhất và chuyện mở lại kỳ</h2>
+  <p class="lede">Một chứng từ có thể chịu chi phối của nhiều thiết lập cùng lúc: mốc toàn hệ thống, mốc theo loại chứng từ của nó, mốc theo người tạo nó. Ngày khóa sổ áp dụng thực tế là <strong>giá trị lớn nhất</strong> trong số đó.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Cần biết mốc áp dụng cho<br/>một chứng từ cụ thể"]) --> B["Mốc Toàn hệ thống<br/>luôn tồn tại · mốc cơ sở"]
+    A --> C["Mốc theo Loại chứng từ<br/>khớp loại của chứng từ"]
+    A --> D["Mốc theo Người dùng<br/>khớp người tạo chứng từ"]
+    B --> E["NgayKhoaSo áp dụng<br/>= giá trị muộn nhất trong ba"]:::ok
+    C --> E
+    D --> E
+    E --> F{"Ngày HT ≤ mốc áp dụng?"}
+    F -- Có --> G["Chứng từ thuộc kỳ đã khóa"]:::err
+    F -- Không --> H["Chứng từ thuộc kỳ mở"]:::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Thiết lập chi tiết chỉ có tác dụng khi nó khóa xa hơn mốc cơ sở.</b> Đặt mốc theo loại chứng từ sớm hơn mốc toàn hệ thống là thao tác vô hiệu — nó không mở lại được gì.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tình huống</th><th>Mốc chi phối</th><th>Kết quả với chứng từ ngày 05/06</th></tr></thead>
+    <tbody>
+      <tr><td>Toàn hệ thống khóa 31/05, loại "Bán hàng" khóa 10/06</td><td>Chứng từ bán hàng chịu cả hai, lấy 10/06</td><td>Chứng từ <b>bán hàng</b> ngày 05/06 bị chặn</td></tr>
+      <tr><td>Cùng cấu hình trên</td><td>Chứng từ mua hàng chỉ chịu mốc 31/05</td><td>Chứng từ <b>mua hàng</b> ngày 05/06 vẫn sửa được</td></tr>
+      <tr><td>Mốc hiện tại 15/04/2026, người dùng sửa thành 10/04/2026</td><td>Mốc áp dụng lùi về 10/04</td><td>Chứng từ từ 11/04 trở đi <b>được mở lại</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Mở sổ không có nút riêng</span>
+    <p>Glossary định nghĩa <em>Mở sổ</em> là "lùi ngày khóa sổ, cho phép chỉnh sửa các chứng từ trong khoảng thời gian đã mở". Về mặt luồng, nó chạy qua đúng popup Thiết lập ở <a href="#s2">mục 02</a> với một ngày sớm hơn — không có use case, màn hình hay thông báo riêng cho mở sổ. Điều kiện quét chứng từ chưa ghi sổ vẫn áp dụng vì phạm vi quét là "ngày HT nhỏ hơn hoặc bằng ngày khóa sổ" của mốc mới.</p>
+  </div>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — BR07 · BR17 chung</span>
+  <h2>Ảnh hưởng ra ngoài: năm thao tác bị chặn</h2>
+  <p class="lede">Đây là phần duy nhất của epic chạm vào mọi phân hệ khác. Mốc khóa sổ không sinh dữ liệu ở chứng từ nào, nhưng nó là điều kiện gác đứng trước năm thao tác của <em>mọi</em> loại chứng từ trong hệ thống.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    T1["Thêm mới chứng từ"] --> B
+    T2["Sửa chứng từ"] --> B
+    T3["Xóa chứng từ"] --> B
+    T4["Ghi sổ"] --> B
+    T5["Bỏ ghi sổ"] --> B
+    B{"Ngày HT ≤ mốc áp dụng?"}
+    B -- Không --> OK["Cho phép thực hiện"]:::ok
+    B -- Có --> C["Chặn và báo MSG_026<br/>nêu ngày khóa sổ đang áp dụng<br/>và tên thao tác vừa thử"]:::err
+    C --> D["Mốc trong thông báo lấy theo<br/>nguyên tắc muộn nhất · mục 10"]:::err
+    OK --> E["Còn phải qua mốc<br/>Ngày bắt đầu dữ liệu · BR17.2"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Bỏ ghi sổ cũng bị chặn.</b> Đây là điểm hay bị bỏ sót: kỳ đã khóa không chỉ khóa việc thay đổi dữ liệu mà khóa cả đường rút chứng từ ra khỏi sổ cái <span class="chip c-br">BR17.1</span>. Muốn bỏ ghi sổ thì phải lùi mốc khóa sổ trước.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Ngày HT thuộc kỳ mở</th><th>Ngày HT thuộc kỳ đã khóa</th></tr></thead>
+    <tbody>
+      <tr><td>Lưu (Thêm mới / Sửa)</td><td>Cho phép</td><td>Chặn, không cho lưu <span class="chip c-msg">MSG_026</span></td></tr>
+      <tr><td>Xóa</td><td>Cho phép, theo chính sách xóa mềm</td><td>Chặn <span class="chip c-msg">MSG_026</span></td></tr>
+      <tr><td>Ghi sổ</td><td>Cho phép</td><td>Chặn <span class="chip c-msg">MSG_026</span></td></tr>
+      <tr><td>Bỏ ghi sổ</td><td>Cho phép</td><td>Chặn <span class="chip c-msg">MSG_026</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Khi thao tác hàng loạt gặp kỳ đã khóa</span>
+    <p>Ghi sổ / bỏ ghi sổ / xóa hàng loạt <strong>không dừng cả lô</strong>. Theo quy tắc chung, hệ thống bỏ qua bản ghi vướng kỳ khóa, chạy tiếp các bản ghi hợp lệ, rồi mở popup tổng kết kèm cột Nguyên nhân ghi rõ "Chứng từ thuộc kỳ kế toán đã khóa" <span class="chip c-br">BR45</span>. Đóng popup thì lưới tự tải lại.</p>
+  </div>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — Tra cứu</span>
+  <h2>Điều kiện chặn, mã thông báo và quyền</h2>
+  <p class="lede">Bảng gom mọi nhánh chặn xuất hiện trong các sơ đồ trên. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-07528_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Ngữ cảnh</th><th>Điều kiện</th><th class="mono">Mã</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="3">Danh sách thiết lập</td><td>Danh sách trống</td><td class="mono">001</td></tr>
+      <tr><td>Lỗi khi tải danh sách</td><td class="mono">002</td></tr>
+      <tr><td>Không có quyền truy cập</td><td class="mono">ẩn chức năng</td></tr>
+      <tr><td rowspan="8">Lưu thiết lập</td><td>Chọn chứng từ mà chưa chọn loại CT</td><td class="mono">005</td></tr>
+      <tr><td>Chọn người dùng mà chưa chọn user</td><td class="mono">006</td></tr>
+      <tr><td>Tắt tự động mà chưa chọn ngày khóa sổ</td><td class="mono">015</td></tr>
+      <tr><td>Bật tự động mà chưa chọn chu kỳ</td><td class="mono">022</td></tr>
+      <tr><td>Bật tự động mà chưa chọn giờ thực thi</td><td class="mono">007</td></tr>
+      <tr><td>Kỳ Hàng tuần mà chưa chọn thứ</td><td class="mono">017</td></tr>
+      <tr><td>Kỳ Hàng tháng mà chưa chọn ngày</td><td class="mono">018</td></tr>
+      <tr><td>Phạm vi giao thoa một phần với thiết lập đã có</td><td class="mono">027</td></tr>
+      <tr><td rowspan="2">Khóa sổ</td><td>Có chứng từ chưa ghi sổ trong phạm vi</td><td class="mono">008</td></tr>
+      <tr><td>Lỗi hệ thống khi thực hiện khóa sổ</td><td class="mono">004</td></tr>
+      <tr><td rowspan="3">Chứng từ chờ xử lý</td><td>Không còn chứng từ nào cần xử lý</td><td class="mono">012</td></tr>
+      <tr><td>Lỗi khi xử lý chứng từ</td><td class="mono">003</td></tr>
+      <tr><td>Chuyển ngày mà bỏ trống ngày mới</td><td class="mono">013</td></tr>
+      <tr><td>Xóa chứng từ</td><td>Xác nhận trước khi xóa</td><td class="mono">010</td></tr>
+      <tr><td rowspan="3">Xóa thiết lập</td><td>Xác nhận trước khi xóa</td><td class="mono">009</td></tr>
+      <tr><td>Bản ghi mặc định hoặc không cho phép xóa</td><td class="mono">023</td></tr>
+      <tr><td>Lỗi hệ thống khi xóa</td><td class="mono">024</td></tr>
+      <tr><td>Chỉnh sửa thiết lập</td><td>Lỗi hệ thống khi cập nhật</td><td class="mono">025</td></tr>
+      <tr><td>Mọi chứng từ toàn hệ thống</td><td>Thêm / sửa / xóa / ghi sổ / bỏ ghi sổ trong kỳ đã khóa</td><td class="mono">026</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Thông báo thành công</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Mã</th><th>Nội dung</th><th>Bắn ra khi</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">011</td><td>Khóa sổ thành công</td><td>Hoàn tất một lượt khóa sổ thủ công</td></tr>
+      <tr><td class="mono">019</td><td>Thiết lập khóa sổ đã được tạo mới thành công</td><td>Tạo mới thiết lập, thủ công hoặc tự động</td></tr>
+      <tr><td class="mono">020</td><td>Thiết lập khóa sổ đã được cập nhật thành công</td><td>Chỉnh sửa thiết lập</td></tr>
+      <tr><td class="mono">021</td><td>Thiết lập khóa sổ đã được xóa thành công</td><td>Xóa bản ghi Thiết lập</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th><th>Vai trò</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">HTKhoaSo.View</td><td>Vào màn danh sách thiết lập · nút Xem chi tiết</td><td>Kế toán trưởng · Quản trị viên hệ thống</td></tr>
+      <tr><td class="mono">HTKhoaSo.Create</td><td>Nút Khóa sổ · lưu thiết lập mới thủ công và tự động</td><td>Kế toán trưởng</td></tr>
+      <tr><td class="mono">HTKhoaSo.Edit</td><td>Icon Bút · lưu ở chế độ chỉnh sửa</td><td>Kế toán trưởng</td></tr>
+      <tr><td class="mono">HTKhoaSo.Delete</td><td>Icon Thùng rác trên dòng thiết lập</td><td>Kế toán trưởng</td></tr>
+      <tr><td class="mono">HTKhoaSo.Execute</td><td>Thực thi lệnh khóa sổ ba phạm vi</td><td>Kế toán trưởng</td></tr>
+      <tr><td class="mono">HTKhoaSo.Reprocess</td><td>Xử lý lại chứng từ chờ: ghi sổ · chuyển ngày · xóa</td><td>Kế toán trưởng</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Theo quy tắc chung, nút không có quyền thì <strong>ẩn hẳn</strong> chứ không disable, menu không có quyền ẩn hoàn toàn, và URL không có quyền chuyển sang trang 403 <span class="chip c-br">BR25</span>.</p>
+
+  <h3>Những chỗ tài liệu chưa quy định</h3>
+  <ul>
+    <li>Trạng thái của job sau khi bị treo vì còn chứng từ chưa ghi sổ — có tự chạy lại ở lượt kế tiếp hay không.</li>
+    <li>Cơ chế notification cảnh báo job thất bại: BA ghi rõ chưa hỗ trợ ở phiên bản hiện tại.</li>
+    <li>Miền giá trị của "Ngày hạch toán mới" khi chuyển ngày — có bắt buộc muộn hơn ngày khóa sổ hay không, ngoài giá trị mặc định là mốc cộng một ngày.</li>
+    <li>Hiển thị của hai control Giờ và Số ngày ngay sau khi bật switch mà chưa chọn chu kỳ.</li>
+    <li>Quy tắc giao thoa phạm vi theo <em>người dùng</em>: <span class="chip c-msg">MSG_027</span> chỉ nói về tập loại chứng từ.</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-07528 · Khóa sổ kế toán</span>
+  <span>Dựng từ 12 UC · 12 Activity Diagram · 8 màn hình · 2 ma trận ẩn hiện</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

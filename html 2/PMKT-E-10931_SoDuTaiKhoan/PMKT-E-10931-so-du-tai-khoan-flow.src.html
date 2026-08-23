@@ -1,0 +1,933 @@
+<title>Luồng Số dư ban đầu tài khoản</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-10931 · Số dư đầu kỳ</p>
+  <h1>Luồng xử lý Số dư ban đầu Tài khoản</h1>
+  <p>Toàn bộ vòng đời một bản ghi số dư ban đầu tài khoản — nhập tay, nhập từ Excel ba bước, chỉnh sửa, xóa — cùng hai thứ dễ sai nhất của epic: quy tắc đối trừ Master từ lưới chi tiết và bút toán số dư đầu kỳ sinh thẳng vào Sổ cái ngay lúc lưu.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 9 use case · 9 activity diagram · 8 tài liệu màn hình</span>
+    <span><b>Entity gốc:</b> SoDuBanDauTaiKhoan · ChiTietSDBD_TaiKhoan</span>
+    <span><b>Quyền:</b> SoDuTaiKhoan.*</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Bản đồ vòng đời</a></li>
+    <li><a href="#s1"><span>01</span>Xem danh sách</a></li>
+    <li><a href="#s2"><span>02</span>Nguồn gốc bản ghi</a></li>
+    <li><a href="#s3"><span>03</span>Thêm mới — nhập liệu</a></li>
+    <li><a href="#s4"><span>04</span>Thêm mới — chuỗi lưu</a></li>
+    <li><a href="#s5"><span>05</span>Đối trừ Master từ Detail</a></li>
+    <li><a href="#s6"><span>06</span>Ghi sổ SDDK_TK</a></li>
+    <li><a href="#s7"><span>07</span>Nhập Excel — khung 3 bước</a></li>
+    <li><a href="#s8"><span>08</span>Tab 2: ghép cột</a></li>
+    <li><a href="#s9"><span>09</span>Tab 3: phân loại và lưu</a></li>
+    <li><a href="#s10"><span>10</span>Chỉnh sửa</a></li>
+    <li><a href="#s11"><span>11</span>Xóa</a></li>
+    <li><a href="#s12"><span>12</span>Cảnh báo lệch phân hệ</a></li>
+    <li><a href="#s13"><span>13</span>Tra cứu chặn lưu</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Bản đồ vòng đời một bản ghi số dư</h2>
+  <p class="lede">Số dư đầu kỳ <strong>không có trạng thái ghi sổ</strong>. Không có nút Ghi sổ, cũng không có Bỏ ghi sổ: bút toán sinh ngay trong cùng giao dịch với việc lưu, và biến mất ngay trong cùng giao dịch với việc xóa.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(( )) -- "Nhập tay — quyền Create" --> A
+    S -- "Nhập Excel — quyền Import" --> A
+    S -- "Khai ở 4 phân hệ khác" --> B
+    A["<b>BẢN GHI NHẬP TRỰC TIẾP</b><br/>SoDuBanDauTaiKhoan<br/>+ ChiTietSDBD_TaiKhoan<br/>Đã có bút toán SDDK_TK"]
+    B["<b>BẢN GHI TỔNG HỢP</b><br/>Nguồn KH · NCC · NV · TKNH<br/>Chỉ hiển thị tại màn này"]
+    A -- "Sửa — xóa bút toán cũ, sinh lại" --> A
+    A -- "Ghi đè từ Excel — giữ số cũ" --> A
+    B -- "Sửa — điều hướng màn nguồn" --> C
+    A -- "Xóa" --> D
+    B -- "Xóa — xóa ở bảng nguồn" --> D
+    C["<b>MÀN NGUỒN TƯƠNG ỨNG</b><br/>Danh sách số dư của phân hệ đó"]
+    D["<b>ĐÃ XÓA</b><br/>Xóa cứng bản ghi<br/>và xóa cứng bút toán"]
+
+    classDef st fill:#ffffff,stroke:#2f6f8f,color:#16202b;
+    classDef gone fill:#faf8f3,stroke:#cdc7b9,color:#6f6a61;
+    class A,B,C st;
+    class D gone;
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Lưu là ghi sổ.</b> <span class="chip c-br">BR16</span> quy định <span class="f">NguoiGhiSoId</span> / <span class="f">ThoiGianGhiSo</span> lấy đúng người và thời điểm lưu — số dư đầu kỳ được coi là đã ghi sổ ngay khi lưu, và <span class="chip c-br">BR42</span> Bỏ ghi sổ <b>không</b> áp dụng.</figcaption>
+  </figure>
+
+  <h3>Năm nguồn cùng đổ về một màn hình</h3>
+  <p>Danh sách ở màn này là <em>bản tổng hợp</em>: chỉ một trong năm nguồn được nhập và sửa tại chỗ, bốn nguồn còn lại chỉ mượn màn để hiển thị.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nguồn</th><th class="mono">Bảng Master</th><th class="mono">Bảng chi tiết</th><th>Sửa tại màn này?</th></tr></thead>
+    <tbody>
+      <tr><td>Nhập trực tiếp</td><td class="mono">SoDuBanDauTaiKhoan</td><td class="mono">ChiTietSDBD_TaiKhoan</td><td>Có — popup Thêm mới / Chỉnh sửa</td></tr>
+      <tr><td>Số dư khách hàng<br>PMKT-E-10976</td><td class="mono">SoDuBanDauKhachHang</td><td class="mono">ChiTietSDBD_KH_HoaDon</td><td>Không — điều hướng sang màn nguồn</td></tr>
+      <tr><td>Số dư nhà cung cấp<br>PMKT-E-10970</td><td class="mono">SoDuBanDauNCC</td><td class="mono">ChiTietSDBD_NCC_HoaDon</td><td>Không — điều hướng sang màn nguồn</td></tr>
+      <tr><td>Số dư nhân viên<br>PMKT-E-10964</td><td class="mono">SoDuBanDauNhanVien</td><td>không có</td><td>Không — điều hướng sang màn nguồn</td></tr>
+      <tr><td>Số dư TK ngân hàng<br>PMKT-E-10958</td><td class="mono">SoDuBanDauTKNganHang</td><td>không có</td><td>Không — điều hướng sang màn nguồn</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Xóa thì ngược lại: nút Xóa ở màn này <em>xóa thật</em> bản ghi ở bảng nguồn, không chỉ gỡ khỏi danh sách — xem <a href="#s11">mục 11</a>.</p>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — UC_SoDuBanDauTK_DanhSach</span>
+  <h2>Xem danh sách: một cây tài khoản, ba chế độ cột</h2>
+  <p class="lede">Lưới là cây tài khoản cha - con. Bộ lọc <span class="f">Loại tiền</span> không chỉ lọc dữ liệu mà còn <strong>đổi luôn tập cột hiển thị</strong> và đổi cả ý nghĩa của hai cột Dư Nợ / Dư Có.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Mở menu Số dư ban đầu TK"]) --> B{"Quyền SoDuTaiKhoan.View?"}
+    B -- "Không" --> B1["Ẩn menu · vào URL thì MSG_002"]:::err
+    B -- "Có" --> C["Tải và gộp số dư theo tài khoản<br/>từ cả 5 nguồn — BR4"]
+    C --> D{"Bộ lọc Loại tiền — BR1"}
+    D -- "Tổng hợp (mặc định)" --> D1["Ẩn 2 cột quy đổi<br/>Dư Nợ = SUM Dư Nợ quy đổi"]
+    D -- "Đồng tiền hạch toán" --> D2["Ẩn 2 cột quy đổi<br/>Hiện giá trị nguyên tệ"]
+    D -- "Ngoại tệ" --> D3["Hiện đủ 4 cột số dư"]
+    D1 --> E["Dựng cây TK cha - con — BR6<br/>cha cộng dồn mọi con cấp lá"]
+    D2 --> E
+    D3 --> E
+    E --> F["Dòng tổng cộng — BR31<br/>không cộng trùng tài khoản cha"]
+    E --> G["Cảnh báo lệch phân hệ — mục 12"]
+    E --> H["Nút Thêm mới · Nhập excel<br/>Xem · Sửa · Xóa"]
+    E --> I["Không có bản ghi → MSG_001"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Cột Dư Nợ đổi nghĩa theo bộ lọc.</b> Ở chế độ <em>Tổng hợp</em> nó là tổng giá trị <b>quy đổi</b> của mọi loại tiền; ở hai chế độ còn lại nó là giá trị <b>nguyên tệ</b>. Lấy nhầm cột là lệch số liệu ngay ở dòng tổng.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Bộ lọc Loại tiền</th><th>Cột hiển thị</th><th>Nguồn số của cột Dư Nợ / Dư Có</th></tr></thead>
+    <tbody>
+      <tr><td>Tổng hợp <span class="chip c-perm">mặc định</span></td><td>Dư Nợ · Dư Có</td><td class="mono">SUM(DuNoQuyDoi) · SUM(DuCoQuyDoi)</td></tr>
+      <tr><td>Đồng tiền hạch toán <span class="f">Tenant.LoaiTienId</span></td><td>Dư Nợ · Dư Có</td><td class="mono">DuNo · DuCo</td></tr>
+      <tr><td>Ngoại tệ</td><td>Dư Nợ · Dư Nợ quy đổi · Dư Có · Dư Có quy đổi</td><td class="mono">DuNo · DuNoQuyDoi · DuCo · DuCoQuyDoi</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Số dư tài khoản cha không bù trừ</span>
+    <p><span class="chip c-br">BR6</span> — CSDL chỉ lưu số dư của tài khoản chi tiết cấp lá; dòng tài khoản cha được tính động bằng cách cộng dồn <em>toàn bộ</em> con cháu cấp lá. Hệ thống <strong>không netting</strong> hai bên Nợ - Có theo tính chất của tài khoản cha: TK 154 có con 1541 dư Nợ 100.000 và con 1542 dư Có 50.000 thì dòng 154 hiển thị <em>đồng thời</em> Dư Nợ 100.000 và Dư Có 50.000.</p>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — BR5 màn Danh sách</span>
+  <h2>Nguồn gốc bản ghi quyết định nút Sửa và nút Xóa làm gì</h2>
+  <p class="lede">Cùng một nút, ba hành vi khác nhau. Trước khi mở bất kỳ popup nào, hệ thống phải phân loại dòng đang chọn: nhập trực tiếp, tổng hợp từ phân hệ khác, hay là dòng tài khoản cha do cây tự dựng.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Bấm Sửa hoặc Xóa trên một dòng"]) --> B{"Nguồn gốc dòng — BR5"}
+    B -- "Nhập trực tiếp" --> S1["Sửa: mở popup Chỉnh sửa"]
+    B -- "Nhập trực tiếp" --> X1["Xóa: hỏi MSG_402"]
+    B -- "Từ KH · NCC · NV · TKNH" --> S2["Sửa: điều hướng màn nguồn"]
+    B -- "Từ KH · NCC · NV · TKNH" --> X2["Xóa: hỏi MSG_404<br/>rồi xóa ở bảng nguồn"]
+    B -- "Tài khoản cha" --> S3["Sửa: chặn bằng MSG_209"]:::err
+    B -- "Tài khoản cha" --> X3["Xóa: hỏi MSG_405<br/>rồi xóa đệ quy TK con lá"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Sửa bị chặn ở tài khoản cha, nhưng Xóa thì không.</b> Bấm Sửa trên dòng tài khoản cha chỉ nhận <span class="chip c-msg">MSG_209</span>; bấm Xóa trên chính dòng đó lại xóa đệ quy toàn bộ số dư của các tài khoản con cấp lá sau khi xác nhận <span class="chip c-msg">MSG_405</span>.</figcaption>
+  </figure>
+  <p>Cùng bộ luật này áp cho hai nút Sửa / Xóa đặt trong popup Xem chi tiết (<span class="f">SCR_SoDuBanDauTK_XemChiTiet</span> — BR1 của màn đó), theo <span class="chip c-br">BR34</span> quy trình chỉnh sửa từ màn xem.</p>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — UC_SoDuBanDauTK_ThemMoi</span>
+  <h2>Thêm mới: tài khoản vừa chọn quyết định cả form</h2>
+  <p class="lede">Ba câu hỏi liên tiếp về tài khoản vừa chọn — <em>có theo dõi đối tượng riêng không</em>, <em>có cho hạch toán ngoại tệ không</em>, <em>tính chất là gì</em> — quyết định form còn lại trường nào và mở ô nào.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Thêm mới — quyền Create"]) --> B["Mở popup Thêm mới số dư"]
+    B --> C["Chọn Tài khoản — BR1<br/>loại TK cha và TK không có số dư"]
+    C --> D{"Tài khoản theo dõi đối tượng riêng?"}
+    D -- "Đối tượng liên quan = Khách hàng" --> D1["Ẩn mọi trường và cả nút Lưu<br/>Chỉ hiện link số dư khách hàng"]:::warn
+    D -- "= Nhà cung cấp" --> D2["Chỉ hiện link số dư NCC"]:::warn
+    D -- "= Nhân viên" --> D3["Chỉ hiện link số dư nhân viên"]:::warn
+    D -- "TheoDoiTaiKhoanNganHang = true" --> D4["Chỉ hiện link số dư TK ngân hàng"]:::warn
+    D1 --> DL["Click link mở tab mới<br/>điền sẵn tài khoản vừa chọn"]
+    D2 --> DL
+    D3 --> DL
+    D4 --> DL
+    D -- "Không" --> E{"Loại tiền — BR2"}
+    E -- "TK cho phép hạch toán ngoại tệ" --> E1["Enable · chọn được ngoại tệ<br/>Hiện thêm 2 cột quy đổi — BR6"]
+    E -- "Không cho phép" --> E2["Disable · giữ đồng tiền hạch toán"]
+    E1 --> F{"Tính chất tài khoản — BR3"}
+    E2 --> F
+    F -- "Dư Nợ" --> F1["Khóa ô Dư Có và Dư Có quy đổi"]
+    F -- "Dư Có" --> F2["Khóa ô Dư Nợ và Dư Nợ quy đổi"]
+    F -- "Lưỡng tính" --> F3["Mở cả hai bên"]
+    F1 --> G{"Nhập số dư ở đâu?"}
+    F2 --> G
+    F3 --> G
+    G -- "Chỉ phần Master" --> G1["Số dư tổng hợp<br/>không sinh dòng chi tiết"]
+    G -- "Có lưới Detail — BR9" --> G2["Mỗi dòng cần ≥ 1 đối tượng:<br/>THCP · Đơn vị · KMCP · Vụ việc"]
+    G1 --> H(["Bấm Lưu hoặc Lưu và thêm mới"])
+    G2 --> H
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Tài khoản công nợ không bị loại khỏi combogrid.</b> <span class="chip c-br">BR1</span> vẫn cho chọn TK khách hàng / NCC / nhân viên / TK ngân hàng, nhưng chọn xong thì form <em>tự dọn sạch</em> và chỉ còn một đường link sang đúng chức năng số dư của phân hệ đó — khác hẳn nhập Excel, nơi cùng tình huống này bị báo lỗi <span class="chip c-msg">213</span>…<span class="chip c-msg">216</span>.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Master hay Detail — chọn một</span>
+    <p><span class="chip c-br">BR9</span> cho phép nhập thẳng ở Master <em>hoặc</em> nhập lưới Detail. Nhập cả hai không bị cấm, nhưng khi lưu hệ thống <strong>luôn ưu tiên Detail</strong>: hỏi xác nhận <span class="chip c-msg">MSG_401</span> rồi ghi đè số dư Master bằng kết quả đối trừ — xem <a href="#s5">mục 05</a>.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — Chuỗi lưu</span>
+  <h2>Bấm Lưu: chín cửa kiểm trước khi chạm cơ sở dữ liệu</h2>
+  <p class="lede">Chuỗi kiểm chạy theo thứ tự từ định danh bản ghi tới từng ô số tiền. Cửa cuối cùng không phải lỗi mà là một câu hỏi — nếu người dùng trả lời Không, thao tác lưu bị hủy hoàn toàn.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Bấm Lưu / Lưu và thêm mới"]) --> V1{"Đã chọn Tài khoản và Loại tiền?"}
+    V1 -- "Thiếu" --> X1["MSG_236 · MSG_237"]:::err
+    V1 -- "Đủ" --> V2{"Tài khoản là tài khoản cha?"}
+    V2 -- "Có" --> X2["MSG_209"]:::err
+    V2 -- "Không" --> V3{"Đã có tổ hợp TK + Loại tiền?"}
+    V3 -- "Có — BR11" --> X3["MSG_206"]:::err
+    V3 -- "Chưa" --> V4{"Ngoại tệ mà TK không cho<br/>hạch toán ngoại tệ?"}
+    V4 -- "Có — BR14" --> X4["MSG_217"]:::err
+    V4 -- "Không" --> V5{"Vùng nhập có ≥ 1 số dư khác 0?"}
+    V5 -- "Cả 4 trường bằng 0" --> X5["MSG_202"]:::err
+    V5 -- "Có — BR5" --> V6{"Cùng dòng nhập cả Nợ và Có?"}
+    V6 -- "Có — BR4" --> X6["MSG_203"]:::err
+    V6 -- "Không" --> V7{"Có dòng Detail?"}
+    V7 -- "Có" --> V8{"Mỗi dòng có ≥ 1 đối tượng?"}
+    V8 -- "Không" --> X7["MSG_207"]:::err
+    V8 -- "Có" --> V9{"Trùng tổ hợp đối tượng?"}
+    V9 -- "Có" --> X8["MSG_208"]:::err
+    V9 -- "Không" --> V10
+    V7 -- "Không" --> V10{"Quy đổi khác 0 và cùng dấu?"}
+    V10 -- "Vi phạm — BR15" --> X9["MSG_228"]:::err
+    V10 -- "Đạt" --> V11{"Nhập số dư ở CẢ Master và Detail?"}
+    V11 -- "Có — BR8" --> C1{"MSG_401 — lấy số dư<br/>theo lưới chi tiết?"}
+    C1 -- "Không" --> C2["Hủy lưu · giữ nguyên form"]:::warn
+    C1 -- "Có" --> W
+    V11 -- "Không" --> W["Đối trừ Master theo BR7<br/>Nếu là ĐTHT: quy đổi = nguyên tệ"]
+    W --> W2["Ghi SoDuBanDauTaiKhoan<br/>+ ChiTietSDBD_TaiKhoan"]
+    W2 --> W3["Sinh bút toán SDDK_TK<br/>trong cùng giao dịch"]
+    W3 --> OK(["MSG_101 · đóng form<br/>hoặc reset để nhập tiếp"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Trả lời Không ở MSG_401 là hủy lưu, không phải giữ số Master.</b> <span class="chip c-br">BR8</span> ghi rõ: chọn Không thì hệ thống <em>không cập nhật và không lưu gì cả</em>, giữ nguyên màn hình để người dùng tự sửa lại cho khớp.</figcaption>
+  </figure>
+
+  <h3>Vùng nào bị kiểm quy tắc "ít nhất một số dư khác 0"</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tình huống nhập</th><th>Vùng bị kiểm</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td>Không có dòng Detail</td><td>Phần Master</td><td>Cả 4 ô bằng 0 → <span class="chip c-msg">202</span></td></tr>
+      <tr><td>Có dòng Detail</td><td>Từng dòng Detail</td><td>Master do hệ thống tự tính; kết quả đối trừ bằng 0 <b>không</b> bị coi là vi phạm</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Bấm Hủy hoặc dấu <span class="f">x</span> khi form đã có thay đổi thì hỏi <span class="chip c-msg">MSG_403</span> trước khi đóng — <span class="chip c-br">BR13</span> của màn Thêm mới, khớp <span class="chip c-br">BR14</span> chung về form nhập liệu.</p>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — BR7 màn Thêm mới</span>
+  <h2>Đối trừ: Master luôn là kết quả tính, không phải số người dùng gõ</h2>
+  <p class="lede">Khi có lưới chi tiết, bốn ô số dư ở Master bị ghi đè bằng kết quả tính từ Detail. Quy tắc rẽ theo tính chất tài khoản, và phần quy đổi có một luật riêng dễ bỏ sót.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Lưới Detail của một bản ghi"] --> B["Cộng 4 tổng chi tiết:<br/>Tổng_Nợ · Tổng_Có<br/>Tổng_Nợ_QĐ · Tổng_Có_QĐ"]
+    B --> C{"Tính chất tài khoản"}
+    C -- "Dư Nợ" --> D1["Master.DuNo = Tổng_Nợ<br/>Master.DuCo = 0<br/>quy đổi làm tương tự"]
+    C -- "Dư Có" --> D2["Master.DuCo = Tổng_Có<br/>Master.DuNo = 0<br/>quy đổi làm tương tự"]
+    C -- "Lưỡng tính" --> E["A = Tổng_Nợ − Tổng_Có<br/>B = Tổng_Nợ_QĐ − Tổng_Có_QĐ"]
+    E --> F{"Dấu của A"}
+    F -- "A dương" --> G1["Master.DuNo = A · DuCo = 0<br/>DuNoQuyDoi = B, nhận cả số âm"]
+    F -- "A âm" --> G2["Master.DuCo = |A| · DuNo = 0<br/>DuCoQuyDoi = −B, nhận cả số âm"]
+    F -- "A = 0" --> G3["Nguyên tệ hai bên = 0<br/>Quy đổi đặt theo dấu của B"]
+    D1 --> H["Ghi đè 4 ô số dư ở Master"]
+    D2 --> H
+    G1 --> H
+    G2 --> H
+    G3 --> H
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Quy đổi bám cột của nguyên tệ, không bám dấu của chính nó.</b> Sau khi đối trừ, số quy đổi luôn nằm <em>cùng bên</em> với số nguyên tệ. A dương mà B âm thì <span class="f">DuNoQuyDoi</span> nhận giá trị âm, tuyệt đối không lật sang <span class="f">DuCoQuyDoi</span>.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Ngoại lệ của BR15 — đừng validate lại Master</span>
+    <p>Ràng buộc "nguyên tệ khác 0 thì quy đổi phải khác 0 và cùng dấu" <span class="chip c-msg">MSG_228</span> chỉ áp cho <strong>từng dòng nhập đơn lẻ</strong>. Bản ghi Master của tài khoản lưỡng tính sau đối trừ được phép ngược dấu — ví dụ Dư Nợ 5 USD nhưng Dư Nợ quy đổi −20.000 VND. Đem BR15 kiểm lại Master là chặn nhầm dữ liệu hợp lệ.</p>
+  </div>
+
+  <h3>Ví dụ đối trừ — TK 1388 lưỡng tính, loại tiền USD</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Dòng</th><th class="num">Dư Nợ</th><th class="num">Dư Nợ quy đổi</th><th class="num">Dư Có</th><th class="num">Dư Có quy đổi</th><th>Đối tượng</th></tr></thead>
+    <tbody>
+      <tr><td>Chi tiết 1</td><td class="num">500</td><td class="num">12.000.000</td><td class="num">0</td><td class="num">0</td><td>Vụ việc VV001</td></tr>
+      <tr><td>Chi tiết 2</td><td class="num">0</td><td class="num">0</td><td class="num">200</td><td class="num">5.000.000</td><td>Vụ việc VV002</td></tr>
+      <tr><td><b>Master tính ra</b></td><td class="num"><b>300</b></td><td class="num"><b>7.000.000</b></td><td class="num">0</td><td class="num">0</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Khi <span class="f">Loại tiền</span> trùng đồng tiền hạch toán, <span class="chip c-br">BR12</span> ép quy đổi bằng nguyên tệ ở cả Master lẫn Detail — người dùng không nhập tay hai cột quy đổi trong trường hợp này.</p>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — BR16 · Mapping Sổ cái</span>
+  <h2>Ghi sổ: bút toán một vế, mã chứng từ SDDK_TK</h2>
+  <p class="lede">Đây là mục đặc tả ghi sổ dùng chung cho cả sáu màn số dư đầu kỳ. Số dư tài khoản là màn duy nhất ghi sổ <strong>theo từng dòng chi tiết</strong>, các màn còn lại ghi theo Master.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Lưu thành công<br/>Thêm mới · Sửa · Nhập Excel"]) --> B{"Bản ghi còn số dư?"}
+    B -- "Cả 4 trường bằng 0" --> B1["Không sinh bút toán nào"]:::warn
+    B -- "Còn số dư" --> C{"Là sửa hay ghi đè?"}
+    C -- "Có" --> C1["Xóa cứng bút toán cũ<br/>giữ nguyên số chứng từ đã cấp"]
+    C -- "Thêm mới" --> C2["Cấp số SDDK_TK01, SDDK_TK02…<br/>bộ đếm riêng theo đơn vị kế toán"]
+    C1 --> D
+    C2 --> D{"Bản ghi có lưới chi tiết?"}
+    D -- "Có" --> D1["Mỗi dòng chi tiết một bút toán<br/>STTDongChiTiet tính từ 1"]
+    D -- "Không" --> D2["Một bút toán lấy từ Master<br/>ChiTietChungTuId để trống"]
+    D1 --> E{"Vế Nợ hay vế Có?"}
+    D2 --> E
+    E -- "Dư Nợ hoặc quy đổi khác 0" --> E1["PSNo · PSNoQuyDoi"]
+    E -- "Dư Có hoặc quy đổi khác 0" --> E2["PSCo · PSCoQuyDoi"]
+    E1 --> F["TKDoiUngId để trống<br/>bút toán một vế · STTButToan = 1"]
+    E2 --> F
+    F --> G["NgayChungTu = NgayHachToan<br/>= NgayBatDauDuLieu trừ 1 ngày"]
+    G --> H["TyGia = 1 khi là ĐTHT<br/>hoặc khi nguyên tệ bằng 0"]
+    H --> I(["Ghi ENT_acc_so_cai · IsAuto = true"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Số chứng từ gắn với bản ghi, không gắn với bút toán.</b> Một bản ghi nhiều dòng chi tiết thì mọi bút toán mang <em>cùng một</em> số chứng từ, phân biệt nhau bằng <span class="f">STTDongChiTiet</span>. Sửa hay ghi đè đều giữ số cũ; số đã cấp không bao giờ dùng lại.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Quy tắc</th><th>Giá trị cho màn Số dư tài khoản</th></tr></thead>
+    <tbody>
+      <tr><td>Sổ đích</td><td class="mono">ENT_acc_so_cai</td></tr>
+      <tr><td>Loại chứng từ</td><td class="mono">SDDK_TK</td> </tr>
+      <tr><td>Thời điểm ghi</td><td>Ngay khi lưu, cùng giao dịch — hoặc lưu được cả hai, hoặc không ghi gì</td></tr>
+      <tr><td>Mức ghi sổ</td><td>Theo từng dòng chi tiết; bản ghi không có lưới thì một bút toán lấy từ Master</td></tr>
+      <tr><td class="mono">ChungTuId</td><td class="mono">SoDuBanDauTaiKhoan.Id</td></tr>
+      <tr><td class="mono">ChiTietChungTuId</td><td class="mono">ChiTietSDBD_TaiKhoan.Id</td></tr>
+      <tr><td class="mono">TKId / TK</td><td class="mono">TaiKhoanId · HeThongTaiKhoan.SoHieuTaiKhoan</td></tr>
+      <tr><td>Chiều phân tích</td><td class="mono">VuViecId · DonViId · DoiTuongTapHopChiPhiId · KhoanMucChiPhiId</td></tr>
+      <tr><td>Để trống</td><td class="mono">TKDoiUngId · TKDoiUng · VatTuId · DoiTuongId · TKNganHangId · DonHangId · HopDongId · KheUocId · DienGiai</td></tr>
+      <tr><td>Khi xóa số dư</td><td>Xóa <b>cứng</b> bút toán — ngoại lệ có chủ đích của <span class="chip c-br">BR29.1</span></td></tr>
+      <tr><td>Bỏ ghi sổ</td><td>Không có — <span class="chip c-br">BR42</span> không áp dụng</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><span class="chip c-br">BR36</span> chung vẫn giữ: không gộp bút toán. Hai dòng chi tiết cùng tài khoản vẫn sinh hai bản ghi sổ riêng, phân biệt bằng chiều phân tích và <span class="f">STTDongChiTiet</span>.</p>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — UC nhập Excel cơ bản &amp; đầy đủ</span>
+  <h2>Nhập Excel: ba bước tuyến tính, quay lui không mất dữ liệu</h2>
+  <p class="lede">Hai use case "cơ bản" và "đầy đủ" dùng <strong>chung một popup</strong>. Không có bước nhận diện loại file — cấu trúc dữ liệu nhập vào do <em>các cột người dùng đã ghép</em> quyết định, hai file mẫu chỉ là hai bộ cột gợi ý.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Nút Nhập excel — quyền Import"]) --> T1["<b>TAB 1</b><br/>Chọn file · checkbox ghi đè"]
+    T1 -- "Tiếp theo — tìm dòng tiêu đề" --> T2["<b>TAB 2</b><br/>Ghép cột"]
+    T2 -- "Quay lại — giữ file đã chọn" --> T1
+    T2 -- "Tiếp theo — validate ghép cột" --> T3["<b>TAB 3</b><br/>Kiểm tra dữ liệu"]
+    T3 -- "Quay lại — giữ cấu hình ghép" --> T2
+    T3 -- "Xác nhận lưu" --> OK(["Lưu tất cả · MSG_104"]):::ok
+    T1 -- "Tải file mẫu" --> M["Mau_SoDuTaiKhoan_CoBan.xlsx<br/>Mau_SoDuTaiKhoan_DayDu.xlsx"]
+    T3 -- "Tải file lỗi" --> L["Bản sao file gốc, thêm cột<br/>Chi tiết lỗi viết chữ đỏ"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Quay lại là an toàn, đổi file thì không.</b> Quay về Tab 1 rồi <em>chọn file khác</em> và bấm Tiếp theo sẽ xóa sạch cấu hình ghép cột đang có trên màn hình và chạy lại auto-map từ đầu.</figcaption>
+  </figure>
+
+  <h3>Tab 1 — nhận diện dòng tiêu đề</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Chọn hoặc kéo thả file xlsx / xls"]) --> B{"Dung lượng ≤ 20 MB?"}
+    B -- "Vượt" --> X1["MSG_230 · chọn file khác"]:::err
+    B -- "Đạt" --> C["Enable nút Tiếp theo"]
+    C --> D["Duyệt 20 dòng đầu của sheet 1"]
+    D --> E{"Điểm khớp tiêu đề từng dòng"}
+    E -- "Có dòng đạt ≥ 2 ô khớp" --> E1["Lấy dòng điểm cao nhất<br/>đồng điểm thì lấy dòng ở trên"]
+    E -- "Không dòng nào đạt ngưỡng" --> E2{"Có dòng nào ≥ 2 ô không trống?"}
+    E2 -- "Có" --> E3["Lấy dòng đầu tiên như vậy<br/>người dùng tự ghép toàn bộ cột"]
+    E2 -- "Không · file rỗng · file hỏng" --> X2["MSG_210 · giữ nguyên Tab 1"]:::err
+    E1 --> F["Trích danh sách cột trên tệp<br/>trùng tên thì kèm ký hiệu cột"]
+    E3 --> F
+    F --> G(["Sang Tab 2 · chạy auto-map"])
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Ngưỡng 2 ô khớp là để tránh chọn nhầm dòng ghi chú.</b> Một dòng "Ghi chú: …" có thể tình cờ khớp đúng một từ khóa của cột Diễn giải; đòi tối thiểu hai ô khớp loại được tình huống đó. Tab 1 <b>không</b> chặn vì thiếu cột bắt buộc — việc đó để Tab 2 kiểm sau khi người dùng đã có cơ hội ghép tay.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — Tab 2</span>
+  <h2>Ghép cột: ba lớp auto-map và ba cửa chặn</h2>
+  <p class="lede">Auto-map chạy ba lớp và <strong>dừng ở lớp đầu tiên cho kết quả</strong>. Cột nào không khớp thì để <em>Chưa ghép</em> — hệ thống cố tình không dùng so khớp gần đúng.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Vào Tab 2"]) --> B["Chuẩn hóa tên cột hai phía:<br/>bỏ dấu · chữ thường · bỏ ký tự thừa"]
+    B --> C{"Auto-map ba lớp, dừng ở lớp đầu"}
+    C -- "Lớp 1" --> C1["Cấu hình đã lưu ở LocalStorage<br/>chỉ dùng nếu tên cột có trong file"]
+    C -- "Lớp 2" --> C2["Khớp chính xác sau chuẩn hóa"]
+    C -- "Lớp 3" --> C3["Bảng từ khóa đồng nghĩa"]
+    C1 --> D["Cột không khớp để Chưa ghép<br/>không so khớp gần đúng"]
+    C2 --> D
+    C3 --> D
+    D --> E(["Chỉnh tay rồi bấm Tiếp theo"])
+    E --> V1{"Đã ghép Tài khoản và Loại tiền?"}
+    V1 -- "Thiếu" --> X1["MSG_240 · dừng ở Tab 2"]:::err
+    V1 -- "Đủ" --> V2{"Đã ghép ≥ 1 cột số dư?"}
+    V2 -- "Chưa" --> X2["MSG_242"]:::err
+    V2 -- "Rồi" --> V3{"Một cột Excel ghép cho 2 cột?"}
+    V3 -- "Có" --> X3["MSG_241"]:::err
+    V3 -- "Không" --> V4{"Đã sửa tay ở Tab 3<br/>rồi đổi ghép cột?"}
+    V4 -- "Có" --> C4{"MSG_244 — đọc lại từ file?"}
+    C4 -- "Không" --> C5["Giữ nguyên Tab 2"]:::warn
+    C4 -- "Có" --> F["Bỏ các chỉnh sửa tay"]
+    V4 -- "Không" --> F
+    F --> G["Đọc từ dòng Header Row + 1<br/>chỉ đọc cột đã ghép · bỏ dòng trống"]
+    G --> H["Lưu cấu hình ghép cột cho lần sau"]
+    H --> I(["Sang Tab 3"])
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Chặn "chưa ghép cột số dư nào" ngay tại Tab 2 là có chủ đích.</b> Không ghép cột số dư nào thì mọi dòng đều vi phạm quy tắc "ít nhất một số dư khác 0" — báo <span class="chip c-msg">MSG_242</span> ở đây tốt hơn là để người dùng sang Tab 3 rồi thấy toàn bộ lưới đỏ.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột trên phần mềm</th><th>Bắt buộc ghép</th><th>Vai trò khi đọc dữ liệu</th></tr></thead>
+    <tbody>
+      <tr><td>Tài khoản · Loại tiền</td><td><span class="chip c-msg">bắt buộc</span></td><td>Khóa nhận diện bản ghi, luôn hiển thị trên lưới Tab 3</td></tr>
+      <tr><td>Dư Nợ · Dư Nợ quy đổi · Dư Có · Dư Có quy đổi</td><td><span class="chip c-warn">ít nhất một</span></td><td>Thiếu cả bốn thì chặn tại Tab 2</td></tr>
+      <tr><td>Đối tượng THCP · Đơn vị · Khoản mục chi phí · Vụ việc</td><td><span class="chip c-perm">tùy chọn</span></td><td>Có ghép hay không quyết định dòng là chi tiết hay tổng hợp</td></tr>
+      <tr><td>Diễn giải</td><td><span class="chip c-perm">tùy chọn</span></td><td>Chỉ lưu được trên dòng chi tiết</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Cấu hình ghép cột được nhớ lại theo <em>tên cột</em> (không theo vị trí), phạm vi từng người dùng · từng chức năng · từng trình duyệt, lưu ở LocalStorage. File mới có nhiều cột trùng tên với cấu hình cũ thì cặp đó bị bỏ qua an toàn, không đoán theo vị trí.</p>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — Tab 3 · BR4 · BR7</span>
+  <h2>Tab 3: phân loại từng dòng rồi lưu tất cả hoặc không lưu gì</h2>
+  <p class="lede">Lưới Tab 3 giữ nguyên từng dòng của file để người dùng đối chiếu. Việc gom nhóm chỉ xảy ra <strong>lúc bấm Xác nhận lưu</strong>, và cách gom phụ thuộc vào việc mỗi dòng có điền đối tượng chi tiết hay không.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Mỗi dòng trên lưới Tab 3"] --> B{"Có điền ≥ 1 đối tượng chi tiết?"}
+    B -- "Có" --> C1["Dòng số dư CHI TIẾT"]
+    B -- "Không" --> C2["Dòng số dư TỔNG HỢP"]
+    C1 --> D["Gom theo Tài khoản + Loại tiền"]
+    C2 --> D
+    D --> E{"Nhóm gồm loại dòng nào?"}
+    E -- "Chỉ dòng tổng hợp" --> A1["<b>Trường hợp A</b><br/>Mỗi dòng một bản ghi Master<br/>Không sinh dòng chi tiết nào"]
+    E -- "Chỉ dòng chi tiết" --> B1["<b>Trường hợp B</b><br/>Gom nhóm rồi đối trừ theo BR7<br/>Master + toàn bộ dòng chi tiết"]
+    E -- "Trộn cả hai loại" --> C3["<b>Trường hợp C</b><br/>MSG_243 trên mọi dòng của nhóm"]:::err
+    A1 --> F1["Trùng tổ hợp giữa các dòng lưới<br/>→ MSG_206 cho mọi dòng trùng"]
+    A1 --> F3["Cột Diễn giải không được lưu"]
+    B1 --> F2["Nhiều dòng cùng tổ hợp là hợp lệ<br/>chỉ kiểm trùng đối tượng → MSG_208"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Dòng trống đối tượng không phải là dòng lỗi.</b> <span class="chip c-msg">MSG_207</span> "phải chọn ít nhất 1 đối tượng" <b>không</b> áp dụng cho nhập Excel — nó chỉ dành cho lưới Detail nhập tay ở màn Thêm mới / Chỉnh sửa. Điều bị cấm ở đây là <em>khai trộn</em> hai cách trong cùng một tổ hợp.</figcaption>
+  </figure>
+
+  <h3>Chuỗi lưu — tất cả hoặc không gì cả</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Bấm Xác nhận lưu — nút luôn enable"]) --> A{"Còn dòng Không hợp lệ?"}
+    A -- "Có" --> X1["MSG_211 · giữ nguyên lưới"]:::err
+    A -- "100% hợp lệ" --> B["Mở một giao dịch duy nhất"]
+    B --> C{"Tổ hợp đã có trong CSDL?"}
+    C -- "Chưa có" --> D1["Thêm mới bản ghi Master"]
+    C -- "Đã có · KHÔNG tích ghi đè" --> X2["MSG_206 cho dòng hoặc cả nhóm"]:::err
+    C -- "Đã có · CÓ tích ghi đè" --> D2["Cập nhật đè Master<br/>xóa sạch dòng chi tiết cũ — BR7"]
+    D1 --> E["Ghi chi tiết theo trường hợp A / B"]
+    D2 --> E
+    E --> F["Chuẩn hóa mã theo danh mục<br/>usd lưu thành USD — BR10"]
+    F --> G["Sinh lại bút toán Sổ cái — mục 06"]
+    G --> H{"Lỗi hệ thống?"}
+    H -- "Có" --> X3["Hủy toàn bộ · MSG_003<br/>không bản ghi nào được lưu"]:::err
+    H -- "Không" --> OK(["MSG_104 · đóng popup<br/>tải lại danh sách"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Checkbox ghi đè chỉ tha cho trùng với cơ sở dữ liệu.</b> Trùng giữa hai dòng <em>trong cùng file</em> ở Trường hợp A luôn là lỗi <span class="chip c-msg">MSG_206</span> — tích ghi đè không bỏ qua được kiểm tra này.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Ba việc lưới Tab 3 làm ngay khi người dùng gõ</span>
+    <p><strong>Validate real-time:</strong> sửa ô là chạy lại toàn bộ quy tắc, cập nhật cột Trạng thái và Chi tiết lỗi — kết hợp bộ lọc <em>Không hợp lệ</em> thì dòng vừa sửa đúng sẽ tự biến khỏi danh sách.<br>
+    <strong>Đồng bộ quy đổi:</strong> loại tiền là đồng tiền hạch toán thì sửa số gốc kéo theo số quy đổi <span class="chip c-br">BR5</span>, mọi giá trị quy đổi trong file bị bỏ qua.<br>
+    <strong>Hiển thị nguyên trạng:</strong> lưới giữ đúng chữ hoa/thường của file gốc để đối chiếu; chuẩn hóa chỉ xảy ra lúc lưu <span class="chip c-br">BR10</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — UC_SoDuBanDauTK_ChinhSua</span>
+  <h2>Chỉnh sửa: khóa định danh, ghi lại toàn bộ bút toán</h2>
+  <p class="lede">Form chỉnh sửa dùng lại nguyên bộ quy tắc của Thêm mới, khác đúng hai chỗ: <span class="f">Tài khoản</span> và <span class="f">Loại tiền</span> bị khóa, và bút toán cũ bị dọn sạch trước khi sinh lại.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Sửa — quyền Edit"]) --> B{"Nguồn gốc bản ghi — BR5"}
+    B -- "Từ KH · NCC · NV · TKNH" --> B1["Điều hướng màn danh sách nguồn"]
+    B -- "Tài khoản cha" --> B2["MSG_209"]:::err
+    B -- "Nhập trực tiếp" --> C["Mở popup Chỉnh sửa<br/>Tài khoản và Loại tiền bị khóa"]
+    C --> D["Sửa số dư Master và lưới Detail"]
+    D --> E(["Bấm Lưu"])
+    E --> F{"Bộ kiểm tra như Thêm mới — mục 04"}
+    F -- "Vi phạm" --> X["Báo lỗi tương ứng · giữ form"]:::err
+    F -- "Đạt" --> G["Cập nhật SoDuBanDauTaiKhoan<br/>+ ChiTietSDBD_TaiKhoan"]
+    G --> H["Xóa hết bút toán cũ của bản ghi<br/>sinh lại theo dữ liệu mới<br/>giữ nguyên số chứng từ"]
+    H --> OK(["MSG_102 · đóng popup · refresh"]):::ok
+    C -- "Bấm Hủy khi form đã đổi" --> Q{"MSG_403 — đóng không lưu?"}
+    Q -- "Có" --> Q1["Đóng popup, bỏ mọi thay đổi"]
+    Q -- "Không" --> Q2["Giữ nguyên màn hình"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Xóa rồi sinh lại, không cập nhật tại chỗ.</b> Người dùng có thể thêm hoặc bớt dòng chi tiết trong lần sửa, nên không có cách nào ánh xạ một - một bút toán cũ sang mới; dọn sạch rồi ghi lại là cách duy nhất để sổ khớp lại với số dư vừa sửa.</figcaption>
+  </figure>
+  <p>Vì <span class="f">Tài khoản</span> và <span class="f">Loại tiền</span> bị khóa nên cửa kiểm trùng <span class="chip c-msg">MSG_206</span> ở màn này chỉ còn ý nghĩa với dữ liệu cũ; các cửa còn lại (<span class="chip c-msg">202</span> · <span class="chip c-msg">203</span> · <span class="chip c-msg">207</span> · <span class="chip c-msg">208</span> · <span class="chip c-msg">228</span> · <span class="chip c-msg">401</span>) vẫn chạy đủ.</p>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — UC_SoDuBanDauTK_Xoa</span>
+  <h2>Xóa: ba câu xác nhận, sáu đường xóa dữ liệu</h2>
+  <p class="lede">Nút Xóa ở màn này chạm tới bảng của <em>phân hệ khác</em>. Câu xác nhận phải nói đúng phạm vi ảnh hưởng, và thứ tự xóa luôn là chi tiết trước, master sau.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Xóa — quyền Delete"]) --> B{"Nguồn gốc bản ghi — BR2"}
+    B -- "Nhập trực tiếp" --> C1["MSG_402"]
+    B -- "Từ KH · NCC · NV · TKNH" --> C2["MSG_404"]
+    B -- "Tài khoản cha" --> C3["MSG_405"]
+    C1 --> D{"Người dùng xác nhận?"}
+    C2 --> D
+    C3 --> D
+    D -- "Hủy" --> D1["Đóng popup · không xóa gì"]
+    D -- "Xác nhận" --> E{"Xóa ở bảng nào?"}
+    E -- "Nhập trực tiếp" --> E1["ChiTietSDBD_TaiKhoan<br/>rồi SoDuBanDauTaiKhoan"]
+    E -- "Khách hàng" --> E2["ChiTietSDBD_KH_HoaDon<br/>rồi SoDuBanDauKhachHang"]
+    E -- "Nhà cung cấp" --> E3["ChiTietSDBD_NCC_HoaDon<br/>rồi SoDuBanDauNCC"]
+    E -- "Nhân viên" --> E4["SoDuBanDauNhanVien<br/>không có bảng chi tiết"]
+    E -- "TK ngân hàng" --> E5["SoDuBanDauTKNganHang<br/>không có bảng chi tiết"]
+    E -- "Tài khoản cha" --> E6["Đệ quy mọi TK con cấp lá<br/>theo đúng nguồn từng bản ghi"]
+    E1 --> F["Xóa CỨNG bút toán sinh từ bản ghi<br/>cùng giao dịch với việc xóa số dư"]
+    E2 --> F
+    E3 --> F
+    E4 --> F
+    E5 --> F
+    E6 --> F
+    F --> G{"Có lỗi khi xóa?"}
+    G -- "Có" --> X["MSG_003 · rollback toàn bộ"]:::err
+    G -- "Không" --> OK(["MSG_103 · refresh danh sách"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Đây là ngoại lệ được ghi rõ của chính sách xóa mềm.</b> <span class="chip c-br">BR29.1</span> bắt mọi dữ liệu chỉ được xóa mềm; số dư đầu kỳ được miễn vì chưa phải nghiệp vụ phát sinh, và để lại dòng xóa mềm sẽ làm sai số dư đầu kỳ trên báo cáo.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — BR7 màn Danh sách</span>
+  <h2>Cảnh báo lệch số dư với các phân hệ khai đầu kỳ khác</h2>
+  <p class="lede">Vật tư, tài sản cố định, công cụ dụng cụ và chi phí trả trước đều khai đầu kỳ ở màn riêng nhưng phải lên Sổ cái qua chính số dư tài khoản ở đây. Hệ thống đối chiếu và cảnh báo, <strong>không tự sửa và không chặn lưu</strong>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Tải xong lưới danh sách"] --> B{"Bộ lọc Loại tiền đang là gì?"}
+    B -- "Ngoại tệ" --> B1["Không xét cảnh báo"]
+    B -- "Tổng hợp hoặc ĐTHT" --> C{"Phân hệ nào có số liệu đầu kỳ?"}
+    C -- "Vật tư có Giá trị tồn" --> C1["SUM GiaTriTon so với<br/>SUM Dư Nợ TK 151…157"]
+    C -- "TSCĐ SoDuDauKy = true" --> C2["Nguyên giá theo TK nguyên giá<br/>Khấu hao theo TK khấu hao"]
+    C -- "CCDC hoặc CPTT đầu kỳ" --> C3["Giá trị còn lại gộp theo<br/>tài khoản chờ phân bổ"]
+    C1 --> D{"Có chênh lệch?"}
+    C2 --> D
+    C3 --> D
+    D -- "Khớp" --> D1["Không hiện cảnh báo"]
+    D -- "Lệch" --> D2["Hiện cảnh báo dưới lưới<br/>liệt kê TK lệch, thứ tự tăng dần"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Cảnh báo chỉ chạy ở hai chế độ lọc.</b> Ở chế độ lọc ngoại tệ, số dư trên lưới là nguyên tệ nên không so được với giá trị đầu kỳ của các phân hệ kia — vì vậy toàn bộ khối cảnh báo bị tắt.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Phân hệ</th><th>Điều kiện kích hoạt</th><th>Vế so sánh bên kia</th><th>Tài khoản đối chiếu</th></tr></thead>
+    <tbody>
+      <tr><td>Vật tư<br>PMKT-E-10984</td><td class="mono">GiaTriTon &gt; 0</td><td class="mono">SUM(GiaTriTon)</td><td>Dư Nợ các TK 151 · 152 · 153 · 155 · 156 · 157</td></tr>
+      <tr><td>TSCĐ — nguyên giá</td><td class="mono">SoDuDauKy = true<br>NguyenGia &gt; 0</td><td class="mono">SUM(NguyenGia)</td><td>Gộp theo <span class="mono">TaiKhoanNguyenGiaId</span>, xét theo tính chất TK</td></tr>
+      <tr><td>TSCĐ — khấu hao</td><td class="mono">SUM(GiaTriDaKhauHao) &gt; 0</td><td class="mono">SUM(GiaTriDaKhauHao)</td><td>Gộp theo <span class="mono">TaiKhoanKhauHaoId</span></td></tr>
+      <tr><td>CCDC và CPTT</td><td class="mono">GiaTriConLai &gt; 0<br>SoTienPBConLai &gt; 0</td><td>Cộng dồn cả hai nguồn theo cùng tài khoản</td><td><span class="mono">TaiKhoanChoPhanBoId</span> · <span class="mono">TaiKhoanChoPBId</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Nhiều cảnh báo có thể cùng hiện nếu nhiều phân hệ lệch; mỗi cảnh báo chỉ xuất hiện khi có chênh lệch thực tế. Đây là <span class="chip c-br">BR16</span> chung — cảnh báo nghiệp vụ, không phải lỗi validate.</p>
+</section>
+
+<!-- ============ 13 ============ -->
+<section id="s13">
+  <span class="snum">13 — Tra cứu</span>
+  <h2>Điều kiện chặn và thông báo tương ứng</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> trong các sơ đồ trên. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-10931_</span>. Cột phạm vi cho biết quy tắc chạy ở màn nhập tay, ở lưới nhập Excel, hay cả hai.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện chặn</th><th class="mono">Mã</th><th>Phạm vi</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="6">Định danh bản ghi</td><td>Bỏ trống Tài khoản</td><td class="mono">236</td><td>Cả hai</td></tr>
+      <tr><td>Bỏ trống Loại tiền</td><td class="mono">237</td><td>Cả hai</td></tr>
+      <tr><td>Tài khoản không tồn tại</td><td class="mono">231</td><td>Nhập Excel</td></tr>
+      <tr><td>Tài khoản là tài khoản cha</td><td class="mono">209</td><td>Cả hai · cả nút Sửa ở danh sách</td></tr>
+      <tr><td>Loại tiền không tồn tại</td><td class="mono">227</td><td>Nhập Excel</td></tr>
+      <tr><td>TK không cấu hình hạch toán ngoại tệ</td><td class="mono">217</td><td>Cả hai</td></tr>
+      <tr><td rowspan="4">Tài khoản thuộc phân hệ khác</td><td>Đối tượng liên quan = Khách hàng</td><td class="mono">213</td><td>Nhập Excel <span class="chip c-warn">màn tay: đổi thành link</span></td></tr>
+      <tr><td>Đối tượng liên quan = Nhà cung cấp</td><td class="mono">214</td><td>Nhập Excel</td></tr>
+      <tr><td>Đối tượng liên quan = Nhân viên</td><td class="mono">215</td><td>Nhập Excel</td></tr>
+      <tr><td>Bật cờ theo dõi TK ngân hàng</td><td class="mono">216</td><td>Nhập Excel</td></tr>
+      <tr><td rowspan="5">Giá trị số dư</td><td>Cả 4 trường số dư bằng 0</td><td class="mono">202</td><td>Cả hai</td></tr>
+      <tr><td>Nhập đồng thời Dư Nợ và Dư Có trên một dòng</td><td class="mono">203</td><td>Cả hai</td></tr>
+      <tr><td>TK tính chất Dư Nợ mà có Dư Có khác 0</td><td class="mono">218</td><td>Nhập Excel <span class="chip c-warn">màn tay: khóa ô</span></td></tr>
+      <tr><td>TK tính chất Dư Có mà có Dư Nợ khác 0</td><td class="mono">219</td><td>Nhập Excel <span class="chip c-warn">màn tay: khóa ô</span></td></tr>
+      <tr><td>Quy đổi bằng 0 hoặc ngược dấu nguyên tệ</td><td class="mono">228</td><td>Cả hai</td></tr>
+      <tr><td rowspan="7">Đối tượng chi tiết và trùng lặp</td><td>Dòng Detail không chọn đối tượng nào</td><td class="mono">207</td><td>Chỉ màn nhập tay</td></tr>
+      <tr><td>Trùng tổ hợp đối tượng chi tiết</td><td class="mono">208</td><td>Cả hai</td></tr>
+      <tr><td>Trùng tổ hợp Tài khoản + Loại tiền</td><td class="mono">206</td><td>Cả hai</td></tr>
+      <tr><td>Khai trộn dòng tổng hợp và dòng chi tiết</td><td class="mono">243</td><td>Chỉ nhập Excel</td></tr>
+      <tr><td>Đối tượng THCP không tồn tại</td><td class="mono">232</td><td>Chỉ nhập Excel</td></tr>
+      <tr><td>Đơn vị · Vụ việc không tồn tại</td><td class="mono">233 · 234</td><td>Chỉ nhập Excel</td></tr>
+      <tr><td>Khoản mục chi phí không tồn tại</td><td class="mono">235</td><td>Chỉ nhập Excel</td></tr>
+      <tr><td rowspan="5">Tiến trình nhập Excel</td><td>File vượt 20 MB</td><td class="mono">230</td><td>Tab 1</td></tr>
+      <tr><td>Không xác định được dòng tiêu đề</td><td class="mono">210</td><td>Tab 1</td></tr>
+      <tr><td>Chưa ghép cột bắt buộc</td><td class="mono">240</td><td>Tab 2</td></tr>
+      <tr><td>Một cột Excel ghép cho nhiều cột phần mềm</td><td class="mono">241</td><td>Tab 2</td></tr>
+      <tr><td>Chưa ghép cột số dư nào</td><td class="mono">242</td><td>Tab 2</td></tr>
+      <tr><td rowspan="5">Xác nhận trước khi làm</td><td>Lưới còn dòng lỗi lúc Xác nhận lưu</td><td class="mono">211</td><td>Tab 3</td></tr>
+      <tr><td>Đổi ghép cột sau khi đã sửa tay lưới</td><td class="mono">244</td><td>Tab 2</td></tr>
+      <tr><td>Nhập số dư ở cả Master và Detail</td><td class="mono">401</td><td>Màn nhập tay</td></tr>
+      <tr><td>Đóng form khi đã có thay đổi</td><td class="mono">403</td><td>Màn nhập tay</td></tr>
+      <tr><td>Xóa bản ghi trực tiếp · nguồn khác · TK cha</td><td class="mono">402 · 404 · 405</td><td>Màn Xóa</td></tr>
+      <tr><td>Mọi màn</td><td>Không có quyền · lỗi hệ thống · không có dữ liệu</td><td class="mono">002 · 003 · 001</td><td>Cả hai</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">SoDuTaiKhoan.View</td><td>Menu và màn danh sách cây</td></tr>
+      <tr><td class="mono">SoDuTaiKhoan.View.Detail</td><td>Icon Xem · popup Xem chi tiết read-only</td></tr>
+      <tr><td class="mono">SoDuTaiKhoan.Create</td><td>Nút Thêm mới · Lưu · Lưu và thêm mới · Thêm/Xóa dòng chi tiết</td></tr>
+      <tr><td class="mono">SoDuTaiKhoan.Edit</td><td>Nút Sửa ở danh sách và ở popup Xem chi tiết</td></tr>
+      <tr><td class="mono">SoDuTaiKhoan.Delete</td><td>Nút Xóa · nút Xác nhận trong popup xác nhận xóa</td></tr>
+      <tr><td class="mono">SoDuTaiKhoan.Import</td><td>Nút Nhập excel · hai link tải file mẫu</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Không có quyền thì <strong>ẩn nút</strong>, không disable <span class="chip c-br">BR25</span>; vào thẳng bằng URL thì trả <span class="chip c-msg">MSG_002</span>. Epic này không có quyền Ghi sổ / Bỏ ghi sổ vì số dư đầu kỳ không có hai thao tác đó.</p>
+
+  <h3>Điểm tài liệu BA chưa quy định</h3>
+  <ul>
+    <li>Popup <b>Xem chi tiết</b> chỉ đặc tả cho bản ghi nhập trực tiếp (Master + lưới <span class="f">ChiTietSDBD_TaiKhoan</span>); tài liệu chưa nói hiển thị gì khi mở trên dòng tổng hợp từ phân hệ khác hoặc trên dòng tài khoản cha.</li>
+    <li>Nút <b>Lưu và thêm mới</b> được mô tả là "reset form" nhưng chưa nói có giữ lại Tài khoản / Loại tiền vừa nhập hay xóa trắng cả hai.</li>
+    <li>Lưới Tab 3 chưa có quy định về <b>giới hạn số dòng</b> của một lần import và cách phân trang lưới kiểm tra.</li>
+    <li>Cảnh báo lệch phân hệ chưa nói rõ được tính lại vào lúc nào ngoài thời điểm tải lưới (ví dụ sau khi lưu một bản ghi mới trong cùng phiên).</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-10931 · Số dư ban đầu Tài khoản</span>
+  <span>Dựng từ 9 UC · 9 Activity Diagram · 8 tài liệu màn hình · 42 mã MSG</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

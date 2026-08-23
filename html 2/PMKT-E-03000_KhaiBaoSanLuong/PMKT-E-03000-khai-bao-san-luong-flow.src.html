@@ -1,0 +1,774 @@
+<title>Luồng Khai báo sản lượng</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-03000 · Phân hệ Kế toán TSCĐ</p>
+  <h1>Luồng xử lý Khai báo sản lượng</h1>
+  <p>Toàn bộ luồng nghiệp vụ của epic Khai báo sản lượng — từ danh sách kỳ đã khai báo, nạp danh sách TSCĐ theo bộ lọc ba điều kiện, nhập sản lượng tháng, chuỗi kiểm tra khi lưu, đến chỉnh sửa, xóa và mối ràng buộc hai chiều với nghiệp vụ Tính khấu hao TSCĐ. Mỗi sơ đồ bám đúng Activity Diagram và BR trong bộ tài liệu BA.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 5 use case · 5 màn hình · 3 ma trận ẩn/hiện</span>
+    <span><b>Entity gốc:</b> fa_khai_bao_san_luong_tai_san_co_dinh</span>
+    <span><b>Liên đới:</b> PMKT-E-02600 Tính khấu hao TSCĐ</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Bản đồ vòng đời kỳ</a></li>
+    <li><a href="#s1"><span>01</span>Xem danh sách</a></li>
+    <li><a href="#s2"><span>02</span>Vùng chi tiết dưới lưới</a></li>
+    <li><a href="#s3"><span>03</span>Thêm mới: nạp &amp; nhập</a></li>
+    <li><a href="#s4"><span>04</span>Thêm mới: chuỗi lưu</a></li>
+    <li><a href="#s5"><span>05</span>Trường dẫn xuất</a></li>
+    <li><a href="#s6"><span>06</span>Quan hệ dữ liệu</a></li>
+    <li><a href="#s7"><span>07</span>Chỉnh sửa</a></li>
+    <li><a href="#s8"><span>08</span>Xóa</a></li>
+    <li><a href="#s9"><span>09</span>Xem chi tiết</a></li>
+    <li><a href="#s10"><span>10</span>Ảnh hưởng tính khấu hao</a></li>
+    <li><a href="#s11"><span>11</span>Ma trận trạng thái trường</a></li>
+    <li><a href="#s12"><span>12</span>Tra cứu chặn &amp; quyền</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Bản đồ vòng đời một kỳ khai báo</h2>
+  <p class="lede">Khai báo sản lượng <strong>không phải chứng từ kế toán</strong>: không có số chứng từ, không ghi sổ, không sinh bút toán. Nhưng nó có đúng một bản lề khóa mọi thao tác — <em>kỳ khai báo đã được dùng để tính khấu hao hay chưa</em>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(( )) -- "Thêm mới — chọn Tháng, Năm" --> A
+    A["<b>ĐÃ KHAI BÁO</b><br/>Chưa dùng tính khấu hao<br/>Sửa · Xóa mở"]
+    B["<b>ĐÃ DÙNG TÍNH KH</b><br/>Bút toán khấu hao đã ghi sổ<br/>Khóa sửa · khóa xóa"]
+    D["<b>ĐÃ XÓA</b><br/>Xóa kèm toàn bộ dòng chi tiết"]
+    A -- "Tính khấu hao kỳ này ghi sổ" --> B
+    B -- "Bỏ ghi bút toán khấu hao" --> A
+    A -- "Xóa — kéo theo dòng chi tiết" --> D
+    B -. "không có đường trực tiếp" .-> D
+
+    classDef st fill:#ffffff,stroke:#2f6f8f,color:#16202b;
+    classDef gone fill:#faf8f3,stroke:#cdc7b9,color:#6f6a61;
+    class A,B st;
+    class D gone;
+</pre>
+    </div>
+    <figcaption><b>Việc tính khấu hao khóa kỳ khai báo, không phải ngược lại.</b> Nút Sửa và Xóa chỉ hiện khi kỳ chưa được dùng tính khấu hao. Muốn sửa hay xóa một kỳ đã tính khấu hao, phải sang màn Tính khấu hao TSCĐ bỏ ghi bút toán trước — hệ thống chặn cứng, không có đường tắt.</figcaption>
+  </figure>
+
+  <h3>Giá trị trên lưới đều là giá trị dẫn xuất</h3>
+  <p>Bảng cha chỉ lưu đúng bốn trường nghiệp vụ (<span class="f">Thang</span>, <span class="f">Nam</span>, <span class="f">TenantId</span>, <span class="f">ChiNhanhId</span>). Mọi con số người dùng thấy trên lưới đều tính lại từ bảng con.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Giá trị hiển thị</th><th class="mono">Nguồn</th><th>Công thức</th></tr></thead>
+    <tbody>
+      <tr><td>Số tài sản</td><td class="mono">dẫn xuất</td><td>Số dòng chi tiết trong kỳ</td></tr>
+      <tr><td>Tổng sản lượng</td><td class="mono">dẫn xuất</td><td>Tổng <span class="f">SanLuongThangNay</span> trong kỳ</td></tr>
+      <tr><td>SL đã khai báo</td><td class="mono">dẫn xuất</td><td>Tổng <span class="f">SanLuongThangNay</span> của TSCĐ đó ở các kỳ trước</td></tr>
+      <tr><td>SL còn lại</td><td class="mono">dẫn xuất</td><td>Theo cây quyết định ở <a href="#s5">mục 05</a> — có xét phiếu điều chỉnh</td></tr>
+      <tr><td>Tổng SL dự kiến</td><td class="mono">join TSCĐ</td><td>Lấy từ <span class="f">TaiSanCoDinh.TongSanLuong</span>, không lưu lặp</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Khoảng trống tài liệu</span>
+    <p><strong>Cột &quot;Trạng thái&quot; chưa có tập giá trị.</strong> UC_XemDanhSach liệt kê Trạng thái là một trong các thông tin chính của lưới và popup Xem chi tiết có trường Trạng thái, nhưng bảng trường của <span class="f">SCR_KhaiBaoSanLuong_DanhSach</span> không có cột này và không tài liệu nào định nghĩa enum của nó. Trang này vì thế mô tả trạng thái theo <em>điều kiện nghiệp vụ</em> (đã dùng tính KH hay chưa) chứ không theo một field trạng thái — đúng như tài liệu có, không tự đặt thêm.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — PMKT-U-03000</span>
+  <h2>Xem danh sách: màn điều phối mọi thao tác</h2>
+  <p class="lede">Màn <span class="f">SCR_KhaiBaoSanLuong_DanhSach</span> chỉ nạp các kỳ đã khai báo <strong>của năm tài chính hiện tại</strong> <span class="chip c-br">BR1</span>. Mọi nút trên dòng gác bởi cặp điều kiện <strong>quyền × đã dùng tính khấu hao</strong>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Mở chức năng Khai báo sản lượng"]) --> B{"Có quyền xem danh sách?"}
+    B -- Không --> B1["Ẩn hoàn toàn chức năng<br/>MSG_005 nếu cố truy cập"]:::err
+    B -- Có --> C["Nạp kỳ đã khai báo<br/>của năm tài chính hiện tại"]
+    C --> C1["Sắp xếp Ngày tạo mới nhất trước<br/>Phân trang mặc định 20 dòng"]
+    C1 --> D{"Có bản ghi nào?"}
+    D -- Không --> D1["MSG_301 — Không có dữ liệu"]:::warn
+    D -- Có --> E["Lưới: Tháng · Năm<br/>Số tài sản · Tổng sản lượng"]
+
+    E --> G1{{"Không gác trạng thái"}}
+    E --> G2{{"Gác theo đã dùng tính KH"}}
+    G1 --> A1["Thêm mới · Xem chi tiết<br/>Tìm kiếm theo Tháng, Năm"]
+    G1 --> A2["Export danh sách ra Excel"]
+    G2 -- "Chưa dùng tính KH" --> A3["Hiện Sửa · Hiện Xóa"]:::ok
+    G2 -- "Đã dùng tính KH" --> A4["Ẩn Sửa · Ẩn Xóa"]:::err
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Chỉ hai nút bị gác trạng thái.</b> Xem chi tiết, Tìm kiếm, Thêm mới và Export không phụ thuộc việc kỳ đã dùng tính khấu hao hay chưa — chỉ Sửa và Xóa bị ẩn <span class="chip c-br">BR2</span>. Theo <span class="chip c-br">BR25</span> đây là <em>ẩn nút</em>, không phải disable.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Điểm dễ sai</span>
+    <p><strong>Danh sách không hiện mọi kỳ đã khai báo.</strong> <span class="chip c-br">BR1</span> giới hạn phạm vi ở <em>năm tài chính hiện tại</em>; kỳ của năm trước không xuất hiện trên lưới dù bản ghi vẫn tồn tại và vẫn được dùng khi tính lũy kế &quot;SL đã khai báo&quot;. Tìm kiếm theo Tháng, Năm chạy <em>bên trong</em> phạm vi đó.</p>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — SCR_KhaiBaoSanLuong_DanhSach</span>
+  <h2>Vùng chi tiết dưới lưới: xem nhanh không cần mở popup</h2>
+  <p class="lede">Dưới lưới chính có một bảng chi tiết theo kỳ đang chọn. Cái bẫy nằm ở <strong>vùng click</strong>: cùng một dòng nhưng ba vùng khác nhau cho ba hành vi khác nhau.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    N0(["Chưa chọn dòng nào"]) --> N1["Không hiện bảng chi tiết"]
+    R(["Click trên một dòng của lưới"]) --> Z{"Click vào vùng nào?"}
+    Z -- "Cột Tháng — hyperlink" --> P1["Mở popup Xem chi tiết"]
+    Z -- "Icon cột Chức năng" --> P2["Chạy đúng chức năng đó<br/>Không đổi kỳ đang chọn"]
+    Z -- "Phần còn lại của dòng" --> P3["Đánh dấu dòng được chọn"]
+    P3 --> T["Hiện bảng chi tiết dưới lưới<br/>Nhãn kỳ khai báo ở góc phải"]
+    T --> T1["Tab Chi tiết sản lượng<br/>theo tài sản — chỉ xem"]
+    T --> T2["Tab Đính kèm — chỉ xem<br/>Ẩn thao tác thêm, xóa file"]
+    T1 --> F["Dòng tổng cộng 4 cột số<br/>Phân trang riêng 20 dòng"]
+    P3 -- "Chọn dòng khác" --> T
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class T1,T2 ok;
+</pre>
+    </div>
+    <figcaption><b>Click vào Tháng không bật bảng chi tiết.</b> Cột Tháng là hyperlink mở popup Xem chi tiết, cột Chức năng chỉ chạy chức năng — cả hai đều <em>không</em> đổi kỳ đang chọn ở bảng dưới. Chỉ phần thân dòng còn lại mới là vùng chọn kỳ.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột</th><th>Tab Chi tiết sản lượng theo tài sản</th><th class="mono">Loại</th></tr></thead>
+    <tbody>
+      <tr><td>STT</td><td>Số thứ tự dòng</td><td class="mono">hiển thị</td></tr>
+      <tr><td>Mã TSCĐ · Tên TSCĐ</td><td>Join theo <span class="f">TaiSanCoDinhId</span></td><td class="mono">join</td></tr>
+      <tr><td>Tổng sản lượng dự kiến</td><td>Công suất thiết kế của TSCĐ</td><td class="mono">join</td></tr>
+      <tr><td>SL đã khai báo</td><td>Tổng sản lượng các kỳ trước</td><td class="mono">dẫn xuất</td></tr>
+      <tr><td>Sản lượng kỳ này</td><td><span class="f">SanLuongThangNay</span> của kỳ đang chọn</td><td class="mono">lưu trữ</td></tr>
+      <tr><td>SL còn lại</td><td>Theo cây quyết định <a href="#s5">mục 05</a></td><td class="mono">dẫn xuất</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Bốn cột số cuối đều vào <strong>dòng tổng cộng</strong> ở footer bảng <span class="chip c-br">BR31</span>. Tab Đính kèm dùng thành phần chung <span class="f">SCR_FileDinhKem</span>, ở chế độ chỉ xem.</p>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — PMKT-U-03001 · phần nạp dữ liệu</span>
+  <h2>Thêm mới: chọn kỳ trước, danh sách tài sản tự nạp sau</h2>
+  <p class="lede">Người dùng <strong>không chọn tài sản</strong>. Chọn Tháng và Năm xong, hệ thống tự lọc và nạp toàn bộ TSCĐ thỏa ba điều kiện của <span class="chip c-br">BR1</span> vào lưới — mỗi tài sản một dòng, chỉ có đúng một ô nhập được.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Thêm mới trên màn Danh sách"]) --> B{"Có quyền tạo mới?"}
+    B -- Không --> B1["Nút Thêm mới vốn đã bị ẩn"]:::err
+    B -- Có --> C["Mở popup Thêm mới<br/>Tháng, Năm mặc định kỳ hiện tại"]
+    C --> D["Người dùng chọn Tháng và Năm"]
+    D --> E{"Lọc TSCĐ theo 3 điều kiện"}
+    E -- "Điều kiện 1" --> E1["Trạng thái = Hoạt động"]
+    E -- "Điều kiện 2" --> E2["PP khấu hao = Theo sản lượng"]
+    E -- "Điều kiện 3" --> E3["Ngày bắt đầu KH ≤ ngày cuối kỳ"]
+    E1 --> F{"Có tài sản nào thỏa?"}
+    E2 --> F
+    E3 --> F
+    F -- Không --> F1["MSG_302 — lưới rỗng<br/>Không có tài sản phù hợp"]:::warn
+    F -- Có --> G["Lưới: Mã · Tên · Tổng SL dự kiến<br/>SL đã khai báo · SL còn lại"]
+    G --> H["Nhập SL tháng này — mặc định 0<br/>Đây là ô duy nhất sửa được"]
+    H --> I{"Vượt ngưỡng sản lượng?"}
+    I -- Có --> I1["MSG_103 — cảnh báo, không chặn"]:::warn
+    I -- Không --> K(["Bấm Lưu hoặc Đóng"])
+    I1 --> K
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Ba điều kiện lọc phải thỏa đồng thời.</b> Thiếu một điều kiện là tài sản không lên lưới — và một TSCĐ khấu hao theo sản lượng không lên lưới sẽ kéo theo mức khấu hao bằng 0 ở màn Tính khấu hao (xem <a href="#s10">mục 10</a>). <span class="chip c-msg">MSG_302</span> là trạng thái rỗng của lưới, không phải lỗi chặn lưu.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Bốn cột chỉ đọc</span>
+    <p>Mã TSCĐ, Tên TSCĐ, Tổng SL dự kiến lấy bằng JOIN <span class="f">ChiTiet.TaiSanCoDinhId = TaiSanCoDinh.Id</span>; SL đã khai báo và SL còn lại là giá trị tính. <strong>Không lưu lặp lại mã, tên hay tổng sản lượng vào bảng chi tiết</strong> — bảng con chỉ giữ đúng hai trường nghiệp vụ: <span class="f">TaiSanCoDinhId</span> và <span class="f">SanLuongThangNay</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — PMKT-U-03001 · phần lưu</span>
+  <h2>Chuỗi lưu: sáu cửa chặn, một cửa cảnh báo</h2>
+  <p class="lede">Chuỗi kiểm tra khi Lưu đi tuần tự; chạm cửa nào là dừng ở cửa đó, popup giữ nguyên và <strong>không ghi gì vào cơ sở dữ liệu</strong> — kể cả bảng cha.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Bấm Lưu"]) --> V1{"Tháng và Năm đã chọn?"}
+    V1 -- Thiếu --> X1["MSG_106 · MSG_107<br/>Báo lỗi tại trường tương ứng"]:::err
+    V1 -- Đủ --> V2{"Kỳ này đã có khai báo?"}
+    V2 -- Có --> X2["Chặn theo BR4<br/>chưa có mã MSG riêng"]:::err
+    V2 -- Chưa --> V3{"Có dòng nào SL âm?"}
+    V3 -- Có --> X3["MSG_101 — phải ≥ 0"]:::err
+    V3 -- Không --> V4{"Có ít nhất 1 dòng SL lớn hơn 0?"}
+    V4 -- Không --> X4["MSG_102 — ít nhất 1 tài sản"]:::err
+    V4 -- Có --> V5{"Bút toán KH kỳ này đã ghi sổ?"}
+    V5 -- Có --> X5["Chặn khai báo<br/>Phải bỏ ghi bút toán khấu hao"]:::err
+    V5 -- Chưa --> W1["Ghi 1 dòng bảng kỳ khai báo<br/>Thang · Nam · TenantId"]
+    W1 --> W2["Ghi N dòng bảng chi tiết<br/>TaiSanCoDinhId · SanLuongThangNay"]
+    W2 --> W3{"Ghi dữ liệu thành công?"}
+    W3 -- Không --> X6["MSG_002 — lỗi hệ thống"]:::err
+    W3 -- Có --> OK(["MSG_001 · đóng popup<br/>quay về màn Danh sách"]):::ok
+
+    X1 --> R["Giữ nguyên popup · giữ dữ liệu<br/>Không ghi bản ghi nào"]:::warn
+    X2 --> R
+    X3 --> R
+    X4 --> R
+    X5 --> R
+    X6 --> R
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Cảnh báo vượt tổng sản lượng không nằm trong chuỗi này.</b> <span class="chip c-msg">MSG_103</span> bật ngay lúc nhập (mục 05), là cảnh báo mềm — người dùng vẫn Lưu được. Sáu nhánh đỏ ở trên mới là chặn cứng.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Chặn cứng chưa có mã MSG</span>
+    <p>Hai điều kiện chặn dưới đây có trong tài liệu BA nhưng <strong>chưa được cấp mã message</strong> trong <span class="f">6.messages.md</span>:</p>
+    <ul>
+      <li><span class="chip c-br">BR4</span> — không cho khai báo nếu Tháng/Năm đó đã có khai báo trước đó (trùng kỳ, theo <span class="chip c-br">BR19</span>).</li>
+      <li>Nguyên văn UC: &quot;<em>Bút toán khấu hao kỳ này đã được ghi sổ. Nếu bạn muốn khai báo sản lượng thì cần bỏ ghi bút toán khấu hao</em>&quot; — vừa cảnh báo vừa chặn.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — Trường dẫn xuất</span>
+  <h2>SL còn lại: hai nhánh, phiếu điều chỉnh thắng</h2>
+  <p class="lede">&quot;SL còn lại&quot; là trường khó nhất của epic. Nó <strong>không phải</strong> lúc nào cũng bằng hiệu của tổng sản lượng trừ lũy kế — một khi TSCĐ đã có phiếu điều chỉnh sản lượng, mốc gốc bị thay.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Một dòng TSCĐ trong kỳ khai báo"]) --> B{"TSCĐ đã có phiếu điều chỉnh<br/>sản lượng còn lại chưa?"}
+    B -- "Chưa có phiếu nào" --> C["SL còn lại =<br/>Tổng SL dự kiến − SL đã khai báo"]
+    B -- "Đã có phiếu" --> D["Lấy mốc theo phiếu<br/>điều chỉnh mới nhất"]
+    D --> D1["Các kỳ sau: SL còn lại =<br/>SL đã ĐC − SL khai báo sau ĐC"]
+    C --> E["SL đã khai báo = tổng<br/>SanLuongThangNay các kỳ trước"]
+    D1 --> E
+    E --> F["Cả hai đều là giá trị tính<br/>Không lưu vào bảng chi tiết"]
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class F ok;
+</pre>
+    </div>
+    <figcaption><b>Phiếu điều chỉnh mới nhất đặt lại mốc.</b> Nguồn phiếu là Tab &quot;Kết quả đánh giá (Sản lượng)&quot; của chứng từ Điều chỉnh TSCĐ <span class="f">PMKT-E-02569</span>. Sau điều chỉnh, lũy kế được tính từ mốc mới — không cộng dồn lại các kỳ trước ngày điều chỉnh.</figcaption>
+  </figure>
+
+  <h3>Cảnh báo vượt: mềm, không chặn</h3>
+  <p>Hai màn phát biểu điều kiện cảnh báo <strong>khác nhau về câu chữ</strong> nhưng dùng chung một mã message.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Nhập SL tháng này"]) --> B{"Đang ở màn nào?"}
+    B -- "Thêm mới — BR2" --> C{"SL tháng này + SL đã khai báo<br/>lớn hơn Tổng SL dự kiến?"}
+    B -- "Chỉnh sửa — BR2" --> D{"SL tháng này<br/>lớn hơn SL còn lại?"}
+    C -- Có --> W["MSG_103 — cảnh báo vượt"]:::warn
+    D -- Có --> W
+    C -- Không --> N["Không cảnh báo"]:::ok
+    D -- Không --> N
+    W --> W1["Vẫn cho Lưu — người dùng<br/>chọn Lưu hoặc sửa lại"]
+    N --> K(["Tiếp tục nhập dòng khác"])
+    W1 --> K
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hai công thức, một mã message.</b> Màn Thêm mới so &quot;SL nhập + lũy kế&quot; với Tổng SL dự kiến; màn Chỉnh sửa so trực tiếp &quot;SL nhập&quot; với SL còn lại. Khi TSCĐ chưa có phiếu điều chỉnh, hai cách cho cùng kết quả; khi đã có phiếu điều chỉnh thì <em>không</em> — tài liệu BA chưa thống nhất điểm này, đã ghi nhận ở ma trận ẩn/hiện màn Chỉnh sửa.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th>Bảng lưu</th><th>Ghi khi</th><th>Kiểu</th></tr></thead>
+    <tbody>
+      <tr><td>Tháng · Năm</td><td class="mono">bảng cha</td><td>Thêm mới; không sửa được về sau</td><td>lưu trữ</td></tr>
+      <tr><td>SL tháng này</td><td class="mono">bảng con</td><td>Thêm mới và Chỉnh sửa</td><td>lưu trữ</td></tr>
+      <tr><td>Mã · Tên · Tổng SL dự kiến</td><td class="mono">không lưu</td><td>—</td><td>join TSCĐ</td></tr>
+      <tr><td>SL đã khai báo · SL còn lại</td><td class="mono">không lưu</td><td>—</td><td>tính khi hiển thị</td></tr>
+      <tr><td>Số tài sản · Tổng sản lượng</td><td class="mono">không lưu</td><td>—</td><td>tổng hợp theo kỳ</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Số thập phân của mọi cột sản lượng hiển thị và làm tròn theo <span class="chip c-br">BR7</span>; ràng buộc <span class="f">SanLuongThangNay ≥ 0</span> có ngay ở tầng dữ liệu (LDM) chứ không chỉ ở UI.</p>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — Quan hệ dữ liệu</span>
+  <h2>Ba bảng, chỉ hai bảng bị ghi</h2>
+  <p class="lede">Epic động vào đúng hai bảng. Bảng TSCĐ chỉ đóng vai <strong>nguồn lọc và nguồn join</strong> — khai báo sản lượng không bao giờ ghi ngược vào tài sản.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    U(["Thao tác trên màn Khai báo sản lượng"]) --> K
+    K["<b>Kỳ khai báo</b> — bảng cha<br/>Thang · Nam<br/>TenantId · ChiNhanhId"]
+    K -- "1 kỳ — N dòng" --> CT["<b>Chi tiết khai báo</b> — bảng con<br/>TaiSanCoDinhId<br/>SanLuongThangNay"]
+    CT -. "N — 1 · chỉ đọc" .-> TS["<b>TSCĐ</b> — không bị ghi<br/>Mã · Tên · Tổng sản lượng<br/>PP khấu hao · Trạng thái"]
+    TS -. "nguồn lọc dòng lưới" .-> CT
+
+    classDef gone fill:#faf8f3,stroke:#cdc7b9,color:#6f6a61;
+    class TS gone;
+</pre>
+    </div>
+    <figcaption><b>Bảng con là nơi duy nhất giữ số liệu nghiệp vụ.</b> Bảng cha chỉ định danh kỳ; bảng TSCĐ chỉ cho mượn dữ liệu hiển thị. Sửa tên hay tổng sản lượng của TSCĐ về sau sẽ đổi luôn số hiển thị trên các kỳ khai báo cũ — đúng quy tắc &quot;không lưu lặp&quot;.</figcaption>
+  </figure>
+
+  <h3>Ma trận CRUD theo use case</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Bảng</th><th class="mono">U-03000<br/>Danh sách</th><th class="mono">U-03001<br/>Thêm mới</th><th class="mono">U-03002<br/>Chỉnh sửa</th><th class="mono">U-03003<br/>Chi tiết</th><th class="mono">U-03004<br/>Xóa</th></tr></thead>
+    <tbody>
+      <tr><td><span class="f">fa_khai_bao_san_luong_tai_san_co_dinh</span></td><td class="mono">R</td><td class="mono">C R</td><td class="mono">R</td><td class="mono">R</td><td class="mono">D</td></tr>
+      <tr><td><span class="f">…_chi_tiet</span></td><td class="mono">R</td><td class="mono">C R</td><td class="mono">C R U D</td><td class="mono">R</td><td class="mono">D</td></tr>
+      <tr><td><span class="f">fa_tai_san_co_dinh</span></td><td class="mono">—</td><td class="mono">R</td><td class="mono">R</td><td class="mono">R</td><td class="mono">—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><strong>Chỉnh sửa là use case duy nhất có đủ C·R·U·D trên bảng con</strong> — vì tập tài sản của kỳ được nạp lại theo bộ lọc, dòng mới thêm được, dòng cũ không còn thỏa điều kiện bị bỏ. Bảng cha ở use case này chỉ đọc: Tháng và Năm khóa cứng <span class="chip c-br">BR3</span> của màn Chỉnh sửa.</p>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — PMKT-U-03002</span>
+  <h2>Chỉnh sửa: cửa gác nằm trước cả khi mở form</h2>
+  <p class="lede">Khác với các epic chứng từ, kiểm tra &quot;đã dùng tính khấu hao&quot; chạy <strong>ngay lúc bấm nút Sửa</strong>, không đợi tới lúc Lưu — và nút vốn đã bị ẩn trên lưới nếu điều kiện không thỏa.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Chọn kỳ · bấm Sửa"]) --> B{"Có quyền chỉnh sửa?"}
+    B -- Không --> B1["Nút Sửa bị ẩn"]:::err
+    B -- Có --> C{"Kỳ đã dùng tính khấu hao?"}
+    C -- "Đã dùng" --> C1["MSG_202 — không cho chỉnh sửa"]:::err
+    C -- "Chưa dùng" --> D["Mở popup Chỉnh sửa<br/>Tháng, Năm readonly"]
+    D --> E["Sửa SL tháng này từng dòng<br/>Cảnh báo MSG_103 nếu vượt"]
+    E --> S{"Bấm Lưu hay Đóng?"}
+    S -- Đóng --> Z(["Về màn Danh sách, không lưu"])
+    S -- Lưu --> V1{"Dữ liệu bắt buộc đủ?"}
+    V1 -- Không --> X1["Báo lỗi tại trường tương ứng"]:::err
+    V1 -- Có --> V2{"Có dòng nào SL âm?"}
+    V2 -- Có --> X2["MSG_101"]:::err
+    V2 -- Không --> V3{"Có ít nhất 1 dòng SL lớn hơn 0?"}
+    V3 -- Không --> X3["MSG_102"]:::err
+    V3 -- Có --> W["Cập nhật bảng cha và bảng con"]
+    W --> W1{"Cập nhật thành công?"}
+    W1 -- Không --> X4["MSG_002"]:::err
+    W1 -- Có --> OK(["MSG_004 · về màn Danh sách"]):::ok
+
+    X1 --> R["Giữ nguyên popup"]:::warn
+    X2 --> R
+    X3 --> R
+    X4 --> R
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Không có nhánh kiểm trùng kỳ ở màn Chỉnh sửa.</b> <span class="chip c-br">BR4</span> chỉ áp cho Thêm mới; ở đây Tháng và Năm readonly nên kỳ không thể đổi, kiểm trùng thành vô nghĩa. Chuỗi validate còn lại giống hệt Thêm mới, chỉ khác thông báo thành công là <span class="chip c-msg">MSG_004</span>.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Hai lớp cùng một điều kiện</span>
+    <p>&quot;Chưa dùng tính khấu hao&quot; xuất hiện ba lần: <span class="chip c-br">BR2</span> màn Danh sách ẩn nút, điều kiện tiên quyết của popup Chỉnh sửa, và <span class="chip c-br">BR1</span> của chính màn Chỉnh sửa chặn bằng <span class="chip c-msg">MSG_202</span>. Lớp thứ ba là lớp bắt buộc phải có ở tầng API — theo <span class="chip c-br">BR25</span> ẩn nút không phải là biện pháp bảo vệ dữ liệu.</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — PMKT-U-03004</span>
+  <h2>Xóa: xác nhận trước, kiểm điều kiện sau</h2>
+  <p class="lede">Thứ tự trong Activity Diagram rất rõ: popup xác nhận hiện <strong>trước</strong>, việc kiểm &quot;đã dùng tính khấu hao&quot; chỉ chạy sau khi người dùng bấm Xóa trong popup.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Chọn kỳ · bấm Xóa"]) --> B{"Có quyền xóa?"}
+    B -- Không --> B1["Nút Xóa bị ẩn"]:::err
+    B -- Có --> C["Popup xác nhận<br/>Hiện Tháng - Năm · Số tài sản"]
+    C --> D{"Người dùng xác nhận?"}
+    D -- "Bấm Đóng" --> D1(["Đóng popup, không xóa"])
+    D -- "Bấm Xóa" --> E{"Kỳ đã dùng tính khấu hao?"}
+    E -- "Đã dùng" --> E1["MSG_201 — không cho xóa"]:::err
+    E1 --> E2["Muốn xóa phải bỏ ghi<br/>bút toán khấu hao kỳ đó"]:::warn
+    E -- "Chưa dùng" --> F["Xóa dòng bảng cha"]
+    F --> G["Xóa toàn bộ dòng bảng con"]
+    G --> H{"Xóa thành công?"}
+    H -- Không --> H1["MSG_002"]:::err
+    H -- Có --> OK(["MSG_003 · tải lại danh sách"]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Xóa là xóa cả cụm.</b> Một thao tác xóa gỡ đồng thời dòng kỳ khai báo và toàn bộ dòng chi tiết của kỳ đó — đúng quy tắc xóa lan của <span class="chip c-br">BR29</span>. Sau khi tải lại danh sách, giữ nguyên vị trí trang hiện tại theo <span class="chip c-br">BR29</span> mục 29.4.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Xóa mềm hay xóa vật lý?</span>
+    <p>Tài liệu epic chỉ ghi &quot;xóa bản ghi&quot;, không nói rõ. <span class="chip c-br">BR29</span> mục 29.1 quy định <strong>mọi dữ liệu được phép xóa đều chỉ xóa mềm</strong>, không xóa vật lý — nên hiện thực phải là soft delete kèm các trường hệ thống của <span class="chip c-br">BR46</span>. Đây là chỗ epic không nhắc lại BR chung chứ không phải ngoại lệ.</p>
+  </div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — PMKT-U-03003</span>
+  <h2>Xem chi tiết: đọc thuần, một nút duy nhất</h2>
+  <p class="lede">Popup chi tiết không có nút Sửa hay Xóa — mọi thao tác thay đổi đều xuất phát từ màn Danh sách. Đây là điểm lệch có chủ đích so với <span class="chip c-br">BR34</span>, đã được ghi nhận là điểm cần BA xác nhận.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Click cột Tháng hoặc icon Mắt"]) --> B{"Có quyền xem chi tiết?"}
+    B -- Không --> B1["Ẩn nút xem chi tiết"]:::err
+    B -- Có --> C{"Tìm thấy bản ghi?"}
+    C -- Không --> C1["MSG_303 — Không tìm thấy"]:::err
+    C -- Có --> D["Header: Tháng · Năm · Trạng thái"]
+    D --> E["Lưới TSCĐ đã khai báo trong kỳ"]
+    E --> F["Tính hiển thị SL đã khai báo<br/>và SL còn lại"]
+    F --> G["Toàn bộ trường readonly"]
+    G --> H(["Nút Đóng — không có hành động khác"])
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok  fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class G ok;
+</pre>
+    </div>
+    <figcaption><b>Popup chi tiết và tab dưới lưới hiển thị cùng một tập dữ liệu.</b> Tài liệu chỉ rõ tab &quot;Chi tiết sản lượng theo tài sản&quot; của màn Danh sách lấy nguồn từ chính danh sách tài sản của popup này — nên chỉ nên có một chỗ tính SL đã khai báo và SL còn lại.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — Liên đới PMKT-E-02600</span>
+  <h2>Ảnh hưởng tới tính khấu hao: phụ thuộc hai chiều</h2>
+  <p class="lede">Khai báo sản lượng tồn tại chỉ vì một lý do — làm <strong>đầu vào cho mức khấu hao tháng</strong> của TSCĐ khấu hao theo sản lượng. Chiều ngược lại, việc đã ghi sổ bút toán khấu hao lại khóa chính kỳ khai báo đó.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Kỳ khai báo sản lượng<br/>SanLuongThangNay theo TSCĐ"] -- "đầu vào" --> B["Màn Tính khấu hao TSCĐ<br/>PMKT-E-02600"]
+    B --> C{"TSCĐ theo PP sản lượng<br/>đã khai báo kỳ này chưa?"}
+    C -- "Chưa khai báo hoặc = 0" --> D["Banner cảnh báo vàng<br/>Bỏ qua hoặc Khai báo ngay"]:::warn
+    D --> D1["Nếu bỏ qua: Mức KH = 0"]:::err
+    C -- "Đã khai báo" --> E["Mức KH tháng = SL thực tế ×<br/>Giá trị tính KH / Tổng sản lượng"]:::ok
+    E --> F["Ghi sổ bút toán khấu hao"]
+    F -- "khóa ngược lại" --> G["Kỳ khai báo chuyển sang<br/>Đã dùng tính KH"]
+    G -- "chặn Sửa · Xóa" --> A
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Vòng khóa khép kín.</b> Sản lượng chảy sang khấu hao, bút toán khấu hao chảy ngược lại thành khóa. Muốn sửa số liệu sản lượng của một kỳ đã tính khấu hao, quy trình duy nhất là: bỏ ghi bút toán khấu hao → sửa hoặc xóa khai báo → tính lại khấu hao.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tình huống</th><th>Hành vi màn Tính khấu hao</th><th class="mono">Mã</th></tr></thead>
+    <tbody>
+      <tr><td>TSCĐ theo PP sản lượng, chưa khai báo kỳ này</td><td>Banner cảnh báo vàng đầu màn, có nút &quot;Khai báo ngay&quot;</td><td class="mono">02600_103</td></tr>
+      <tr><td>Người dùng bấm &quot;Bỏ qua&quot;</td><td>Vẫn tính được, mức khấu hao của TSCĐ đó bằng 0</td><td class="mono">—</td></tr>
+      <tr><td>Đã khai báo sản lượng kỳ này</td><td>Mức KH = SL thực tế × (Giá trị tính KH / Tổng sản lượng), làm tròn theo <span class="chip c-br">BR7</span></td><td class="mono">—</td></tr>
+      <tr><td>Bút toán khấu hao kỳ này đã ghi sổ</td><td>Chặn Thêm mới · Chỉnh sửa · Xóa khai báo của kỳ</td><td class="mono">201 · 202</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Đây là ràng buộc <strong>xuyên module</strong>: điều kiện &quot;đã dùng tính khấu hao&quot; của epic này phải truy vấn sang dữ liệu khấu hao, không có cờ nào lưu sẵn trên bảng kỳ khai báo theo LDM hiện tại.</p>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — Ma trận ẩn/hiện</span>
+  <h2>Trạng thái trường theo từng màn</h2>
+  <p class="lede">Cả ba popup đều <strong>không có ma trận động</strong>: không trường nào ẩn/hiện theo giá trị trường khác. Bảng dưới là trạng thái tĩnh, gộp từ ba file ma trận của epic.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th>Thêm mới</th><th>Chỉnh sửa</th><th>Xem chi tiết</th></tr></thead>
+    <tbody>
+      <tr><td>Tháng</td><td><span class="chip c-ok">Show</span> Select, bắt buộc</td><td><span class="chip c-perm">Disable</span> readonly</td><td><span class="chip c-perm">Disable</span></td></tr>
+      <tr><td>Năm</td><td><span class="chip c-ok">Show</span> Select, bắt buộc</td><td><span class="chip c-perm">Disable</span> readonly</td><td><span class="chip c-perm">Disable</span></td></tr>
+      <tr><td>Trạng thái</td><td><span class="chip c-perm">không có</span></td><td><span class="chip c-perm">không có</span></td><td><span class="chip c-perm">Disable</span></td></tr>
+      <tr><td>Mã TSCĐ · Tên TSCĐ</td><td><span class="chip c-perm">Disable</span></td><td><span class="chip c-perm">Disable</span></td><td><span class="chip c-perm">Disable</span></td></tr>
+      <tr><td>Tổng SL dự kiến</td><td><span class="chip c-perm">Disable</span></td><td><span class="chip c-perm">Disable</span></td><td><span class="chip c-perm">Disable</span></td></tr>
+      <tr><td>SL đã khai báo</td><td><span class="chip c-perm">Disable</span></td><td><span class="chip c-perm">Disable</span></td><td><span class="chip c-perm">Disable</span></td></tr>
+      <tr><td><b>SL tháng này</b></td><td><span class="chip c-ok">Show</span> mặc định 0</td><td><span class="chip c-ok">Show</span> lấy từ bản ghi</td><td><span class="chip c-perm">Disable</span></td></tr>
+      <tr><td>SL còn lại</td><td><span class="chip c-perm">Disable</span> auto-calc</td><td><span class="chip c-perm">Disable</span> auto-calc</td><td><span class="chip c-perm">Disable</span></td></tr>
+      <tr><td>Bộ nút</td><td>Lưu · Đóng</td><td>Lưu · Đóng</td><td>Đóng</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><strong>Đúng một ô nhập được trên cả epic:</strong> cột &quot;SL tháng này&quot; ở hai màn Thêm mới và Chỉnh sửa. Thay đổi Tháng/Năm ở màn Thêm mới chỉ đổi <em>tập dữ liệu</em> nạp vào lưới, không ẩn/hiện trường nào — nên không dựng ma trận động, theo đúng kết luận trong ba file ma trận.</p>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — Tra cứu</span>
+  <h2>Điều kiện chặn, thông báo và quyền</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> và <em>cảnh báo</em> trong các sơ đồ trên, theo thao tác. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-03000_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện</th><th class="mono">Mã</th><th>Loại</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="6">Thêm mới</td><td>Chưa chọn Tháng · chưa chọn Năm</td><td class="mono">106 · 107</td><td>Chặn</td></tr>
+      <tr><td>Kỳ Tháng/Năm đó đã có khai báo — BR4</td><td class="mono">chưa cấp mã</td><td>Chặn</td></tr>
+      <tr><td>Có dòng sản lượng âm</td><td class="mono">101</td><td>Chặn</td></tr>
+      <tr><td>Không dòng nào có sản lượng lớn hơn 0</td><td class="mono">102</td><td>Chặn</td></tr>
+      <tr><td>Bút toán khấu hao kỳ đó đã ghi sổ</td><td class="mono">chưa cấp mã</td><td>Chặn</td></tr>
+      <tr><td>SL nhập + lũy kế vượt Tổng SL dự kiến</td><td class="mono">103</td><td>Cảnh báo</td></tr>
+      <tr><td rowspan="4">Chỉnh sửa</td><td>Kỳ đã dùng để tính khấu hao</td><td class="mono">202</td><td>Chặn</td></tr>
+      <tr><td>Có dòng sản lượng âm</td><td class="mono">101</td><td>Chặn</td></tr>
+      <tr><td>Không dòng nào có sản lượng lớn hơn 0</td><td class="mono">102</td><td>Chặn</td></tr>
+      <tr><td>SL nhập vượt SL còn lại</td><td class="mono">103</td><td>Cảnh báo</td></tr>
+      <tr><td>Xóa</td><td>Kỳ đã dùng để tính khấu hao</td><td class="mono">201</td><td>Chặn</td></tr>
+      <tr><td>Xem chi tiết</td><td>Không tìm thấy bản ghi</td><td class="mono">303</td><td>Thông tin</td></tr>
+      <tr><td>Danh sách</td><td>Không có dữ liệu · tìm kiếm không ra kết quả</td><td class="mono">301 · 304</td><td>Thông tin</td></tr>
+      <tr><td>Thêm mới · Chỉnh sửa</td><td>Không có TSCĐ nào thỏa bộ lọc</td><td class="mono">302</td><td>Thông tin</td></tr>
+      <tr><td>Mọi màn</td><td>Không có quyền truy cập chức năng</td><td class="mono">005</td><td>Chặn</td></tr>
+      <tr><td>Lưu · Cập nhật · Xóa</td><td>Lỗi hệ thống khi ghi dữ liệu</td><td class="mono">002</td><td>Chặn</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Thông báo thành công</h3>
+  <p><span class="chip c-msg">001</span> Thêm mới thành công · <span class="chip c-msg">004</span> Cập nhật thành công · <span class="chip c-msg">003</span> Xóa thành công. Hiển thị dạng toast theo <span class="chip c-br">BR26</span>, sau đó đóng popup và quay về màn Danh sách.</p>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Quyền theo mô tả BA</th><th>Mở khóa</th><th>Khi thiếu</th></tr></thead>
+    <tbody>
+      <tr><td>Xem danh sách khai báo sản lượng</td><td>Vào chức năng · lưới · tìm kiếm · Export</td><td>Ẩn hoàn toàn chức năng</td></tr>
+      <tr><td>Xem chi tiết khai báo sản lượng</td><td>Icon Mắt · hyperlink cột Tháng · popup chi tiết</td><td>Ẩn nút xem chi tiết</td></tr>
+      <tr><td>Tạo mới khai báo sản lượng</td><td>Nút Thêm mới · hành động Lưu</td><td>Ẩn nút Thêm mới</td></tr>
+      <tr><td>Chỉnh sửa khai báo sản lượng</td><td>Icon Bút · hành động Lưu ở màn Chỉnh sửa</td><td>Ẩn nút Sửa</td></tr>
+      <tr><td>Xóa khai báo sản lượng</td><td>Icon Thùng rác · popup xác nhận xóa</td><td>Ẩn nút Xóa</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><strong>Tài liệu BA chưa đặt mã permission</strong> cho epic này — cột trái là tên quyền theo lời văn trong UC, không phải mã <span class="f">Module.Action</span>. Mọi quyền ở đây đều là <em>ẩn nút</em> chứ không disable, theo <span class="chip c-br">BR25</span>.</p>
+
+  <h3>Điểm tài liệu chưa quy định</h3>
+  <ul>
+    <li><span class="chip c-msg">104</span> &quot;Năm không hợp lệ&quot; và <span class="chip c-msg">105</span> &quot;Tháng không hợp lệ&quot; có trong bảng message nhưng <strong>không màn nào gắn</strong> — Tháng và Năm đều là Select nên khó phát sinh giá trị ngoài miền.</li>
+    <li>Hai chặn cứng chưa có mã MSG: trùng kỳ khai báo <span class="chip c-br">BR4</span> và chặn khi bút toán khấu hao đã ghi sổ.</li>
+    <li>Tab Đính kèm của màn Danh sách trỏ tới thành phần chung <span class="f">SCR_FileDinhKem</span> nhưng <strong>LDM của epic không có entity đính kèm</strong> — chưa rõ file gắn vào bảng nào.</li>
+    <li>Cột &quot;Trạng thái&quot; chưa định nghĩa tập giá trị (xem <a href="#s0">mục 00</a>).</li>
+    <li>Hai công thức cảnh báo <span class="chip c-msg">103</span> phát biểu khác nhau giữa màn Thêm mới và Chỉnh sửa (xem <a href="#s5">mục 05</a>).</li>
+    <li><span class="f">ChiNhanhId</span> có trong LDM nhưng không xuất hiện trên bất kỳ màn nào — chưa rõ lấy theo ngữ cảnh đăng nhập hay cho chọn.</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-03000 · Khai báo sản lượng</span>
+  <span>Dựng từ 5 UC · 5 Activity Diagram · 5 màn hình · 3 ma trận ẩn/hiện</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

@@ -51,11 +51,12 @@ features/<domain>/
 
 **Một màn hình = MỘT module.** Không có tầng `<nhóm>` trung gian, không tách màn theo hành vi
 (`danhSach/` · `themMoi/` · `chinhSua/` · `xemChiTiet/`). Popup Thêm / Sửa / Xem là **component của
-cùng module**, nằm ở `components/` — nó dùng chung `types`, `constants`, `api`, `helpers`, i18n với
-màn danh sách, tách ra chỉ đẻ thêm `_shared/` và một mớ `../../..`.
+cùng module**, nằm ở `components/modal/` (§3 luật cứng 4) — nó dùng chung `types`, `constants`, `api`,
+`helpers`, i18n với màn danh sách, tách ra chỉ đẻ thêm `_shared/` và một mớ `../../..`.
 
 `_shared/` là cơ chế dùng chung **giữa các module có thật**, không phải cấu trúc dựng sẵn. Domain mới
-chỉ có một màn → **không tạo `_shared/`**.
+chỉ có một màn → **không tạo `_shared/`**. Khi đã có ≥2 module: chữ dùng chung của chúng đặt ở
+`<domain>/_shared/i18n/`, chữ riêng vẫn ở `<module>/i18n/`.
 
 ### 3. Cấu trúc chuẩn của `<module>/` — BẮT BUỘC
 
@@ -66,7 +67,8 @@ Module tham chiếu: **`../../client/src/features/banHang/chungTuBanHang`** — 
 <module>/
 ├── index.ts          ← FILE DUY NHẤT ở gốc module. Cửa ra duy nhất, ngoài chỉ import qua đây
 ├── api/              I/O + hợp đồng Zod với BE          chungTuBanHangApi · model · queries · lookups · payload
-├── components/       MỌI .tsx của màn — list, tab, popup Thêm/Sửa/Xem, panel con
+├── components/       MỌI .tsx của màn — list, tab, panel con
+│   └── modal/        MỌI popup (Thêm / Sửa / Xem / xác nhận / chọn nguồn) — thư mục con DUY NHẤT được phép
 ├── constants/        constants.ts · paths.ts · permissions.ts
 ├── fields/           mô tả cột · ô lưới · option · badge · texts  +  types.ts
 ├── helpers/          hàm thuần BIẾT nghiệp vụ — không React, không mạng, không t()
@@ -83,22 +85,36 @@ là sai chuẩn.
 Lớp nào chưa có nội dung thì **không tạo thư mục rỗng** — luật là *"không có file lạc ra gốc"*,
 không phải *"phải đủ 9 thư mục"*.
 
-`kernel/` **không phải** lớp hợp lệ (dùng `helpers/`). `utils/` cấp màn hình cũng **không** — tiện ích
-kỹ thuật thuần (format ngày/số/chuỗi) thuộc `@core`.
+**Luật cứng — popup nằm ở `components/modal/`**, thư mục con **DUY NHẤT** được phép trong
+`components/`. Một màn thường có 1 list + 3-5 popup; để phẳng hết thì thân màn chìm nghỉm. KHÔNG mở
+thêm `tabs/`, `panels/`, `common/`… — ranh giới của chúng mờ hơn ranh giới "có phải popup không".
 
-### 3.1 Bốn hệ quả phải nhớ
+`kernel/` **không phải** lớp hợp lệ (dùng `helpers/`) — engine `chungTu` đã đổi sang `helpers/`, thấy
+`kernel/` ở đâu là code chưa chuyển. `utils/` cấp màn hình cũng **không** — tiện ích kỹ thuật thuần
+(format ngày/số/chuỗi) thuộc `@core`; dùng ≥2 màn thì đẩy lên `@core`, chỉ 1 file dùng thì để private
+trong chính file đó.
+
+⚠ **Nợ hiện tại:** `chungTuBanHang` là module DUY NHẤT đạt chuẩn này — 46 module `features/` và 6 engine
+`domainKit/` còn lại đều **chưa** đạt, đừng lấy cái khác làm mẫu. Bản thân nó cũng đang chuyển dở
+`components/modal/` (2 modal còn phẳng ở `components/`). Còn **9 `mock.ts`** và 14 namespace i18n nằm sai
+chỗ — số liệu ở [`fe-no-ky-thuat-va-su-co.md §A`](fe-no-ky-thuat-va-su-co.md). Luật áp **từ nay về sau**:
+module mới phải đủ chuẩn, module cũ chuyển dần khi có việc chạm vào; không mở đợt refactor toàn bộ nếu
+không được giao.
+
+### 3.1 Năm hệ quả phải nhớ
 
 | Thứ | Ở đâu | Vì sao |
 |---|---|---|
 | `types.ts` | **`fields/types.ts`** | kiểu của module đi cùng nơi khai báo hình dạng dữ liệu hiển thị; `api/`, `helpers/`, `hooks/`, `components/` đều import xuống đây |
 | `paths.ts` · `permissions.ts` | **`constants/`** | vẫn là hằng số. Ngoài module **deep-import thẳng**, KHÔNG qua `index.ts`: `@features/<domain>/<module>/constants/paths.ts` — giữ chunk eager của `routes.tsx` và menu shell không kéo theo page graph |
+| Popup | **`components/modal/`** | luật cứng 4 — thư mục con duy nhất được phép trong `components/` |
 | CSS của màn | **`pages/<tên>.css`** | một module một stylesheet. Nhiều khối UI (danh sách + popup) thì tách bằng **tiền tố class** (`.pmkt-ctbh-*` vs `.pmkt-ctbh-tm-*`), không tách file |
 | i18n | **`i18n/` — MỘT namespace** | chữ của popup là **nhánh con** trong cùng cây khóa (`themMoi.*`), không mở namespace thứ hai. Namespace thứ hai buộc phải có `vi.ts`/`en.ts` thứ hai → lại đẻ thư mục con |
 
 ### 3.2 File mới đặt đâu — cây quyết định (dừng ở dòng đầu tiên đúng)
 
 ```
-Có JSX?                          → components/   (Page thì → pages/)
+Có JSX?                          → components/   (popup → components/modal/ · Page → pages/)
 Có useState/useEffect/useQuery?  → hooks/
 Gọi http?                        → api/
 Trả về mô tả cột / ô / option?   → fields/
@@ -250,90 +266,22 @@ kéo theo cặp `vi.ts`/`en.ts` thứ hai, và đó chính là thứ đẻ ra th
 
 ---
 
-## 7. Luật cứng áp cho mọi phiếu
+## 7. Luật cứng · BR · cổng nghiệm thu · vùng cấm — KHÔNG lặp lại ở đây
 
-1. **Không hardcode magic value** — mọi số/chuỗi nghiệp vụ là constant có tên, đặt gần nơi dùng nhất.
-2. **Không hardcode text UI** — mọi chuỗi người dùng thấy có key i18n ở **cả** `vi.ts` và `en.ts`.
-   Chuỗi động dùng interpolation `t('key', { name })`, không cộng chuỗi.
-   Key phân tầng `<module>.<màn hình>.<thành phần>`.
-   *Ngoại lệ có chủ đích:* chữ pháp định tiếng Việt trên chứng từ in (mẫu số, chức danh ký, câu thông
-   tư) là **hằng số**, không phải chuỗi i18n.
-3. **Không `any`, không `@ts-ignore`** — dùng `unknown` + type guard, hoặc Zod parse.
-   Mọi dữ liệu từ ngoài vào (API, `localStorage`, query param, postMessage) **phải Zod parse**.
-   ⚠ Lint để `no-explicit-any` ở mức `warn` → lint xanh **không** chứng minh là sạch, phải tự soát.
-4. **Import bằng alias**, chỉ đi xuống tầng dưới, qua barrel công khai.
-5. **TS đang bật**: `strict` · `noUncheckedIndexedAccess` · `erasableSyntaxOnly` (**không** `enum`,
-   **không** `namespace`) · `verbatimModuleSyntax` (`import type`) · `noUnusedLocals/Parameters`.
-6. **Đặt tên**: `.tsx` PascalCase · `.ts` camelCase · thư mục camelCase · constant
-   SCREAMING_SNAKE_CASE · hook `useXxx` · prop `onXxx` / handler `handleXxx` · ưu tiên named export.
-   Ngoại lệ: `.tsx` không export component (`routes.tsx`, `columns.tsx`) giữ camelCase.
-7. **Không tự commit / push / checkout / stash / reset.** Đổi tên file dùng `git mv`.
+Bốn mục này từng được chép lại trong file này và **đã lệch khỏi bản gốc** (cổng nghiệm thu ở đây còn
+giữ bộ lệnh nặng đã bị bãi bỏ 2026-08-13; bảng BR còn thiếu BR35 và BR47–49). Từ nay đọc thẳng bản gốc:
 
----
-
-## 8. Quy chuẩn nghiệp vụ (BR) phải đối chiếu
-
-Mọi phiếu phải code theo [pmkt-docs/ba/Common/business_rules.md](../../pmkt-docs/ba/Common/business_rules.md).
-Epic chỉ mô tả phần đặc thù; phần chung **mặc định lấy theo BR**. Epic không nhắc BR ≠ được bỏ BR.
-
-| Phạm vi phiếu | BR phải đọc |
+| Cần gì | Bản gốc (SSOT) |
 |---|---|
-| Màn danh sách (grid) | BR1 · BR2 · BR11 · BR13.1 · BR30 · BR31 · BR32 · BR38 · BR39 · BR44 · BR45 |
-| Danh mục dạng cây | BR2 · BR22 · BR40 · BR23 |
-| Form / popup | BR3 · BR13.2 · BR14 · BR15 · BR24 · BR34 · BR43 |
-| Combogrid / chọn dữ liệu | BR5 · BR6 · BR10 |
-| Chứng từ & hạch toán | BR4 · BR9 · BR12 · BR17 · BR33 · BR36 · BR37 · BR41 · BR42 |
-| Số liệu / tiền tệ | BR7 · BR18 |
-| Ngày tháng / kỳ | BR8 |
-| Thông báo & cảnh báo | BR16 · BR26 · BR27 |
-| Entity / API | BR7 · BR19 · BR20 · BR28 · BR29 · BR46 |
-| Quyền | BR25 |
-| Grid chi tiết con | BR21 |
+| 8 luật cứng (hardcode · i18n · `any` · alias · commit) | [`CLAUDE.md` §8 luật](../../CLAUDE.md) |
+| Chi tiết FE của các luật đó (TS đang bật · đặt tên · i18n) | [`client/CLAUDE.md`](../../client/CLAUDE.md) §8 §10 §11 |
+| BR phải đối chiếu + cách trích | [`CLAUDE.md` §BR](../../CLAUDE.md) → `./docs/rules/br.sh <số BR>` |
+| Cổng nghiệm thu FE | [`fe-cong-nghiem-thu.md`](fe-cong-nghiem-thu.md) — cổng nhẹ `npx vite build`, **KHÔNG** `npm run build` |
+| Luật test FE | [`fe-test-va-toc-do-suite.md`](fe-test-va-toc-do-suite.md) |
+| Vùng cấm (`master_data/**`, `src/legacy/**`) | [`CLAUDE.md` §Vùng đóng băng](../../CLAUDE.md) · [`client/CLAUDE.md` §9](../../client/CLAUDE.md) |
 
-Text theo BR vẫn đi qua i18n — giữ **nguyên văn tiếng Việt** của BR làm giá trị trong `vi.ts`.
+Hai điều **riêng của phiếu FE**, không có ở nơi khác:
 
----
-
-## 9. Cổng nghiệm thu (DoD) — chạy trước khi báo hoàn thành
-
-```bash
-cd client && npm run typecheck && npm run lint && npm run lint:boundaries && npm run test && npm run build
-```
-
-Repo **đỏ sẵn** (baseline đo lại 2026-08-11): `typecheck` **193 lỗi** (đa số ở `features/danhMuc` —
-nhánh chết, rồi `muaHang`, `tienMat`, `domainKit`) · `lint` **10 lỗi + 2 warning** ·
-`lint:boundaries` **76** (74 "rule not found" + **2 vi phạm thật**: `axios` trần trong `legacy`).
-
-Luật nghiệm thu:
-
-1. **Không làm xấu hơn baseline** — không lệnh nào được tăng số lỗi.
-2. **File mình chạm phải sạch** — 0 lỗi typecheck, 0 lỗi lint trên file đó.
-3. **Không sinh vi phạm tầng mới** — `boundaries/*` và `no-restricted-imports` giữ nguyên mức nợ cũ (2).
-4. **Không dùng `eslint-disable` để dập lint** — mỗi comment disable là thêm một lỗi ở cổng này.
-5. Lệnh nào fail thì **dán output thật**, không báo "đã xong".
-6. Báo cáo hoàn thành phải **liệt kê BR đã áp dụng** và BR chưa đạt (kèm lý do).
-
----
-
-## 10. Vùng cấm
-
-| Vùng | Luật |
-|---|---|
-| `cell-app/**/master_data/**` | Không đọc để tham khảo, không sao chép kiến trúc, không dùng làm mẫu. Deny cứng ở `../../.claude/settings.json` |
-| **`../../client/src/legacy` — VÙNG KHOÁ** | ✗ **Không đọc** để tham khảo (grep toàn repo thì bỏ qua kết quả rơi vào đây) · ✗ **Không sao chép** kiến trúc / pattern / code · ✗ **Không dùng làm mẫu** cho màn mới, kể cả màn danh mục · ✗ **Không sửa** khi user chưa cho phép trực tiếp cho đúng lần đó · ✗ Không thêm tính năng mới, không mở màn mới |
-| `src/legacy/` khi ĐÃ được cho phép sửa | Chỉ vá lỗi màn đang chạy, không mở rộng diff. Đi qua `@platform`, cấm `axios` trần. Test đặt cạnh file nguồn (`<Tên>.rules.test.ts`). Báo rõ cho user là đang chạm vùng khoá |
-| Shape phẳng cũ (`XxxTab.tsx` + `api/columns/model/queries/mock` ở gốc) | Không mở module mới theo shape này |
-| Shape tách theo hành vi (`danhSach/` · `themMoi/` · `_shared/` cho MỘT màn) | Không mở module mới theo shape này — §2. Đây là shape `chungTuBanHang` đã gỡ ngày 2026-08-11 |
-| Nhánh `features/` đã chết (không có trong `RootRoutes.tsx`) | Không sửa, không lấy làm mẫu, không import |
-
-**Nợ hiện tại (đo 2026-08-11)** — module đủ lớp §3: `features` **1/47** · `domainKit` **0/6**
-(`chungTu` gần nhất nhưng còn `kernel/` + 3 file lạc ở gốc).
-
-**Mẫu DUY NHẤT được phép copy: `../../client/src/features/banHang/chungTuBanHang`.** Mọi module khác trong
-`features/` đều chưa đạt chuẩn — không lấy cái khác làm mẫu, kể cả khi nó cũng là màn chứng từ.
-
-Nợ kèm theo: 9 `mock.ts` · 413 import `../../..` xuyên tầng (133 chỗ đáng lẽ là `@domain-kit`) ·
-14 chỗ `any` ngoài legacy.
-
-Luật áp **từ nay về sau**: module mới đủ chuẩn; module cũ chuyển dần khi có việc chạm vào.
-Không mở đợt refactor toàn bộ nếu không được giao.
+1. Báo cáo hoàn thành phải **liệt kê BR đã áp dụng** và BR chưa đạt (kèm lý do).
+2. *Ngoại lệ i18n có chủ đích:* chữ pháp định tiếng Việt trên chứng từ in (mẫu số, chức danh ký, câu
+   thông tư) là **hằng số**, không phải chuỗi i18n.

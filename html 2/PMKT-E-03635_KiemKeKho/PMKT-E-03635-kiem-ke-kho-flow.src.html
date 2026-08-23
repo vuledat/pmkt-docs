@@ -1,0 +1,971 @@
+<title>Luồng Phiếu kiểm kê kho</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-03635 · Phân hệ Kho</p>
+  <h1>Luồng xử lý Phiếu kiểm kê kho</h1>
+  <p>Toàn bộ vòng đời một phiếu kiểm kê kho — từ bộ lọc nạp tồn sổ sách tại một thời điểm, nhập số thực tế, tính chênh lệch từng dòng, đến sinh phiếu nhập / xuất kho điều chỉnh và khóa phiếu khi đã xử lý hết. Mỗi sơ đồ bám đúng Activity Diagram và BR trong bộ tài liệu BA.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 8 use case · 8 AD · 6 màn hình · 4 ma trận</span>
+    <span><b>Entity gốc:</b> inv_phieu_kiem_ke_kho</span>
+    <span><b>Quyền:</b> KiemKeKho.*</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Bản đồ vòng đời</a></li>
+    <li><a href="#s1"><span>01</span>Xem danh sách</a></li>
+    <li><a href="#s2"><span>02</span>Nạp tồn sổ sách</a></li>
+    <li><a href="#s3"><span>03</span>Thêm mới</a></li>
+    <li><a href="#s4"><span>04</span>Hai loại dòng lưới</a></li>
+    <li><a href="#s5"><span>05</span>Import Excel</a></li>
+    <li><a href="#s6"><span>06</span>Chênh lệch &amp; xử lý</a></li>
+    <li><a href="#s7"><span>07</span>Quan hệ dữ liệu</a></li>
+    <li><a href="#s8"><span>08</span>Counter &amp; trạng thái</a></li>
+    <li><a href="#s9"><span>09</span>Chỉnh sửa</a></li>
+    <li><a href="#s10"><span>10</span>Xóa</a></li>
+    <li><a href="#s11"><span>11</span>Xem chi tiết</a></li>
+    <li><a href="#s12"><span>12</span>Export danh sách</a></li>
+    <li><a href="#s13"><span>13</span>Tra cứu chặn &amp; quyền</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Bản đồ vòng đời một phiếu kiểm kê</h2>
+  <p class="lede">Phiếu kiểm kê kho <strong>không có trạng thái ghi sổ</strong>. Thứ điều khiển mọi nút trên màn hình là <em>trạng thái xử lý chênh lệch</em> — bốn giá trị do hệ thống tự tính lại sau mỗi lần lưu phiếu hoặc mỗi lần chứng từ điều chỉnh được tạo / bị xóa.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(( )) -- "Lưu · mọi dòng khớp" --> K
+    S -- "Lưu · còn chênh lệch" --> C
+    K["<b>KHỚP</b><br/>Mọi dòng chênh lệch = 0<br/>Sửa · Xóa mở"]
+    C["<b>CHƯA XỬ LÝ</b><br/>Còn chênh lệch khác 0<br/>Chưa có phiếu nhập/xuất"]
+    D["<b>ĐANG XỬ LÝ</b><br/>Đã xử lý một phần<br/>Khóa Sửa · khóa Xóa"]
+    X["<b>ĐÃ XỬ LÝ</b><br/>Đã xử lý toàn bộ chênh lệch<br/>Chỉ còn xem chi tiết"]
+    DEL["<b>ĐÃ XÓA MỀM</b><br/>IsDeleted = true<br/>Giữ lại cho truy vết"]
+    K -- "Sửa · phát sinh chênh lệch" --> C
+    C -- "Sửa · hết chênh lệch" --> K
+    C -- "Tạo phiếu điều chỉnh một phần" --> D
+    C -- "Tạo phiếu xử lý trọn" --> X
+    D -- "Xử lý nốt phần còn lại" --> X
+    D -- "Xóa phiếu điều chỉnh đã tạo" --> C
+    K -- "Xóa" --> DEL
+    C -- "Xóa" --> DEL
+    D -. "MSG_017 chặn" .-> DEL
+    X -. "MSG_017 chặn" .-> DEL
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    class K,X ok;
+    class C,D warn;
+    class DEL err;
+</pre>
+    </div>
+    <figcaption><b>Ranh giới khóa nằm giữa "Chưa xử lý" và "Đang xử lý".</b> Phiếu chỉ sửa / xóa được khi chưa có bất kỳ phiếu nhập hoặc xuất điều chỉnh nào trỏ về nó. Đường về từ "Đang xử lý" tồn tại — nhưng chỉ mở bằng cách xóa chứng từ điều chỉnh ở phân hệ Kho, không có nút nào trên phiếu kiểm kê làm được việc đó.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Khẳng định gốc — BR20 màn Thêm mới</span>
+    <p><strong>Phiếu kiểm kê kho KHÔNG ghi sổ.</strong> Nó không sinh dòng nào vào <span class="f">acc_so_cai</span> cũng như <span class="f">acc_so_kho</span>, không có định khoản trên phiếu, không có cặp trạng thái Chưa ghi sổ – Đã ghi sổ. Chênh lệch chỉ vào sổ <em>khi ghi sổ chứng từ điều chỉnh</em>: chênh dương đi qua Phiếu nhập kho, chênh âm đi qua Phiếu xuất kho. Vì vậy <span class="chip c-br">BR36</span> ghi sổ, <span class="chip c-br">BR17</span> kỳ kế toán và <span class="chip c-br">BR42</span> bỏ ghi sổ đều áp cho chứng từ điều chỉnh, không áp cho phiếu kiểm kê.</p>
+  </div>
+
+  <h3>Bốn trạng thái và điều gì tính ra chúng</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trạng thái</th><th>Điều kiện tính</th><th>Sửa · Xóa</th><th>Xử lý chênh lệch</th></tr></thead>
+    <tbody>
+      <tr><td><b>Khớp</b></td><td>Mọi dòng có <span class="f">SoLuongChenhLech</span> = 0</td><td>Mở</td><td>Ẩn cả hai nút</td></tr>
+      <tr><td><b>Chưa xử lý</b></td><td>Có dòng chênh lệch khác 0 và <span class="f">SoLuongXuLyChenhLech</span> = 0</td><td>Mở</td><td>Hiện theo loại chênh lệch còn lại</td></tr>
+      <tr><td><b>Đang xử lý</b></td><td>Có dòng thỏa 0 &lt; <span class="f">SoLuongXuLyChenhLech</span> &lt; abs(chênh lệch)</td><td>Khóa <span class="chip c-msg">017 · 018</span></td><td>Hiện cho đúng phần còn lại</td></tr>
+      <tr><td><b>Đã xử lý</b></td><td>Mọi dòng chênh lệch đạt <span class="f">SoLuongXuLyChenhLech</span> = abs(chênh lệch)</td><td>Khóa <span class="chip c-msg">017 · 018</span></td><td>Ẩn cả hai nút</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Cột "Xử lý" trên từng dòng lưới là một đại lượng <em>khác</em> — nó chỉ nhận Nhập kho / Xuất kho / Khớp theo dấu chênh lệch của riêng dòng đó, xem <a href="#s6">mục 06</a>.</p>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — UC_PhieuKiemKeKho_XemDanhSach</span>
+  <h2>Xem danh sách: bảng điều phối mọi thao tác</h2>
+  <p class="lede">Màn <span class="f">SCR_PhieuKiemKeKho_DanhSach</span> gác mọi nút bằng cặp <strong>quyền × trạng thái xử lý</strong>, và mang thêm một section chi tiết chỉ đọc ngay dưới lưới — không phải popup, không điều hướng.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A([Mở màn Danh sách kiểm kê]) --> B{"Quyền KiemKeKho.View?"}
+    B -- Không --> B1["MSG_002 · menu bị ẩn"]:::err
+    B -- Có --> C["Lọc: Số CT · Khoảng ngày<br/>Chi nhánh · Kho · Loại VT<br/>Nhóm VT · Trạng thái"]
+    C --> D["Lưới + dòng tổng cộng<br/>Section chi tiết chỉ đọc dưới lưới"]
+    D --> G1{{"Gác theo trạng thái xử lý"}}
+    D --> G2{{"Không gác trạng thái"}}
+    G1 -- "Khớp" --> A1["Sửa · Xóa"]
+    G1 -- "Chưa xử lý" --> A2["Sửa · Xóa<br/>Xử lý chênh lệch Nhập / Xuất"]
+    G1 -- "Đang xử lý" --> A3["Chỉ xử lý phần còn lại<br/>Sửa và Xóa bị ẩn"]:::warn
+    G1 -- "Đã xử lý" --> A4["Chỉ Xem chi tiết"]:::err
+    G2 --> A5["Xem chi tiết · Tìm kiếm<br/>Xóa điều kiện lọc · Làm mới"]
+    G2 --> A6["Thêm mới · Export<br/>Xóa hàng loạt"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Không có nút nào gác theo ghi sổ.</b> Toàn bộ ràng buộc treo vào trạng thái xử lý chênh lệch. Nút thiếu quyền thì <em>ẩn hẳn</em> chứ không disable <span class="chip c-br">BR25.2</span>; số chứng từ trên lưới là hyperlink mở luôn màn chi tiết.</figcaption>
+  </figure>
+
+  <h3>Section chi tiết dưới lưới — tiêu điểm đi đâu sau mỗi thao tác</h3>
+  <p>Section nạp danh sách vật tư kiểm kê của <em>phiếu đang chọn</em>, mặc định là dòng đầu tiên. Nguyên tắc gốc: phiếu còn trên danh sách sau thao tác thì giữ tiêu điểm ở phiếu đó; phiếu biến mất thì đưa tiêu điểm về dòng đầu.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Tiêu điểm sau thao tác</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td>Click hyperlink Số chứng từ</td><td>Không đổi</td><td>Mở popup chi tiết, section giữ nguyên dòng cũ</td></tr>
+      <tr><td>Nhấp đúp vào dòng</td><td>Không đổi</td><td>Vẫn mở màn Chi tiết theo <span class="chip c-br">BR13.1</span></td></tr>
+      <tr><td>Chỉnh sửa · lưu thành công</td><td>Giữ ở đúng phiếu vừa sửa</td><td>Section nạp lại nội dung mới</td></tr>
+      <tr><td>Xử lý chênh lệch Nhập / Xuất</td><td>Giữ ở đúng phiếu đó</td><td>Section nạp lại theo trạng thái mới</td></tr>
+      <tr><td>Xóa · Xóa hàng loạt</td><td>Về dòng đầu tiên</td><td>Phiếu không còn trên danh sách</td></tr>
+      <tr><td>Tìm kiếm · lọc · sắp xếp · phân trang</td><td>Về dòng đầu tiên của kết quả mới</td><td>Kể cả Xóa điều kiện lọc và Làm mới</td></tr>
+      <tr><td>Lưới không có dòng nào</td><td>Ẩn cả section, kể cả thanh tiêu đề</td><td>Không hiển thị thông báo riêng cho section</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Giới hạn cứng của section chi tiết</span>
+    <p>Section ở chế độ <strong>chỉ đọc tuyệt đối</strong>: không có nút thao tác nào, không sửa trực tiếp, không có cột Chức năng Xóa. Chiều cao cố định, cuộn dọc bên trong, <em>không phân trang</em>. Cấu trúc cột đúng bằng lưới chi tiết của màn Thêm mới, có dòng Tổng cộng theo <span class="chip c-br">BR31</span>, định dạng số theo <span class="chip c-br">BR7</span>. Không có quyền xem chi tiết thì section không tồn tại; lỗi nạp thì báo <span class="chip c-msg">029</span> và lưới danh sách giữ nguyên.</p>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — Bộ lọc Kiểm kê vật tư</span>
+  <h2>Nạp tồn sổ sách: bộ lọc quyết định lưới có gì</h2>
+  <p class="lede">Trước khi có phiếu, phải có ảnh tồn kho. Popup bộ lọc chốt <strong>thời điểm</strong> và <strong>phạm vi</strong>; bấm Áp dụng là hệ thống tổng hợp mọi vật tư còn tồn sổ sách khác 0 thành các dòng hệ thống của lưới.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A([Bấm Thêm mới]) --> B{"Quyền KiemKeKho.Create?"}
+    B -- Không --> B1["Nút Thêm mới vốn đã ẩn<br/>MSG_002"]:::err
+    B -- Có --> C["Mở popup Bộ lọc Kiểm kê vật tư"]
+    C --> D["Chi nhánh — không bắt buộc<br/>phase này chưa dùng"]
+    D --> E["Tồn kho đến ngày — bắt buộc<br/>mặc định là hôm nay<br/>chỉ chọn ngày không quá hôm nay"]
+    E --> F["Kho kiểm kê — bắt buộc<br/>chỉ hiện kho thuộc chi nhánh đã chọn"]
+    F --> G["Nhóm vật tư — tùy chọn<br/>bỏ trống = lấy toàn bộ kho đã chọn"]
+    G --> H["Vật tư — lọc theo nhóm đã chọn"]
+    H --> I([Bấm Áp dụng])
+    I --> J["Đọc tồn kho tại Tồn kho đến ngày"]
+    J --> K{"Số lượng sổ sách khác 0?"}
+    K -- Không --> K1["Không đưa vào lưới"]:::warn
+    K -- Có --> L["Sinh một dòng hệ thống cho khóa<br/>Mã VT · Số lô · HSD · Kho"]:::ok
+    L --> M["Mở popup Tạo phiếu kiểm kê vật tư<br/>SoLuongSoSach đổ sẵn và readonly"]
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Bộ lọc không chỉ lọc — nó sinh dữ liệu.</b> Mỗi tổ hợp Mã vật tư · Số lô · Hạn sử dụng · Kho cho ra đúng một dòng; đây cũng chính là khóa unique dùng lại ở Thêm dòng thủ công và ở mapping Import Excel. Vật tư tồn bằng 0 không lên lưới, muốn kiểm kê thì phải tự thêm dòng.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Hai trường bị hoãn trong tài liệu gốc</span>
+    <p><span class="f">Chi nhánh</span> ghi chú <em>"chưa làm chi nhánh trong phase này"</em> và cặp <span class="f">Số lô</span> · <span class="f">Hạn sử dụng</span> ghi chú <em>"để phase sau"</em>. Ma trận ẩn/hiện đã nêu cả hai vào mục cần BA xác nhận — trang này vẽ theo bảng trường gốc và không tự quyết ẩn tĩnh.</p>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — UC_PhieuKiemKeKho_ThemMoi</span>
+  <h2>Thêm mới: ba section, một lần lưu</h2>
+  <p class="lede">Popup gồm Thông tin chung, Thông tin người kiểm kê (tùy chọn) và Danh sách vật tư kiểm kê. Người dùng chỉ nhập số thực tế; mọi đại lượng dẫn xuất — chênh lệch, cột Xử lý, trạng thái phiếu — do hệ thống tính.</p>
+
+  <h3>Chuỗi nhập liệu</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A([Popup Tạo phiếu kiểm kê vật tư]) --> B["Section Thông tin chung"]
+    B --> B1["Tồn kho đến ngày — readonly<br/>lấy nguyên từ bộ lọc"]
+    B --> B2["Số chứng từ — tự sinh tiền tố KKK<br/>tối đa 50 ký tự · duy nhất"]
+    B --> B3["Ngày kiểm kê — bắt buộc<br/>mặc định hôm nay"]
+    B --> B4["Mục đích kiểm kê — văn bản tự do"]
+    A --> C["Section Thông tin người kiểm kê"]
+    C --> C1["Họ tên · Chức danh · Đại diện<br/>nhập tay · không có danh mục"]
+    C1 --> C2["Thêm dòng · Xóa dòng tự do<br/>STT tự tăng · để trống cũng được"]
+    A --> D["Section Danh sách vật tư kiểm kê"]
+    D --> D1["Dòng hệ thống từ bộ lọc"]
+    D --> D2["Thêm dòng thủ công<br/>khóa unique không được trùng"]
+    D --> D3["Import Excel · Tải file kiểm kê mẫu"]
+    D1 --> E["Nhập SL thực tế · Tốt · Kém · Hỏng<br/>và Ghi chú dòng"]
+    D2 --> E
+    D3 --> E
+    E --> F["Chênh lệch = Thực tế trừ Sổ sách<br/>Cột Xử lý tự tính · số âm màu đỏ"]
+    F --> G([Bấm Lưu])
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class D1 ok;
+</pre>
+    </div>
+    <figcaption><b>Chỉ bốn ô số lượng và ghi chú là dữ liệu người dùng thực sự nhập trên lưới.</b> Số lượng sổ sách đến từ tồn kho, chênh lệch và cột Xử lý là hàm của hai số kia — không ô nào trong ba ô đó cho sửa.</figcaption>
+  </figure>
+
+  <h3>Chuỗi lưu — nơi mọi thứ có thể hỏng</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S([Bấm Lưu]) --> P{"Quyền KiemKeKho.Create?"}
+    P -- Không --> PE["MSG_002 · nút vốn đã ẩn"]:::err
+    P -- Có --> V1{"Đủ trường bắt buộc?"}
+    V1 -- Không --> X1["MSG_001 · MSG_004"]:::err
+    V1 -- Có --> V2{"Số chứng từ đã tồn tại?"}
+    V2 -- Có --> X2["MSG_005 · theo BR19.1"]:::err
+    V2 -- Không --> V3{"Lưới chi tiết có dòng nào?"}
+    V3 -- Không --> X3["MSG_007"]:::err
+    V3 -- Có --> V4{"Có số lượng kiểm kê âm?"}
+    V4 -- Có --> X4["MSG_009"]:::err
+    V4 -- Không --> V5{"Thực tế = Tốt + Kém + Hỏng?"}
+    V5 -- Không --> W1["MSG_054 — chỉ cảnh báo<br/>vẫn cho lưu phiếu"]:::warn
+    V5 -- Có --> W2["Không cảnh báo"]
+    W1 --> SV["Ghi phiếu · chi tiết · người kiểm kê<br/>và ảnh tồn kho đã lọc"]
+    W2 --> SV
+    SV --> ST["Tính trạng thái xử lý theo BR4"]
+    ST --> R1["Mọi dòng chênh lệch = 0<br/>trạng thái Khớp"]:::ok
+    ST --> R2["Còn chênh lệch chưa xử lý<br/>trạng thái Chưa xử lý"]:::warn
+    R1 --> Z(["MSG_003 · đóng popup · tải lại"])
+    R2 --> Z
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Lệch tổng tình trạng là cảnh báo, không phải chặn.</b> Trên form Thêm mới / Chỉnh sửa, Số lượng thực tế do người dùng nhập độc lập; nếu có nhập chi tiết Tốt · Kém · Hỏng mà tổng không khớp thì hệ thống báo <span class="chip c-msg">054</span> rồi <em>vẫn lưu</em>. Đây là điểm khác biệt lớn nhất so với luồng Import Excel.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Mâu thuẫn giữa hai tài liệu — cần đọc kỹ trước khi code</span>
+    <p><strong>Form nhập tay:</strong> Số lượng thực tế là ô nhập độc lập; lệch tổng Tốt + Kém + Hỏng chỉ sinh cảnh báo <span class="chip c-msg">054</span> và vẫn lưu được.<br>
+    <strong>Import Excel:</strong> quy tắc BR5 của UC Import ghi thẳng <span class="f">SL thực tế = SL tốt + SL kém + SL hỏng</span>, và dòng lệch bị <em>mark lỗi, loại khỏi lần import</em>.<br>
+    Hai quy tắc trái nhau về mức độ chặn trên cùng một tập trường. Trang này vẽ đúng từng ngữ cảnh như tài liệu mô tả và không hợp nhất chúng.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — BR04 · BR05 · BR06 màn Thêm mới</span>
+  <h2>Hai loại dòng lưới, hai bộ quyền khác nhau</h2>
+  <p class="lede">Mọi ràng buộc sửa / xóa trên lưới vật tư không treo vào trạng thái phiếu mà treo vào <strong>nguồn gốc của từng dòng</strong> — đây là điều kiện mức dòng, không phải mức form.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    R([Một dòng trong lưới vật tư]) --> Q{"Nguồn gốc dòng?"}
+    Q -- "Hệ thống tổng hợp từ tồn kho" --> S1["Mã VT · Tên VT · Kho · Nhóm VT<br/>Số lô · HSD · ĐVT đều readonly"]
+    Q -- "Người dùng bấm Thêm dòng" --> S2["Các trường trên đều sửa được<br/>khóa unique phải không trùng"]
+    S1 --> T1["Nút Xóa dòng ẩn hoặc disable"]:::err
+    S2 --> T2["Nút Xóa dòng dùng được"]:::ok
+    S1 --> U["Luôn sửa được trên mọi dòng:<br/>SL thực tế · Tốt · Kém · Hỏng<br/>và Ghi chú dòng"]
+    S2 --> U
+    U --> V["SoLuongSoSach luôn readonly<br/>Chênh lệch và Xử lý luôn tự tính"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok  fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Dòng hệ thống là bằng chứng đối chiếu, không được phá.</b> Nó gắn với ảnh tồn kho đã chốt tại "Tồn kho đến ngày" nên mọi trường định danh vật tư bị khóa và không xóa được — chỉ số liệu kiểm kê thực tế mới sửa được. Dòng người dùng thêm thì ngược lại: sửa được định danh, xóa được, nhưng vào lưới với số lượng sổ sách bằng 0.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Một điểm tài liệu chưa chốt</span>
+    <p>BR05 màn Thêm mới ghi nút Xóa trên dòng hệ thống <em>"sẽ bị ẩn hoặc disabled"</em> — tài liệu gốc chưa chọn một trong hai, ma trận ẩn/hiện đánh dấu ô này là chưa có căn cứ. Cần BA chốt trước khi dựng lưới, vì <span class="chip c-br">BR25.2</span> quy định nút thiếu quyền thì ẩn, còn đây là chặn theo dữ liệu chứ không theo quyền.</p>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — UC_PhieuKiemKeKho_ImportExcel</span>
+  <h2>Import Excel: validate từng dòng, không dừng khi gặp lỗi</h2>
+  <p class="lede">Import không tạo phiếu mà chỉ <em>điền số liệu kiểm kê</em> vào lưới đang mở của màn Thêm mới hoặc Chỉnh sửa. Mỗi dòng Excel được kiểm độc lập; dòng lỗi bị đánh dấu rồi bỏ qua, phần còn lại vẫn chạy tiếp.</p>
+
+  <h3>Chuỗi kiểm từng dòng</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A([Bấm Import Excel]) --> B{"Quyền KiemKeKho.Import?"}
+    B -- Không --> B1["Nút bị ẩn · MSG_002"]:::err
+    B -- Có --> C["Popup Import · có Tải file mẫu"]
+    C --> D{"Đúng định dạng Excel?"}
+    D -- Không --> D1["MSG_047"]:::err
+    D -- Có --> E{"File có dữ liệu?"}
+    E -- Không --> E1["MSG_048"]:::err
+    E -- Có --> F["Duyệt từng dòng<br/>gặp lỗi vẫn đi tiếp"]
+    F --> G{"Trùng khóa unique trong file?"}
+    G -- Có --> X1["Lỗi: dữ liệu trong file trùng lặp"]:::err
+    G -- Không --> H{"Có số lượng âm?"}
+    H -- Có --> X2["Lỗi: số lượng phải từ 0 trở lên"]:::err
+    H -- Không --> I{"Mã vật tư tồn tại?"}
+    I -- Không --> X3["Lỗi: mã vật tư không tồn tại"]:::err
+    I -- Có --> J{"Vật tư thuộc kho đã chọn?"}
+    J -- Không --> X4["Lỗi: không thuộc kho đã chọn"]:::err
+    J -- Có --> K{"Thực tế = Tốt + Kém + Hỏng?"}
+    K -- Không --> X5["Lỗi: lệch tổng tình trạng"]:::err
+    K -- Có --> L{"Khóa unique có sẵn trong lưới?"}
+    L -- Có --> M1["Ghi đè SL thực tế · Tốt · Kém<br/>Hỏng · Ghi chú · giữ SL sổ sách"]:::ok
+    L -- Không --> M2["Tạo dòng mới · SL sổ sách = 0<br/>chênh lệch bằng chính SL thực tế"]:::ok
+    M1 --> N["Tính lại Chênh lệch và cột Xử lý"]
+    M2 --> N
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok  fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Ghi đè diễn ra ngầm, không hỏi lại.</b> Khóa mapping là Mã vật tư · Kho · Số lô · Hạn sử dụng. Trúng khóa thì năm trường số liệu bị thay, còn định danh vật tư và <span class="f">SoLuongSoSach</span> giữ nguyên giá trị hệ thống — file Excel không bao giờ được phép sửa số tồn sổ sách.</figcaption>
+  </figure>
+
+  <h3>Ba kết cục của một lần import</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A["Duyệt hết file"] --> B{"Bao nhiêu dòng hợp lệ?"}
+    B -- "Tất cả hợp lệ" --> C1["Đổ hết vào lưới<br/>MSG_049"]:::ok
+    B -- "Một phần hợp lệ" --> C2["Đổ phần hợp lệ vào lưới<br/>tải file lỗi · MSG_051"]:::warn
+    B -- "Không dòng nào hợp lệ" --> C3["Lưới giữ nguyên · tải file lỗi<br/>MSG_050 hoặc MSG_052"]:::err
+    C2 --> D["File lỗi giữ nguyên cột gốc<br/>thêm cột Lý do lỗi ở cuối"]
+    C3 --> D
+    C1 --> E["Tính lại chênh lệch và cột Xử lý"]
+    C2 --> E
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+</pre>
+    </div>
+    <figcaption><b>File lỗi là file gốc cộng một cột.</b> Giữ nguyên định dạng cột ban đầu để người dùng sửa tại chỗ rồi import lại — không đổi thứ tự, không rút gọn cột.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột file mẫu</th><th>Bắt buộc</th><th>Vai trò</th></tr></thead>
+    <tbody>
+      <tr><td>Mã vật tư</td><td>Có</td><td>Thành phần khóa mapping</td></tr>
+      <tr><td>Kho</td><td>Có</td><td>Thành phần khóa mapping · phải thuộc kho đã lọc</td></tr>
+      <tr><td>Số lô</td><td>Khi vật tư theo lô</td><td>Thành phần khóa mapping</td></tr>
+      <tr><td>Hạn sử dụng</td><td>Khi vật tư có HSD</td><td>Thành phần khóa mapping</td></tr>
+      <tr><td>SL thực tế · SL tốt · SL kém · SL hỏng</td><td>Có</td><td>Dữ liệu ghi đè · phải từ 0 trở lên và khớp tổng</td></tr>
+      <tr><td>Ghi chú</td><td>Không</td><td>Dữ liệu ghi đè</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — UC_PhieuKiemKeKho_XuLyChenhLech</span>
+  <h2>Từ chênh lệch một dòng đến chứng từ điều chỉnh</h2>
+  <p class="lede">Chênh lệch là hiệu số thuần túy giữa thực tế và sổ sách. Dấu của nó quyết định loại chứng từ phải lập; phần <em>còn lại chưa xử lý</em> của nó quyết định nút nào còn hiện.</p>
+
+  <h3>Công thức và cột Xử lý</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Một dòng vật tư kiểm kê"] --> B["Chênh lệch = Thực tế trừ Sổ sách"]
+    B --> C{"Dấu của chênh lệch?"}
+    C -- "Dương — thừa so với sổ sách" --> D1["Cột Xử lý = Nhập kho"]:::ok
+    C -- "Âm — thiếu so với sổ sách" --> D2["Cột Xử lý = Xuất kho"]:::warn
+    C -- "Bằng 0" --> D3["Cột Xử lý = Khớp<br/>không phát sinh chứng từ"]
+    D1 --> E["Còn phải xử lý =<br/>abs chênh lệch trừ đã xử lý"]
+    D2 --> E
+    E --> F{"Còn phải xử lý lớn hơn 0?"}
+    F -- Có --> F1["Dòng còn nằm trong<br/>phiếu điều chỉnh kế tiếp"]:::warn
+    F -- Không --> F2["Dòng đã xong<br/>không map sang phiếu nào nữa"]:::ok
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Cột Xử lý mô tả dòng, trạng thái mô tả phiếu.</b> Một phiếu có thể vừa chứa dòng Nhập kho vừa chứa dòng Xuất kho — khi đó cả hai nút cùng hiện và người dùng phải lập hai chứng từ riêng.</figcaption>
+  </figure>
+
+  <h3>Mở màn tạo phiếu điều chỉnh</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S([Bấm nút Xử lý chênh lệch]) --> P{"Quyền ProcessDifference?"}
+    P -- Không --> PE["Nút bị ẩn · MSG_002"]:::err
+    P -- Có --> T{"Trạng thái phiếu kiểm kê?"}
+    T -- "Khớp" --> T1["Không có chênh lệch<br/>ẩn cả hai nút"]:::err
+    T -- "Đã xử lý" --> T2["MSG_017 · ẩn cả hai nút"]:::err
+    T -- "Chưa xử lý hoặc Đang xử lý" --> U{"Còn phần chênh lệch nào?"}
+    U -- "Còn chênh lệch dương" --> N1["Hiện nút Tạo phiếu nhập kho"]:::ok
+    U -- "Còn chênh lệch âm" --> N2["Hiện nút Tạo phiếu xuất kho"]:::warn
+    U -- "Không còn phần nào" --> N3["Ẩn cả hai nút"]:::err
+    N1 --> M1["Mở màn Tạo phiếu nhập kho<br/>chỉ các dòng dương còn lại"]
+    N2 --> M2["Mở màn Tạo phiếu xuất kho<br/>chỉ các dòng âm còn lại"]
+    M1 --> F["Fill sẵn Kho · Vật tư · ĐVT · Số lô<br/>Lý do cố định<br/>tham chiếu phiếu kiểm kê"]
+    M2 --> F
+    F --> G{"Người dùng sửa số lượng?"}
+    G -- "Nhập giá trị 0 hoặc âm" --> G1["Giao diện chặn ngay tại ô"]:::err
+    G -- "Nằm trong phần còn lại" --> H([Lưu hoặc Lưu và Ghi sổ])
+    H --> V{"Đã xử lý cộng đang tạo<br/>vượt abs chênh lệch?"}
+    V -- Có --> V1["MSG_059 · không cho lưu"]:::err
+    V -- Không --> W["Lưu phiếu nhập/xuất theo<br/>validate của module Kho"]:::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hệ thống không tự tạo chứng từ.</b> Nó chỉ mở màn tạo phiếu của phân hệ Kho với dữ liệu điền sẵn; người dùng vẫn phải bấm Lưu, và mọi validation ghi sổ, kỳ kế toán, đơn giá đều theo tài liệu Phiếu nhập kho / Phiếu xuất kho hiện hành.</figcaption>
+  </figure>
+
+  <h3>Bảng map dữ liệu sang chứng từ điều chỉnh</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trên phiếu kiểm kê</th><th>Sang phiếu nhập kho</th><th>Sang phiếu xuất kho</th><th>Sửa được</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">PhieuKiemKeKho.Id</td><td colspan="2">Nguồn phiếu kiểm kê — <span class="f">NguonId</span> (hyperlink)</td><td>Không</td></tr>
+      <tr><td class="mono">PhieuKiemKeKho.SoChungTu</td><td colspan="2">Số phiếu kiểm kê — <span class="f">SoChungTuNguon</span></td><td>Không</td></tr>
+      <tr><td class="mono">ChiTietPhieuKiemKeKho.Id</td><td colspan="2">Chi tiết kiểm kê — <span class="f">ChiTietNguonId</span> trên từng dòng</td><td>Không</td></tr>
+      <tr><td>Kho trên dòng kiểm kê</td><td>Kho nhập</td><td>Kho xuất</td><td>Không — khóa để bảo toàn phiếu</td></tr>
+      <tr><td>Mã VT · Tên VT · ĐVT</td><td colspan="2">Kế thừa nguyên, không cho sửa</td><td>Không</td></tr>
+      <tr><td>Số lô · HSD · Ghi chú · Hệ số quy đổi</td><td colspan="2">Kế thừa nếu có</td><td>Số lô · HSD · Ghi chú: có</td></tr>
+      <tr><td>Phần chênh lệch còn lại</td><td class="mono">SoLuongChenhLech − SoLuongXuLyChenhLech</td><td class="mono">abs(SoLuongChenhLech) − SoLuongXuLyChenhLech</td><td>Có, trong giới hạn còn lại</td></tr>
+      <tr><td>—</td><td>Lý do nhập cố định <b>Nhập kho xử lý chênh lệch (thừa kiểm kê)</b></td><td>Lý do xuất cố định <b>Xuất kho xử lý chênh lệch (thiếu kiểm kê)</b></td><td>Không</td></tr>
+      <tr><td>—</td><td colspan="2">Diễn giải mặc định "Nhập / Xuất xử lý chênh lệch kiểm kê"</td><td>Có</td></tr>
+      <tr><td>—</td><td colspan="2">Đơn giá · TK nợ · TK có lấy theo định khoản ngầm định của lý do</td><td>Có</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Một dòng kiểm kê được xử lý nhiều lần</span>
+    <p>Cho phép lập <strong>nhiều</strong> phiếu nhập hoặc xuất cho cùng một dòng kiểm kê, miễn tổng số lượng đã xử lý không vượt <span class="f">abs(SoLuongChenhLech)</span>. Kiểm tra chạy theo từng <span class="f">ChiTietPhieuKiemKeKhoId</span> tại thời điểm lưu / ghi sổ, không phải ở mức phiếu. Vượt là chặn bằng <span class="chip c-msg">059</span>; giao diện còn chặn sớm hơn bằng cách không cho nhập số nhỏ hơn hoặc bằng 0.</p>
+  </div>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — Quan hệ dữ liệu</span>
+  <h2>Bản ghi nào sinh ra, ai ghi sổ cái gì</h2>
+  <p class="lede">Một lần lưu phiếu kiểm kê sinh bốn nhóm bản ghi và không chạm vào sổ. Sổ chỉ động khi chứng từ điều chỉnh ở phân hệ Kho được ghi sổ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    KK["<b>inv_phieu_kiem_ke_kho</b><br/>Số CT · Tồn kho đến ngày<br/>Trạng thái xử lý"]
+    CT["<b>..._chi_tiet</b><br/>SL sổ sách · thực tế · chênh lệch<br/>SoLuongXuLyChenhLech"]
+    NKK["<b>inv_nguoi_kiem_ke_chi_tiet</b><br/>Họ tên · Chức danh · Đại diện"]
+    SNAP["<b>inv_ton_kho_snapshot_chi_tiet</b><br/>Ảnh tồn kho tại ngày đã lọc"]
+    PN["<b>Phiếu nhập kho</b><br/>Nhập xử lý chênh lệch"]
+    PX["<b>Phiếu xuất kho</b><br/>Xuất xử lý chênh lệch"]
+    SO["<b>acc_so_cai · acc_so_kho</b>"]
+    KK --> CT
+    KK --> NKK
+    KK --> SNAP
+    CT -- "chênh lệch dương" --> PN
+    CT -- "chênh lệch âm" --> PX
+    PN -. "NguonId · ChiTietNguonId" .-> CT
+    PX -. "NguonId · ChiTietNguonId" .-> CT
+    PN -- "chỉ khi Ghi sổ" --> SO
+    PX -- "chỉ khi Ghi sổ" --> SO
+    KK -. "không sinh dòng nào" .-> SO
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class PN,PX ok;
+    class SO warn;
+</pre>
+    </div>
+    <figcaption><b>Tham chiếu là hai chiều và ở hai cấp.</b> Cấp phiếu qua <span class="f">NguonId</span> cộng <span class="f">LoaiChungTuNguon = PhieuKiemKeKho</span>, cấp dòng qua <span class="f">ChiTietNguonId</span>. Cấp dòng mới là thứ dùng để cộng trừ số lượng đã xử lý — trỏ nhầm vào header sẽ làm sai counter khi một mã vật tư nằm trên nhiều dòng khác kho, khác lô.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Đây không phải tham chiếu mềm</span>
+    <p>Quan hệ phiếu kiểm kê ↔ phiếu nhập / xuất điều chỉnh là <strong>ràng buộc nghiệp vụ</strong>, nên nằm ngoài phạm vi <span class="chip c-br">BR41</span>. Hệ quả: xóa chứng từ điều chỉnh <em>không</em> chỉ gỡ liên kết ngầm mà còn <em>trừ lại</em> số lượng đã xử lý và có thể kéo phiếu kiểm kê từ "Đã xử lý" quay về "Đang xử lý" hoặc "Chưa xử lý".</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — Trường dẫn xuất</span>
+  <h2>Counter SoLuongXuLyChenhLech chạy khi nào</h2>
+  <p class="lede">Một con số duy nhất trên mỗi dòng chi tiết điều khiển cả nút bấm lẫn trạng thái phiếu. Điều bất ngờ nhất: nó cộng ngay khi <em>lưu</em>, kể cả chứng từ còn ở dạng nháp chưa ghi sổ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["SoLuongXuLyChenhLech trên từng dòng"] --> B{"Sự kiện gì xảy ra?"}
+    B -- "Lưu phiếu nhập/xuất kể cả nháp" --> C1["Cộng số lượng đang tạo<br/>chặn nếu vượt phần còn lại"]
+    B -- "Xóa phiếu nhập/xuất khỏi Kho" --> C2["Trừ lại số lượng của phiếu đó"]
+    B -- "Ghi sổ hoặc Bỏ ghi sổ" --> C3["KHÔNG tác động"]:::warn
+    C1 --> D["Tính lại trạng thái ở mức toàn phiếu"]
+    C2 --> D
+    D --> E1["Mọi dòng chênh lệch = 0<br/>trạng thái Khớp"]:::ok
+    D --> E2["Chưa dòng nào được xử lý<br/>trạng thái Chưa xử lý"]
+    D --> E3["Còn dòng xử lý dở dang<br/>trạng thái Đang xử lý"]:::warn
+    D --> E4["Mọi dòng đã xử lý đủ<br/>trạng thái Đã xử lý"]:::ok
+    E3 --> F["Chỉ hiện nút cho phần còn lại"]
+    E4 --> G["Ẩn cả hai nút · khóa Sửa và Xóa"]
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Ghi sổ không xuất hiện ở đâu trong sơ đồ này.</b> Vì counter tính cả chứng từ nháp, thao tác Bỏ ghi sổ một phiếu điều chỉnh <em>không</em> trả lại số lượng đã xử lý — muốn trả lại thì phải xóa hẳn chứng từ đó.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Đại lượng</th><th class="mono">Field</th><th>Ai tính</th><th>Kiểu số</th></tr></thead>
+    <tbody>
+      <tr><td>Số lượng sổ sách</td><td class="mono">SoLuongSoSach</td><td>Đọc tồn kho tại <span class="f">TonKhoDenNgay</span></td><td class="num">decimal(18,3)</td></tr>
+      <tr><td>Số lượng thực tế</td><td class="mono">SoLuongThucTe</td><td>Người dùng nhập hoặc import</td><td class="num">decimal(18,3)</td></tr>
+      <tr><td>Số lượng chênh lệch</td><td class="mono">SoLuongChenhLech</td><td>Thực tế trừ sổ sách · số âm hiện màu đỏ</td><td class="num">decimal(18,3)</td></tr>
+      <tr><td>Số lượng đã xử lý</td><td class="mono">SoLuongXuLyChenhLech</td><td>Cộng khi lưu, trừ khi xóa chứng từ điều chỉnh</td><td class="num">decimal(18,3)</td></tr>
+      <tr><td>Cột Xử lý trên dòng</td><td class="mono">XuLy</td><td>Hàm của dấu chênh lệch · không cho sửa</td><td>Nhập kho · Xuất kho · Khớp</td></tr>
+      <tr><td>Trạng thái phiếu</td><td class="mono">TrangThai</td><td>Hàm của toàn bộ dòng chi tiết</td><td>4 giá trị ở mục 00</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — UC_PhieuKiemKeKho_ChinhSua</span>
+  <h2>Chỉnh sửa: chỉ mở khi chưa động đến kho</h2>
+  <p class="lede">Popup chỉnh sửa có cấu trúc y hệt Thêm mới nhưng <strong>không có bộ lọc kiểm kê vật tư</strong> — phạm vi tồn kho đã chốt từ lúc tạo phiếu và không lọc lại được.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S([Bấm Sửa]) --> P{"Quyền KiemKeKho.Edit?"}
+    P -- Không --> PE["MSG_025 · nút vốn đã ẩn"]:::err
+    P -- Có --> Q{"Phiếu còn tồn tại?"}
+    Q -- Không --> QE["MSG_013"]:::err
+    Q -- Có --> T{"Trạng thái xử lý?"}
+    T -- "Đang xử lý hoặc Đã xử lý" --> TE["MSG_018 · không mở form"]:::err
+    T -- "Chưa xử lý hoặc Khớp" --> F["Mở popup Chỉnh sửa<br/>không có bộ lọc kiểm kê"]
+    F --> F1["Sửa Thông tin chung<br/>Tồn kho đến ngày vẫn readonly"]
+    F --> F2["Sửa người kiểm kê · thêm/xóa dòng"]
+    F --> F3["Sửa số liệu kiểm kê mọi dòng<br/>xóa được dòng do người dùng thêm"]
+    F1 --> V{"Validate như màn Thêm mới"}
+    F2 --> V
+    F3 --> V
+    V -- "Số chứng từ trùng" --> X1["MSG_005"]:::err
+    V -- "Thiếu trường bắt buộc" --> X2["MSG_001"]:::err
+    V -- "Lưới chi tiết trống" --> X3["MSG_007"]:::err
+    V -- "Hợp lệ" --> W["Cập nhật phiếu · tính lại chênh lệch"]
+    W --> R1["Hết chênh lệch · trạng thái Khớp"]:::ok
+    W --> R2["Còn chênh lệch · Chưa xử lý"]:::warn
+    R1 --> Z["MSG_014 · giữ tiêu điểm<br/>ở phiếu vừa sửa"]
+    R2 --> Z
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Sau khi sửa, phiếu chỉ có thể rơi vào Khớp hoặc Chưa xử lý.</b> Hai trạng thái còn lại không đạt được từ đường này vì chúng đòi hỏi đã có chứng từ điều chỉnh — mà phiếu có chứng từ điều chỉnh thì không mở được form sửa.</figcaption>
+  </figure>
+
+  <p>Số chứng từ vẫn cho sửa và vẫn kiểm trùng, chỉ loại trừ chính phiếu đang mở <span class="chip c-br">BR19.1</span>. Ngày kiểm kê cho sửa nhưng không được vượt ngày hiện tại. Vào form từ màn Xem chi tiết cũng đi qua đúng chuỗi gác này <span class="chip c-br">BR34</span>.</p>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — UC_PhieuKiemKeKho_Xoa</span>
+  <h2>Xóa: một phiếu và nhiều phiếu</h2>
+  <p class="lede">Điều kiện xóa trùng khít điều kiện sửa — chỉ "Chưa xử lý" và "Khớp". Lý do gốc: phiếu đã phát sinh chứng từ điều chỉnh thì mất nó là mất đường truy vết của phiếu nhập / xuất đang trỏ về.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S([Bấm Xóa trên dòng]) --> P{"Quyền KiemKeKho.Delete?"}
+    P -- Không --> PE["MSG_026 · nút vốn đã ẩn"]:::err
+    P -- Có --> Q{"Phiếu còn tồn tại?"}
+    Q -- Không --> QE["MSG_013"]:::err
+    Q -- Có --> T{"Trạng thái xử lý?"}
+    T -- "Đang xử lý hoặc Đã xử lý" --> TE["MSG_017<br/>không mở popup xác nhận"]:::err
+    T -- "Chưa xử lý hoặc Khớp" --> C["Popup xác nhận · MSG_027"]
+    C -- "Đóng · ESC · click ra ngoài" --> C1["Hủy thao tác, không xóa"]
+    C -- "Xác nhận" --> D["Xóa mềm phiếu và dữ liệu con<br/>IsDeleted = true"]:::ok
+    D --> E["MSG_016 · tải lại danh sách<br/>giữ nguyên trang<br/>tiêu điểm về dòng đầu"]:::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok  fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Trạng thái được kiểm trước khi popup xuất hiện.</b> Phiếu "Đang xử lý" hoặc "Đã xử lý" báo <span class="chip c-msg">017</span> ngay, không hiện hộp xác nhận. Xóa luôn là xóa mềm theo <span class="chip c-br">BR29.1</span>, dữ liệu con xử lý theo cấu hình xóa lan <span class="chip c-br">BR29.2</span>.</figcaption>
+  </figure>
+
+  <h3>Xóa hàng loạt: bỏ qua phần không đủ điều kiện</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Chọn nhiều phiếu bằng checkbox"] --> B([Bấm Xóa hàng loạt])
+    B --> C{"Trong tập chọn có phiếu<br/>Đang xử lý hoặc Đã xử lý?"}
+    C -- Không --> D1["Xóa mềm toàn bộ<br/>MSG_028"]:::ok
+    C -- Có --> D2["Cảnh báo trước · MSG_042"]:::warn
+    D2 --> E["Bỏ qua phiếu không đủ điều kiện<br/>vẫn xóa phần hợp lệ"]:::warn
+    E --> F["Kết quả một phần · MSG_043"]:::warn
+    F --> G["Popup kết quả theo BR45<br/>liệt kê từng phiếu và nguyên nhân"]
+    D1 --> H["Tải lại danh sách<br/>tiêu điểm về dòng đầu"]
+    G --> H
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hàng loạt không chặn cả lô vì một phiếu sai.</b> Theo <span class="chip c-br">BR45</span>, hệ thống bỏ qua bản ghi không đủ điều kiện, chạy tiếp phần hợp lệ, rồi mở popup kết quả liệt kê đích danh phiếu lỗi kèm nguyên nhân; đóng popup là tự tải lại danh sách.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — UC_PhieuKiemKeKho_ChiTiet</span>
+  <h2>Xem chi tiết: bộ nút đổi theo trạng thái</h2>
+  <p class="lede">Popup chi tiết read-only toàn bộ. Thứ duy nhất thay đổi theo trạng thái là bộ nút hành động và sự tồn tại của section Chứng từ tham chiếu.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A([Mở popup Chi tiết]) --> P{"Quyền View.Detail?"}
+    P -- Không --> PE["MSG_030"]:::err
+    P -- Có --> L{"Nạp dữ liệu chi tiết"}
+    L -- "Không thấy phiếu" --> L1["MSG_013"]:::err
+    L -- "Lỗi khi nạp" --> L2["MSG_029"]:::err
+    L -- "Thành công" --> C["Thông tin chung · người kiểm kê<br/>lưới vật tư — tất cả read-only"]
+    C --> S{"Trạng thái xử lý?"}
+    S -- "Khớp" --> S1["Chỉnh sửa · Đóng<br/>không có chứng từ tham chiếu"]:::ok
+    S -- "Chưa xử lý" --> S2["Chỉnh sửa · Tạo phiếu nhập/xuất<br/>chưa có chứng từ tham chiếu"]
+    S -- "Đang xử lý" --> S3["Tạo phiếu cho phần còn lại<br/>hiện section Chứng từ tham chiếu"]:::warn
+    S -- "Đã xử lý" --> S4["Chỉ xem · Đóng<br/>hiện section Chứng từ tham chiếu"]:::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Section Thông tin người kiểm kê tự ẩn khi phiếu không có dữ liệu.</b> Section Chứng từ tham chiếu chỉ tồn tại từ "Đang xử lý" trở đi — nó liệt kê mọi phiếu nhập / xuất sinh từ phiếu này, sắp xếp theo ngày chứng từ giảm dần, có cột Trạng thái ghi sổ của chính chứng từ đó.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trạng thái</th><th>Nút Chỉnh sửa</th><th>Nút xử lý chênh lệch</th><th>Section Chứng từ tham chiếu</th></tr></thead>
+    <tbody>
+      <tr><td><b>Khớp</b></td><td>Có</td><td>Không — không có chênh lệch</td><td>Không</td></tr>
+      <tr><td><b>Chưa xử lý</b></td><td>Có</td><td>Có, nếu còn dòng cần nhập / xuất</td><td>Không</td></tr>
+      <tr><td><b>Đang xử lý</b></td><td>Không</td><td>Có, cho phần chênh lệch còn lại</td><td>Có</td></tr>
+      <tr><td><b>Đã xử lý</b></td><td>Không</td><td>Không</td><td>Có</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">BR thừa trong tài liệu gốc</span>
+    <p>Màn Xem chi tiết chép lại BR xóa dòng và BR sửa trường của màn Thêm mới, trong khi bảng trường của chính nó ghi mọi ô đều không cho sửa và lưới <em>không có</em> cột Chức năng Xóa. Ma trận ẩn/hiện đã chọn theo bảng trường — read-only toàn bộ — và ghi nhận cần BA dọn phần BR thừa.</p>
+  </div>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — UC_PhieuKiemKeKho_ExportDanhSach</span>
+  <h2>Export danh sách theo đúng bộ lọc đang xem</h2>
+  <p class="lede">Export không có bộ lọc riêng — nó lấy nguyên điều kiện lọc hiện tại của lưới, và có một bước xác nhận trước khi kết xuất.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A([Bấm Export]) --> B{"Quyền KiemKeKho.Export?"}
+    B -- Không --> B1["Nút bị ẩn · MSG_002"]:::err
+    B -- Có --> C{"Có dữ liệu theo bộ lọc?"}
+    C -- Không --> C1["MSG_056"]:::err
+    C -- Có --> D["Modal xác nhận · MSG_058"]
+    D -- "Hủy" --> D1["Đóng modal, không kết xuất"]
+    D -- "Xác nhận" --> E["Lấy danh sách theo bộ lọc<br/>xuất đúng cột đang hiển thị"]
+    E --> F["Tên file DanhSachPhieuKiemKe<br/>kèm ngày export · đuôi xlsx"]
+    F --> G["MSG_055"]:::ok
+    E -. "lỗi kết xuất" .-> H["MSG_057"]:::err
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok  fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Cột ẩn trên lưới thì không có trong file.</b> Theo <span class="chip c-br">BR39</span>, file giữ đúng thứ tự cột đang hiển thị, ghi kèm tham số lọc ở đầu file, khóa dòng tiêu đề và xuất cả dòng Tổng cộng.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 13 ============ -->
+<section id="s13">
+  <span class="snum">13 — Tra cứu</span>
+  <h2>Điều kiện chặn, mã thông báo và quyền</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> và <em>cảnh báo</em> trong các sơ đồ trên. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-03635_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện</th><th class="mono">Mã</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="5">Lưu phiếu kiểm kê</td><td>Thiếu trường bắt buộc</td><td class="mono">001 · 004</td></tr>
+      <tr><td>Số chứng từ đã tồn tại</td><td class="mono">005</td></tr>
+      <tr><td>Lưới chi tiết không có dòng nào</td><td class="mono">007</td></tr>
+      <tr><td>Số lượng kiểm kê âm</td><td class="mono">009</td></tr>
+      <tr><td>Thực tế lệch tổng Tốt + Kém + Hỏng — <b>chỉ cảnh báo</b></td><td class="mono">054</td></tr>
+      <tr><td>Lưu thành công</td><td>Thêm mới · Cập nhật</td><td class="mono">003 · 014</td></tr>
+      <tr><td rowspan="2">Chỉnh sửa</td><td>Phiếu Đang xử lý hoặc Đã xử lý</td><td class="mono">018</td></tr>
+      <tr><td>Không có quyền sửa phiếu</td><td class="mono">025</td></tr>
+      <tr><td rowspan="5">Xóa</td><td>Phiếu Đang xử lý hoặc Đã xử lý</td><td class="mono">017</td></tr>
+      <tr><td>Không có quyền xóa phiếu</td><td class="mono">026</td></tr>
+      <tr><td>Xác nhận trước khi xóa</td><td class="mono">027</td></tr>
+      <tr><td>Xóa hàng loạt — cảnh báo trước · kết quả một phần</td><td class="mono">042 · 043</td></tr>
+      <tr><td>Xóa thành công — đơn · hàng loạt</td><td class="mono">016 · 028</td></tr>
+      <tr><td>Xử lý chênh lệch</td><td>Số lượng nhập / xuất vượt phần chênh lệch còn lại</td><td class="mono">059</td></tr>
+      <tr><td rowspan="4">Import Excel</td><td>File sai định dạng · file rỗng</td><td class="mono">047 · 048</td></tr>
+      <tr><td>Import toàn bộ hợp lệ</td><td class="mono">049</td></tr>
+      <tr><td>Import một phần · kèm file lỗi</td><td class="mono">051</td></tr>
+      <tr><td>Không dòng nào hợp lệ · có lỗi phải tải file lỗi</td><td class="mono">050 · 052</td></tr>
+      <tr><td rowspan="4">Export</td><td>Xác nhận trước khi export</td><td class="mono">058</td></tr>
+      <tr><td>Không có dữ liệu để export</td><td class="mono">056</td></tr>
+      <tr><td>Export thành công</td><td class="mono">055</td></tr>
+      <tr><td>Export thất bại</td><td class="mono">057</td></tr>
+      <tr><td rowspan="3">Xem danh sách · chi tiết</td><td>Danh sách trống · không có kết quả tìm kiếm</td><td class="mono">031 · 033</td></tr>
+      <tr><td>Lỗi tải danh sách · lỗi tìm kiếm</td><td class="mono">032 · 034</td></tr>
+      <tr><td>Không quyền xem chi tiết · lỗi nạp chi tiết</td><td class="mono">030 · 029</td></tr>
+      <tr><td>Mọi màn</td><td>Không có quyền truy cập · phiếu đã bị xóa · lỗi hệ thống</td><td class="mono">002 · 013 · 012 · 998</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">KiemKeKho.View</td><td>Vào màn danh sách</td></tr>
+      <tr><td class="mono">KiemKeKho.View.Detail</td><td>Nút Xem chi tiết · section chi tiết dưới lưới</td></tr>
+      <tr><td class="mono">KiemKeKho.Create</td><td>Nút Thêm mới · bộ lọc Kiểm kê vật tư · hành động Lưu</td></tr>
+      <tr><td class="mono">KiemKeKho.Edit</td><td>Nút Chỉnh sửa · Lưu ở màn chỉnh sửa</td></tr>
+      <tr><td class="mono">KiemKeKho.Delete</td><td>Nút Xóa · Xóa hàng loạt</td></tr>
+      <tr><td class="mono">KiemKeKho.ProcessDifference</td><td>Nút Tạo phiếu nhập kho · Tạo phiếu xuất kho</td></tr>
+      <tr><td class="mono">KiemKeKho.Import</td><td>Nút Import Excel trên màn Thêm mới và Chỉnh sửa</td></tr>
+      <tr><td class="mono">KiemKeKho.Export</td><td>Nút Export trên màn danh sách</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Chỗ tài liệu BA chưa quy định — không vẽ vào sơ đồ</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Điểm</th><th>Hiện trạng tài liệu</th></tr></thead>
+    <tbody>
+      <tr><td>Mã thông báo trong AD Xem danh sách</td><td>AD dùng <span class="mono">008 · 009 · 010</span> nhưng bảng message không định nghĩa ba mã này theo nghĩa đó; trang vẽ theo bảng message và UC</td></tr>
+      <tr><td>Nhánh "tổng Tốt + Kém + Hỏng vượt SL sổ sách"</td><td>Chỉ có trong AD Thêm mới, trỏ tới <span class="mono">053</span> — mã không tồn tại trong bảng message, UC không nêu quy tắc này nên không vẽ</td></tr>
+      <tr><td><span class="mono">045 · 046</span> — chênh lệch cân đối</td><td>Có trong bảng message nhưng không UC, AD hay màn hình nào gắn vào luồng cụ thể</td></tr>
+      <tr><td>Nút Xóa trên dòng hệ thống</td><td>BR05 ghi "ẩn hoặc disabled" — chưa chốt một trong hai</td></tr>
+      <tr><td>Số lô · Hạn sử dụng</td><td>Ghi chú "để phase sau"; chưa rõ phase này có render cột hay không</td></tr>
+      <tr><td>Chi nhánh</td><td>Ghi chú "chưa làm chi nhánh trong phase này"; bảng trường vẫn để cho sửa</td></tr>
+      <tr><td>Hai khối nhập / xuất cùng lúc</td><td>Ma trận giả định mỗi lần mở chỉ tạo một loại phiếu; chưa có xác nhận của BA</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-03635 · Phiếu kiểm kê kho</span>
+  <span>Dựng từ 8 UC · 8 Activity Diagram · 6 màn hình · 4 ma trận ẩn hiện</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

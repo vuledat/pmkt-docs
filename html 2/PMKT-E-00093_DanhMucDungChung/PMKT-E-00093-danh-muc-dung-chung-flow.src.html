@@ -1,0 +1,931 @@
+<title>Luồng Danh mục dùng chung</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-00093 · Danh mục dùng chung</p>
+  <h1>Luồng xử lý Danh mục dùng chung</h1>
+  <p>Epic này không có một luồng, nó có <strong>một khuôn</strong> lặp lại 36 lần. Trang dựng khuôn chung trước — danh sách · thêm · sửa · xóa · trạng thái hoạt động · kiểm trùng mã · phân quyền — rồi vẽ riêng bảy danh mục <em>lệch khỏi khuôn</em>. Số còn lại gom vào bảng tra ở mục 12.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 33 nhóm PMKT-U · 170 UC · 171 AD · 162 màn hình</span>
+    <span><b>Thông báo:</b> 474 mã MSG</span>
+    <span><b>Entity gốc:</b> 44 dòng CRUD matrix</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Bản đồ epic</a></li>
+    <li><a href="#s1"><span>01</span>Vòng đời một bản ghi</a></li>
+    <li><a href="#s2"><span>02</span>Màn danh sách</a></li>
+    <li><a href="#s3"><span>03</span>Chuỗi Lưu</a></li>
+    <li><a href="#s4"><span>04</span>Chuỗi Xóa</a></li>
+    <li><a href="#s5"><span>05</span>Lệch: danh mục cây</a></li>
+    <li><a href="#s6"><span>06</span>Lệch: Hệ thống tài khoản</a></li>
+    <li><a href="#s7"><span>07</span>Lệch: danh mục dùng chung</a></li>
+    <li><a href="#s8"><span>08</span>Lệch: Vật tư</a></li>
+    <li><a href="#s9"><span>09</span>Lệch: Đối tượng</a></li>
+    <li><a href="#s10"><span>10</span>Lệch: Tài khoản ngầm định</a></li>
+    <li><a href="#s11"><span>11</span>Lệch: Đánh số chứng từ</a></li>
+    <li><a href="#s12"><span>12</span>Bảng tra 36 danh mục</a></li>
+    <li><a href="#s13"><span>13</span>Quyền · MSG · khoảng trống</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Bản đồ epic: bốn hình dạng, một khuôn</h2>
+  <p class="lede">36 danh mục con nhưng chỉ <strong>bốn hình dạng</strong>. Biết bản ghi thuộc hình dạng nào là biết ngay nó có trường Cha không, có mấy cửa chặn xóa, và người dùng được làm gì trên nó.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    R["<b>DANH MỤC DÙNG CHUNG</b><br/>36 danh mục · 44 entity"]
+
+    R --> A["<b>PHẲNG — 22 danh mục</b><br/>Đủ 4 thao tác CRUD<br/>Một cửa chặn xóa"]
+    R --> B["<b>CÂY — 10 danh mục</b><br/>Thêm trường Cha<br/>Hai cửa chặn xóa"]
+    R --> C["<b>RÀNG BUỘC HẠCH TOÁN</b><br/>Hệ thống tài khoản<br/>Tài khoản ngầm định"]
+    R --> D["<b>CỐ ĐỊNH — 4 danh mục</b><br/>Chỉ đọc hoặc chỉ sửa<br/>Không thêm · không xóa"]
+
+    A --> A1["Chức danh · Đơn vị tính · Kho<br/>Ngân hàng · Loại tiền · Vật tư<br/>Khách hàng · Nhà cung cấp …"]
+    B --> B1["Cơ cấu tổ chức · Nhóm KH-NCC<br/>Nhóm vật tư · Loại CCDC<br/>Công trình · Khoản mục chi phí …"]
+    C --> C1["Cấp tài khoản tự tính<br/>Cho phép hạch toán tự tính<br/>Định khoản dựng sẵn"]
+    D --> D1["Loại chứng từ · Quy tắc đánh số<br/>Loại vật tư · Tỉnh-Phường xã"]
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class C,C1 warn;
+    class D,D1 ok;
+</pre>
+    </div>
+    <figcaption><b>Hình dạng quyết định luật, không phải tên danh mục.</b> Mọi danh mục phẳng dùng chung một chuỗi Lưu và một chuỗi Xóa; danh mục cây chỉ thêm đúng hai thứ — trường Cha ở form và cửa chặn <em>còn bản ghi con</em> ở luồng xóa.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Ba hằng số của cả epic</span>
+    <p><strong>Mã:</strong> hầu hết danh mục dùng đúng một trường <span class="f">&lt;Entity&gt;.Code</span>, max <span class="num">50</span> ký tự, bắt buộc, duy nhất trong phạm vi Tenant <span class="chip c-br">BR19.2</span> <span class="chip c-br">BR20</span>.<br>
+    <strong>Trạng thái:</strong> mọi danh mục có <span class="f">TrangThai</span> kiểu Toggle, mặc định <em>Hoạt động</em> <span class="chip c-br">BR23</span>.<br>
+    <strong>Xóa:</strong> luôn là xóa mềm, và luôn bị chặn nếu danh mục đã phát sinh nghiệp vụ <span class="chip c-br">BR29</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — Khuôn chung</span>
+  <h2>Vòng đời một bản ghi danh mục</h2>
+  <p class="lede">Bản ghi danh mục không có ghi sổ, không có bút toán. Nó chỉ có <strong>hai trạng thái sống</strong> và một trạng thái chết — và trạng thái <em>không</em> khóa thao tác sửa, khác hẳn chứng từ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(( )) -- "Lưu — mặc định Hoạt động" --> A
+    A["<b>HOẠT ĐỘNG</b><br/>Lên combogrid chọn dữ liệu<br/>Sửa · Xóa đều mở"]
+    B["<b>NGỪNG HOẠT ĐỘNG</b><br/>Tự rời khỏi combogrid<br/>Sửa · Xóa vẫn mở"]
+    D["<b>ĐÃ XÓA MỀM</b><br/>Rời danh sách mặc định<br/>Giữ lại để truy vết"]
+
+    A -- "Toggle trên form Sửa" --> B
+    B -- "Toggle trên form Sửa" --> A
+    A -- "Xóa — qua cửa kiểm tham chiếu" --> D
+    B -- "Xóa — qua cửa kiểm tham chiếu" --> D
+
+    classDef gone fill:#faf8f3,stroke:#cdc7b9,color:#6f6a61;
+    class D gone;
+</pre>
+    </div>
+    <figcaption><b>Trạng thái không phải cổng gác thao tác.</b> Ngừng hoạt động chỉ gỡ bản ghi khỏi danh sách chọn trên chứng từ <span class="chip c-br">BR5</span>; nút Sửa và nút Xóa vẫn hiện. Thứ gác nút Xóa là <em>tham chiếu nghiệp vụ</em>, không phải trạng thái.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Điều</th><th>Danh mục</th><th>Chứng từ — để đối chiếu</th></tr></thead>
+    <tbody>
+      <tr><td>Trạng thái chính</td><td>Hoạt động · Ngừng hoạt động</td><td>Chưa ghi sổ · Đã ghi sổ</td></tr>
+      <tr><td>Gác nút Sửa</td><td>Chỉ quyền <span class="f">.Edit</span></td><td>Quyền <b>và</b> trạng thái ghi sổ</td></tr>
+      <tr><td>Gác nút Xóa</td><td>Quyền <b>và</b> tham chiếu nghiệp vụ</td><td>Quyền <b>và</b> trạng thái ghi sổ</td></tr>
+      <tr><td>Sau khi xóa</td><td>Xóa mềm, giữ bản ghi <span class="chip c-br">BR29.1</span></td><td>Xóa mềm, kéo theo phiếu con</td></tr>
+      <tr><td>Sửa khi đã dùng</td><td><b>Vẫn cho sửa</b>; chứng từ cũ hiển thị theo giá trị mới <span class="chip c-br">BR29.3</span></td><td>Khóa sửa khi đã ghi sổ</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Điểm cuối bảng là chỗ hay code sai nhất: <strong>danh mục đã phát sinh nghiệp vụ vẫn được sửa</strong> — chỉ bị chặn xóa. Sửa tên một khách hàng thì mọi chứng từ cũ hiển thị tên mới, đó là hành vi đúng theo <span class="chip c-br">BR29.3</span>.</p>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — Khuôn chung</span>
+  <h2>Màn danh sách: bốn nút, một luật gác</h2>
+  <p class="lede">Mọi màn danh sách trong epic dựng cùng một bộ khung. Khác biệt duy nhất giữa danh mục phẳng và danh mục cây nằm ở <strong>cách phân trang</strong>, không nằm ở bộ nút.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Mở menu Danh mục"]) --> B{"Có quyền DMXxx.View?"}
+    B -- Không --> B1["Ẩn cả chức năng<br/>khỏi menu"]:::err
+    B -- Có --> C{"Danh mục dạng gì?"}
+
+    C -- Phẳng --> C1["Lưới phẳng · phân trang<br/>theo bản ghi — BR1"]
+    C -- Cây --> C2["Tree grid · mặc định thu gọn<br/>phân trang theo cấp 1 — BR40"]
+
+    C1 --> D["Sắp xếp mặc định<br/>Hoạt động trước · Ngừng sau<br/>Ngừng tô xám — BR2"]
+    C2 --> D
+
+    D --> N1["Thêm mới — cần .Create"]
+    D --> N2["Xem chi tiết — cần .View.Detail"]
+    D --> N3["Sửa — cần .Edit"]
+    D --> N4["Xóa — cần .Delete"]
+    D --> N5["Tìm kiếm · Lọc trạng thái<br/>Làm mới — không gác"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+</pre>
+    </div>
+    <figcaption><b>Thiếu quyền là ẩn nút, không phải disable nút.</b> Toàn bộ UC trong epic viết nguyên văn “Ẩn nút …” cho nhánh thiếu quyền <span class="chip c-br">BR25</span>. Ngoại lệ duy nhất là nút Xóa của Tài khoản ngầm định — luôn hiện, Disable theo điều kiện dữ liệu (mục 10).</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột chuẩn</th><th>Nguồn</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td>STT</td><td>—</td><td>Liên tục qua các trang <span class="chip c-br">BR2</span>; cây thì thụt lề theo cấp</td></tr>
+      <tr><td>Chọn</td><td>—</td><td>Checkbox chọn nhiều dòng</td></tr>
+      <tr><td>Mã</td><td class="mono">&lt;Entity&gt;.Code</td><td>Cột định danh, cây sắp xếp tăng dần theo cột này</td></tr>
+      <tr><td>Tên</td><td class="mono">&lt;Entity&gt;.Ten</td><td>Truncate theo <span class="chip c-br">BR44</span></td></tr>
+      <tr><td>Trạng thái</td><td class="mono">&lt;Entity&gt;.TrangThai</td><td>Chỉ đọc trên lưới; đổi trạng thái phải mở form Sửa</td></tr>
+      <tr><td>Chức năng</td><td>—</td><td>Cột cố định bên phải</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Điểm dễ sai</span>
+    <p>Cột Trạng thái trên lưới <strong>không phải toggle bấm được</strong>. Tài liệu Cơ cấu tổ chức nói rõ: “việc đổi trạng thái Hoạt động/Ngừng hoạt động được thực hiện qua popup Sửa, không có nút đổi trạng thái riêng trên danh sách”. Lý do lộ ra ở mục 05 và 06 — đổi trạng thái có thể kéo theo cascade xuống bản ghi con nên cần một popup xác nhận.</p>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — Khuôn chung</span>
+  <h2>Chuỗi Lưu: bốn cửa kiểm, một cửa riêng cho Sửa</h2>
+  <p class="lede">Thêm mới và Chỉnh sửa dùng <strong>chung một form</strong> — mọi màn <span class="f">*_ChinhSua.md</span> trong epic đều viết “tham chiếu màn Thêm mới”. Chỉ có <em>một</em> điểm khác: kiểm trùng mã khi sửa phải loại trừ chính bản ghi đang sửa.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S1(["Bấm Thêm mới"]) --> P{"Kiểm quyền"}
+    S2(["Bấm Sửa trên một dòng"]) --> P
+    P -- "Thiếu .Create hoặc .Edit" --> PE["Nút vốn đã bị ẩn"]:::err
+    P -- Đủ --> F["Mở form<br/>Thêm mới: trắng · Hoạt động<br/>Sửa: nạp sẵn giá trị hiện tại"]
+
+    F --> V1{"Trường bắt buộc đủ?"}
+    V1 -- Không --> X1["Báo lỗi tại đúng trường<br/>MSG_…_006 — BR15"]:::err
+    V1 -- Có --> V2{"Mã hợp lệ?"}
+    V2 -- "Có dấu tiếng Việt · quá 50 ký tự" --> X2["Chặn lưu — BR20.2"]:::err
+    V2 -- Hợp lệ --> V3{"Mã đã tồn tại trong Tenant?"}
+
+    V3 -- "Thêm mới: có bản ghi trùng" --> X3["Giá trị đã tồn tại<br/>MSG_…_005 — BR19.2"]:::err
+    V3 -- "Sửa: trùng bản ghi KHÁC" --> X3
+    V3 -- "Sửa: trùng chính nó" --> V4["Bỏ qua — không phải trùng"]
+    V3 -- Không trùng --> V4
+
+    V4 --> W["Ghi ENT_mst_… kèm TenantId<br/>Trim khoảng trắng — BR43<br/>Điền trường hệ thống — BR46"]
+    W --> R{"Người dùng bấm nút nào?"}
+    R -- Lưu --> R1["Toast thành công<br/>Đóng form · giữ nguyên trang<br/>BR26 · BR29.4"]:::ok
+    R -- "Lưu và thêm mới" --> R2["Toast thành công<br/>Reset form · giữ form mở"]:::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Nút “Lưu và thêm mới” chỉ có ở màn Thêm mới.</b> Màn Chỉnh sửa của mọi danh mục trong epic chỉ có hai nút Lưu và Hủy — không có biến thể thứ ba. Chuỗi kiểm thì giống hệt, chỉ khác mệnh đề loại trừ ở cửa V3.</figcaption>
+  </figure>
+
+  <h3>Nơi khuôn chung này bị bẻ</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Danh mục</th><th>Khóa duy nhất thật sự</th><th>Vì sao lệch</th></tr></thead>
+    <tbody>
+      <tr><td>Tài khoản ngân hàng</td><td class="mono">SoTaiKhoan + NganHangId</td><td>Cùng số tài khoản ở hai ngân hàng khác nhau là hợp lệ <span class="chip c-msg">00117_009</span></td></tr>
+      <tr><td>HTTK dùng chung</td><td class="mono">SoHieuTaiKhoan + ThongTuId</td><td>Một số hiệu tồn tại song song ở nhiều thông tư <span class="chip c-br">BR_00427_003</span></td></tr>
+      <tr><td>Ngân hàng</td><td class="mono">NganHang.Code</td><td>Trường hiển thị là <em>Tên viết tắt</em>, không có ô “Mã ngân hàng”</td></tr>
+      <tr><td>Mẫu số hóa đơn</td><td class="mono">MauSoHoaDon.MauSo</td><td>Chính mẫu số là mã, không có trường Code riêng</td></tr>
+      <tr><td>Ngành nghề · Nhóm ngành nghề</td><td class="mono">Code</td><td>So trùng <b>không phân biệt hoa thường</b> và tự trim</td></tr>
+      <tr><td>Tài khoản ngầm định</td><td>—</td><td><b>Không kiểm trùng tên</b>; Loại chứng từ đã khoanh vùng phạm vi</td></tr>
+      <tr><td>Thông tư</td><td class="mono">ThongTu.Code</td><td>Thêm ràng buộc Ngày hiệu lực ≥ Ngày ban hành</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — Khuôn chung</span>
+  <h2>Chuỗi Xóa: hai cửa chặn xếp nối tiếp</h2>
+  <p class="lede">Đây là nơi khác biệt lớn nhất giữa danh mục phẳng và danh mục cây. Cây có <strong>thêm một cửa chặn đứng trước</strong>, và cửa đó có mã thông báo riêng — không dùng chung mã “đang được sử dụng”.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Xóa trên một dòng"]) --> P{"Có quyền DMXxx.Delete?"}
+    P -- Không --> P1["Nút Xóa vốn đã bị ẩn"]:::err
+    P -- Có --> Q["Mở popup xác nhận<br/>Bạn có chắc chắn muốn xóa …<br/>Thao tác không thể hoàn tác — BR3"]
+    Q -- Hủy --> Q1["Đóng popup · không đổi gì"]
+    Q -- "Xác nhận xóa" --> G1{"CỬA 1 — chỉ danh mục cây<br/>Còn bản ghi con trỏ tới ChaId?"}
+
+    G1 -- Còn con --> X1["Chặn xóa<br/>Vẫn còn bản ghi con<br/>MSG riêng cho nhánh này"]:::err
+    G1 -- "Không còn con · hoặc danh mục phẳng" --> G2{"CỬA 2 — mọi danh mục<br/>Có nghiệp vụ tham chiếu?"}
+
+    G2 -- "Có bản ghi trỏ tới Id này" --> X2["Chặn xóa<br/>Danh mục đã phát sinh dữ liệu<br/>nghiệp vụ, không thể xóa — BR29.3"]:::err
+    G2 -- Chưa ai dùng --> W["Xóa mềm — BR29.1<br/>Rời danh sách mặc định<br/>Rời mọi combogrid chọn dữ liệu"]
+
+    W --> R["Toast xóa thành công<br/>Tải lại danh sách<br/>Giữ nguyên trang — BR29.4"]:::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Hai cửa, hai mã thông báo khác nhau.</b> Nhóm vật tư trả <span class="mono">00105_014</span> khi còn nhóm con và <span class="mono">00105_009</span> khi đang được dùng; Khoản mục chi phí trả <span class="mono">00560_012</span> / <span class="mono">00560_009</span>. Gộp hai nhánh về một mã là sai tài liệu.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Ba biến thể của cửa 2 — phải đọc đúng entity</span>
+    <p><strong>Kiểm ngay trong epic:</strong> Chức danh kiểm <span class="f">mst_doi_tuong_vai_tro.ChucDanhId</span>; Nhóm kho kiểm <span class="f">mst_kho</span>; Ngân hàng kiểm <span class="f">mst_tai_khoan_ngan_hang.NganHangId</span>; Thuế TTĐB kiểm <span class="f">mst_vat_tu.ThueTieuThuDacBietId</span>.<br>
+    <strong>Kiểm sang phân hệ khác:</strong> Loại CCDC kiểm <span class="f">ccdc_cong_cu_dung_cu</span>; Mẫu số hóa đơn kiểm <span class="f">pur_hoa_don_mua</span> và <span class="f">sal_hoa_don_ban_hang</span>; Tài khoản ngân hàng kiểm <span class="f">cash_phieu_thu</span> và <span class="f">cash_phieu_chi</span>; Vật tư kiểm bốn bảng chi tiết chứng từ kho.<br>
+    <strong>Chặn trước khi mở popup:</strong> Mẫu số hóa đơn là trường hợp duy nhất kiểm <em>trước</em> — đã dùng thì báo <span class="mono">03504_015</span> và <b>không mở</b> popup xác nhận.</p>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — Lệch khuôn · dạng cây</span>
+  <h2>Danh mục cây: Cơ cấu tổ chức làm mẫu</h2>
+  <p class="lede">Mười danh mục dạng cây thêm đúng ba thứ so với khuôn chung: trường <span class="f">ChaId</span> trên form, tree grid trên danh sách, và cascade trạng thái xuống nhánh con. Cơ cấu tổ chức là bản đầy đủ nhất — nó còn khóa cả cấp 1.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Thêm mới đơn vị"]) --> B["Nhập Mã · Tên · Thuộc đơn vị<br/>Thuộc đơn vị là BẮT BUỘC<br/>khác mọi danh mục cây khác"]
+    B --> C{"Loại đơn vị vừa chọn?"}
+    C -- "Chi nhánh" --> C1["Hiện thêm 6 trường<br/>Địa chỉ · Số ĐKKD · Ngày cấp<br/>Nơi cấp · Hình thức hạch toán<br/>Kê khai thuế riêng"]
+    C -- "5 loại còn lại" --> C2["Giữ nguyên form gốc"]
+    C1 --> D["Lưu — theo chuỗi mục 03"]
+    C2 --> D
+
+    D --> E["Danh sách vẽ lại cây<br/>Indent 20px mỗi cấp<br/>Không giới hạn số cấp"]
+    E --> F{"Bản ghi ở cấp mấy?"}
+    F -- "Cấp 1" --> F1["Nút Xóa KHÔNG hiển thị<br/>không có MSG cho nhánh này"]:::warn
+    F -- "Cấp 2 trở xuống" --> F2["Nút Xóa hiển thị<br/>đi tiếp chuỗi Xóa mục 04"]
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Cơ cấu tổ chức là danh mục cây duy nhất bắt buộc chọn cha.</b> Chín cây còn lại để <span class="f">ChaId</span> ở mức không bắt buộc — bỏ trống nghĩa là bản ghi cấp 1. Và chỉ Cơ cấu tổ chức ẩn hẳn nút Xóa ở cấp 1 thay vì để chuỗi kiểm chặn lại.</figcaption>
+  </figure>
+
+  <h3>Cascade trạng thái xuống nhánh con</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Gạt Toggle Trạng thái trên form Sửa"]) --> B{"Đổi theo chiều nào?"}
+
+    B -- "Hoạt động → Ngừng hoạt động" --> C["Đếm bản ghi con đang Hoạt động<br/>gán vào biến 0"]
+    C --> D["Popup MSG_COMMON_002<br/>Có N danh mục con sẽ bị chuyển<br/>sang Ngừng hoạt động theo"]
+    D -- Hủy --> D1["Giữ nguyên trạng thái cũ"]
+    D -- "Tiếp tục" --> E["Cập nhật cha và toàn bộ con<br/>trong CÙNG một giao dịch"]:::ok
+
+    B -- "Ngừng hoạt động → Hoạt động" --> G{"Bản ghi cha đang Hoạt động?"}
+    G -- Không --> G1["Chặn kích hoạt<br/>MSG_COMMON_003"]:::err
+    G -- Có --> H["Chỉ cập nhật ĐÚNG bản ghi này<br/>KHÔNG kéo theo bản ghi con"]:::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Cascade chỉ chạy một chiều.</b> Tắt cha thì tắt cả nhánh; bật cha lại <em>không</em> bật con — con phải bật thủ công, và chỉ bật được khi cha đang Hoạt động. Quy tắc này khai ở <span class="chip c-br">BR03/BR04</span> màn Chỉnh sửa Hệ thống tài khoản và <span class="chip c-br">BR_00427_004/005</span>.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Tree grid phân trang khác lưới phẳng</span>
+    <p>Đếm trang <strong>chỉ theo bản ghi cấp 1</strong>: page size 20 nghĩa là tối đa 20 bản ghi cha một trang, bất kể có bao nhiêu con <span class="chip c-br">BR40.1</span>. Mở rộng một cha thì toàn bộ nhánh con hiện ngay trên trang hiện tại, không bị đẩy sang trang sau <span class="chip c-br">BR40.2</span>. Mặc định của tree grid là <em>thu gọn</em> — ghi đè mặc định “expand toàn bộ” của <span class="chip c-br">BR22</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — Lệch khuôn · hạch toán</span>
+  <h2>Hệ thống tài khoản: cây có hai trường tự tính</h2>
+  <p class="lede">Danh mục này lệch khuôn ở chỗ nặng nhất: <strong>không có thao tác Xóa</strong> — bộ quyền chỉ có View, View.Detail, Create, Edit — và hai trường quyết định nghiệp vụ thì <em>không hiển thị trên form</em>, hệ thống tự tính lúc lưu.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Nhập Số hiệu tài khoản"]) --> B{"Số hiệu dài bao nhiêu?"}
+    B -- "Đúng 3 ký tự số" --> C1["Tài khoản cấp 1<br/>Tài khoản tổng hợp: không bắt buộc"]
+    B -- "Trên 3 ký tự số" --> C2["Tài khoản chi tiết<br/>Tài khoản tổng hợp: BẮT BUỘC"]
+
+    C1 --> D1["CapTaiKhoan = 1<br/>ChoPhepHachToan = Có"]:::ok
+    C2 --> E["Chọn Tài khoản tổng hợp<br/>combogrid chỉ liệt kê TK Hoạt động"]
+    E --> D2["CapTaiKhoan = cấp của TK tổng hợp + 1<br/>KHÔNG suy từ độ dài số hiệu"]:::ok
+
+    D2 --> F["TK mới: ChoPhepHachToan = Có<br/>TK tổng hợp: chuyển sang Không<br/>cùng một giao dịch"]
+    F --> G{"TK tổng hợp đã phát sinh<br/>bút toán trực tiếp chưa?"}
+    G -- Chưa --> G1["Đặt Không · xong"]:::ok
+    G -- Rồi --> G2["Xác nhận MSG_00098_020<br/>Giữ ChoPhepHachToan = Có ở TK cha<br/>Chuyển dữ liệu phát sinh sang TK con<br/>Ghi bản lưu vết số hiệu cũ"]:::warn
+    G2 -- "Người dùng Hủy" --> G3["Hủy thao tác thêm mới<br/>quay về form"]:::err
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Nguyên tắc duy nhất cần nhớ: tài khoản có con thì không được hạch toán trực tiếp.</b> Trừ đúng một ngoại lệ — tài khoản cha đã có bút toán thì giữ nguyên quyền hạch toán để không làm mất hiệu lực bút toán đã ghi.</figcaption>
+  </figure>
+
+  <h3>Năm đối tượng theo dõi: checkbox điều khiển giá trị null</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Đối tượng theo dõi</th><th class="mono">Field</th><th>Khi bỏ tick</th><th>Khi tick</th></tr></thead>
+    <tbody>
+      <tr><td>Đối tượng liên quan</td><td class="mono">VaiTroDoiTuongTheoDoi</td><td rowspan="5">Lưu <span class="mono">null</span><br>= không theo dõi</td><td>Khách hàng / Nhà cung cấp / Nhân viên</td></tr>
+      <tr><td>Đối tượng tập hợp chi phí</td><td class="mono">MucYeuCauDoiTuongTapHopChiPhi</td><td rowspan="4">Không yêu cầu · <b>Cảnh báo</b> · <b>Bắt buộc nhập</b></td></tr>
+      <tr><td>Công trình</td><td class="mono">MucYeuCauCongTrinh</td></tr>
+      <tr><td>Đơn vị</td><td class="mono">MucYeuCauDonVi</td></tr>
+      <tr><td>Khoản mục chi phí</td><td class="mono">MucYeuCauKhoanMucChiPhi</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><em>Cảnh báo</em> = bỏ trống thì báo nhưng vẫn cho lưu bút toán. <em>Bắt buộc nhập</em> = bỏ trống thì chặn lưu bút toán. Đây là chỗ danh mục tài khoản điều khiển ngược lên màn lập chứng từ ở các epic khác.</p>
+
+  <div class="note stop">
+    <span class="lbl">Chỉnh sửa bị khóa thêm hai trường</span>
+    <p><span class="chip c-br">BR02</span> màn Chỉnh sửa: <strong>không cho sửa Số hiệu tài khoản và Tài khoản tổng hợp nếu tài khoản hiện tại đã phát sinh dữ liệu</strong>. Ngoài ra <span class="chip c-br">BR05</span> cảnh báo trước khi ngừng hoạt động một tài khoản đã có bút toán hoặc đang làm Tài khoản tổng hợp của một tài khoản con đang Hoạt động.</p>
+  </div>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — Lệch khuôn · dùng chung</span>
+  <h2>Danh mục dùng chung: một bản ghi, mọi tenant</h2>
+  <p class="lede">Ba danh mục có bản “dùng chung” song song với bản của tenant — Hệ thống tài khoản, Loại tiền, và Thông tư. Lưu ở bản dùng chung thì <strong>lan tỏa xuống mọi tenant đang Hoạt động</strong> trong cùng một giao dịch.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Thêm mới tài khoản dùng chung"]) --> B{"Đã chọn Thông tư chưa?"}
+    B -- Chưa --> B1["Chặn lưu<br/>MSG_00427_020"]:::err
+    B -- "Chọn nhiều thông tư" --> C{"Cặp Số hiệu + Thông tư<br/>đã tồn tại và Hoạt động?"}
+    C -- Rồi --> C1["Chặn lưu<br/>MSG_00427_006"]:::err
+    C -- Chưa --> D["Ghi mst_he_thong_tai_khoan_dung_chung<br/>+ một dòng trung gian cho MỖI thông tư<br/>ở mst_thong_tu_tai_khoan_dung_chung"]
+
+    D --> E["Duyệt mọi tenant<br/>có Trạng thái Hoạt động"]
+    E --> F{"Tenant đã có<br/>cùng Số hiệu + Thông tư?"}
+    F -- Rồi --> F1["Bỏ qua tenant này<br/>giữ nguyên dữ liệu hiện có<br/>ghi log lan tỏa"]:::warn
+    F -- Chưa --> F2["Tạo bản ghi tương ứng<br/>ở mst_he_thong_tai_khoan"]:::ok
+
+    F1 --> G{"Lan tỏa có tenant nào lỗi?"}
+    F2 --> G
+    G -- Có --> G1["Rollback TOÀN BỘ giao dịch<br/>không tạo bản ghi nào<br/>MSG_00427_018"]:::err
+    G -- Không --> G2["Hoàn tất — tất cả hoặc không gì cả"]:::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Trùng ở một tenant không làm hỏng cả lượt lan tỏa.</b> Tenant đã có sẵn số hiệu đó thì bị bỏ qua và ghi log — chỉ <em>lỗi kỹ thuật</em> mới kéo rollback toàn bộ. Hai nhánh này khác nhau và không được gộp.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Bản dùng chung</th><th>Bản của tenant</th><th>Ai được sửa</th><th>Chiều đồng bộ</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">mst_he_thong_tai_khoan<br>_dung_chung</td><td class="mono">mst_he_thong_tai_khoan</td><td>Admin DN có C-R-U; ba vai còn lại chỉ R</td><td>Thêm mới lan xuống mọi tenant Hoạt động</td></tr>
+      <tr><td class="mono">mst_loai_tien_dung_chung</td><td class="mono">mst_loai_tien</td><td>Admin DN có CRUD; ba vai còn lại chỉ R</td><td>Theo <span class="chip c-br">BR47</span></td></tr>
+      <tr><td class="mono">mst_thong_tu</td><td>—</td><td>Admin DN có CRUD; ba vai còn lại chỉ R</td><td>Nối vào tài khoản qua hai bảng trung gian</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Nguyên tắc bao trùm ở <span class="chip c-br">BR47.3</span>: Super Admin <strong>Sửa</strong> hay <strong>Xóa</strong> dữ liệu mặc định gốc thì <em>không</em> lan xuống bản ghi đã insert cho tenant; chỉ thao tác <strong>Thêm mới</strong> mới lan xuống. Tenant sửa/xóa bản ghi mặc định của mình cũng không đụng tới bộ gốc <span class="chip c-br">BR28</span>.</p>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — Lệch khuôn · form nhiều tab</span>
+  <h2>Vật tư: một lựa chọn ở đầu quyết định cả form</h2>
+  <p class="lede">Vật tư mở bằng một popup chọn <strong>Tính chất hàng hóa dịch vụ</strong> trước cả form. Lựa chọn đó quyết định form có mấy tab, và chọn Loại vật tư thì auto-fill bảy tài khoản hạch toán ngầm định.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Thêm mới Vật tư"]) --> B["Popup chọn tính chất<br/>6 lựa chọn: Hàng hóa · Dịch vụ<br/>Nguyên vật liệu · Công cụ dụng cụ<br/>Thành phẩm · Bán thành phẩm"]
+    B --> C{"Tính chất vừa chọn?"}
+
+    C -- "Dịch vụ" --> D1["Form rút gọn<br/>Tab Đơn vị tính khác"]
+    C -- "5 tính chất còn lại" --> D2["Form đầy đủ<br/>Tab Thông tin kho<br/>Tab Đơn vị quy đổi"]
+
+    D1 --> E["Chọn Loại vật tư"]
+    D2 --> E
+    E --> F["Auto-fill 7 tài khoản từ Loại vật tư<br/>đọc SoHieuTaiKhoan trên mst_loai_vat_tu<br/>ánh xạ sang mst_he_thong_tai_khoan"]
+    F --> G["Mọi combogrid tài khoản chỉ liệt kê<br/>ChoPhepHachToan = Có<br/>và TrangThai = Hoạt động"]
+
+    G --> H{"Người dùng đổi Loại vật tư?"}
+    H -- Có --> H1["Reset mọi tab về mặc định<br/>CHỈ giữ Mã · Tên · Trạng thái"]:::warn
+    H -- Không --> I["Tab Thông thuế<br/>Thuế suất GTGT chọn 0-5-8-10-KCT-KKKNT<br/>ô Giá trị chỉ đọc<br/>auto-fill theo bảng mapping"]
+    H1 --> I
+    I --> J{"Chọn KHAC?"}
+    J -- Có --> J1["Ô Giá trị chuyển sang nhập tay"]
+    J -- Không --> J2["Ô Giá trị giữ chỉ đọc"]
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Đổi Loại vật tư là xóa sạch form.</b> Tài liệu ghi rõ chỉ giữ lại Mã, Tên và Trạng thái — mọi tài khoản, thông tin kho, thông tin thuế đã nhập đều mất. Đây là hành vi cố ý vì bộ tài khoản ngầm định gắn chặt với Loại vật tư.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Lưới con</th><th>Hiện khi</th><th>Luật riêng</th><th>Lưu lúc nào</th></tr></thead>
+    <tbody>
+      <tr><td>Đơn vị quy đổi<br><span class="mono">mst_don_vi_quy_doi_vat_tu</span></td><td>Tính chất khác Dịch vụ</td><td>Phép tính Nhân hoặc Chia · Tỷ lệ &gt; 0 · không trùng ĐVT chính · không trùng giữa các dòng · không giới hạn số dòng</td><td rowspan="2">Chỉ khi bấm <b>Lưu của form Vật tư</b> — lưới con không có nút Lưu riêng <span class="chip c-br">BR21</span></td></tr>
+      <tr><td>Đơn vị tính khác<br><span class="mono">mst_vat_tu_don_vi_tinh_khac</span></td><td>Tính chất = Dịch vụ</td><td>Dòng bỏ trống ĐVT thì các dòng dưới bị disable</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Đơn vị quy đổi là cửa chặn xóa thứ ba của Vật tư</span>
+    <p>Vật tư bị chặn xóa khi thỏa <em>một trong ba</em>: còn dòng trong <span class="f">mst_don_vi_quy_doi_vat_tu</span>; xuất hiện ở bốn bảng chi tiết chứng từ kho; hoặc bị <span class="f">ccdc_cong_cu_dung_cu.MaVatTuID</span> trỏ tới. Cả ba đều trả cùng một mã <span class="chip c-msg">00106_017</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — Lệch khuôn · một entity ba vai</span>
+  <h2>Đối tượng: Khách hàng, Nhà cung cấp và Nhân viên là một bảng</h2>
+  <p class="lede">Ba mục lớn nhất trong function breakdown thực ra chia nhau đúng <strong>một entity</strong> <span class="f">mst_doi_tuong</span>, phân biệt bằng bản ghi vai trò. Điều đó tạo ra một chiều lệch nữa: mỗi đối tượng còn nhân đôi theo <em>Cá nhân / Tổ chức</em>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    E1["<b>mst_doi_tuong</b><br/>Mã · Tên · Địa chỉ<br/>Mã số thuế · Tỉnh · Phường xã"]
+    E2["<b>mst_doi_tuong_vai_tro</b><br/>Nhóm · Nhân viên phụ trách<br/>Loại tiền · Điều khoản TT<br/>TK công nợ · Chức danh · Đơn vị"]
+    E3["<b>mst_tai_khoan_ngan_hang<br/>_doi_tuong</b>"]
+    E4["<b>mst_dia_chi_giao_hang</b>"]
+
+    E1 --> E2
+    E1 --> E3
+    E1 --> E4
+
+    E2 -- "VaiTro = KhachHang" --> R1["Màn Khách hàng"]
+    E2 -- "VaiTro = NhaCungCap" --> R2["Màn Nhà cung cấp"]
+    E2 -- "VaiTro = NhanVien" --> R3["Màn Nhân viên"]
+
+    R1 --> S1["Cá nhân · Tổ chức<br/>2 bộ trường · 2 bộ MSG"]
+    R2 --> S2["Cá nhân · Tổ chức<br/>2 bộ trường · 2 bộ MSG"]
+    R3 --> S3["Chỉ một dạng<br/>Mã số thuế BẮT BUỘC 10 hoặc 13 số"]
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class S3 warn;
+</pre>
+    </div>
+    <figcaption><b>Cùng một thao tác nhưng hai mã thông báo khác nhau.</b> Xóa khách hàng cá nhân trả <span class="mono">00093_042</span>, tổ chức trả <span class="mono">00093_055</span>; nhà cung cấp là <span class="mono">068</span> / <span class="mono">081</span>. Nội dung câu chữ giống hệt nhau — mã thì không.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Điều khiển</th><th>Tác động</th></tr></thead>
+    <tbody>
+      <tr><td>Checkbox <b>Cá nhân / Tổ chức</b><br><span class="chip c-br">BR2</span> <span class="chip c-br">BR3</span></td><td>Loại trừ nhau, mặc định Tổ chức. Đổi lựa chọn thì <b>chỉ giữ Mã, Tên, Nhóm khách hàng</b>, mọi trường khác reset</td></tr>
+      <tr><td>Checkbox <b>Là nhà cung cấp</b><br><span class="chip c-br">BR4</span> <span class="chip c-br">BR5</span></td><td>Hiện thêm nhóm Người nhận hóa đơn và trường TK công nợ phải trả, auto-fill từ Người liên hệ. Bỏ tick thì giá trị còn trong form nhưng <b>không được lưu xuống</b></td></tr>
+      <tr><td>Combogrid <b>Điều khoản thanh toán</b><br><span class="chip c-br">BR7</span></td><td>Auto-fill Số ngày được nợ; người dùng sửa tay thì hệ thống ưu tiên giá trị nhập tay</td></tr>
+      <tr><td>Combogrid <b>Tỉnh / Phường xã</b><br><span class="chip c-br">BR8</span> <span class="chip c-br">BR9</span></td><td>Phường xã lọc theo Tỉnh đang chọn; đổi Tỉnh thì reset Phường xã. Trường Địa chỉ tự ghép ba thành phần, sửa tay thì giữ nguyên</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Nhân viên có nhánh xóa không giống ai trong epic</span>
+    <p>Xóa nhân viên chạy qua <strong>ba nhánh</strong>, không phải hai: đã phát sinh nghiệp vụ thì chặn thẳng <span class="chip c-msg">00093_029</span>; chưa phát sinh nhưng <em>đang liên kết với một người dùng</em> thì popup đổi nội dung sang <span class="chip c-msg">00093_036</span> và xác nhận sẽ xóa <b>cả người dùng</b> khỏi tenant — hai thao tác trong cùng một lần, hoặc thành công hết hoặc không đổi gì; còn lại mới là xóa mềm thường. Nhánh giữa thuộc epic PMKT-E-14552.</p>
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — Lệch khuôn · cấu hình</span>
+  <h2>Tài khoản ngầm định: bảng cấu hình đội lốt danh mục</h2>
+  <p class="lede">Nó nằm trong menu Danh mục nhưng gần như không giữ luật nào của khuôn chung: không có trường Mã, <strong>không kiểm trùng tên</strong>, nút Xóa không ẩn mà Disable, và số dòng nhập liệu do Loại chứng từ quyết định.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Thêm mới định khoản"]) --> B["Dropdown Loại chứng từ<br/>CHỈ 10 loại cho phép tạo tay"]
+    B --> C{"Nhóm nào?"}
+
+    C -- "7 loại theo cặp Nợ - Có" --> D["Dựng đúng 2 dòng<br/>một TK Nợ · một TK Có"]
+    C -- "Ghi giảm CCDC" --> E1["Dựng 1 dòng<br/>TK xử lý GTCL"]
+    C -- "Ghi giảm TSCĐ" --> E2["Dựng 3 dòng<br/>hao mòn · xử lý GTCL · nguyên giá"]
+    C -- "Điều chỉnh TSCĐ" --> E3["Dựng 4 dòng<br/>điều chỉnh và đối ứng<br/>của Nguyên giá và Hao mòn"]
+
+    D --> F["Hệ thống điền sẵn và KHÓA một dòng<br/>Phiếu thu: TK Nợ = 111 hoặc 112<br/>Phiếu chi: TK Có = 111 hoặc 112<br/>Nhập kho: TK Nợ trong dải 151-158<br/>Xuất kho: TK Có trong dải 151-158<br/>Phiếu KTTH: không khóa dòng nào"]
+    F --> G["Người dùng khai dòng còn lại"]
+    E1 --> G
+    E2 --> G
+    E3 --> G
+
+    G --> H["Mỗi dòng có 2 ô<br/>Lọc tài khoản: giới hạn danh sách chọn<br/>TK ngầm định: giá trị auto-fill"]
+    H --> I["Cả hai chỉ nhận TK có<br/>TrangThai = Hoạt động<br/>và ChoPhepHachToan = Có"]
+    I --> J["Lưu — có hiệu lực NGAY<br/>không cần thao tác kích hoạt"]:::ok
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Người dùng không bao giờ thêm hay bớt dòng tài khoản.</b> Bộ dòng do Loại chứng từ quyết định; định khoản có dòng phụ ngoài bộ đó — TK công nợ, TK tiền, thuế GTGT, chiết khấu, doanh thu — đều là 154 định khoản hệ thống dựng sẵn, chỉ Sửa được chứ không tạo lại được bằng màn Thêm mới.</figcaption>
+  </figure>
+
+  <h3>Nhân bản và Xóa: hai luật gác ngược nhau</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    R["Một dòng định khoản<br/>trên màn Danh sách"]
+
+    R --> N1["Nút Sửa<br/>luôn hiện với quyền .Edit"]
+    R --> N2{"Nút Nhân bản"}
+    R --> N3{"Nút Xóa"}
+
+    N2 -- "LaDinhKhoanHeThong = true" --> N2a["ẨN nút"]:::err
+    N2 -- "Có dòng phụ ngoài bộ chuẩn" --> N2b["ẨN nút — màn Thêm mới<br/>không dựng lại được"]:::err
+    N2 -- "Định khoản người dùng tạo<br/>và đúng bộ dòng chuẩn" --> N2c["Hiện — mở màn Thêm mới<br/>đã sao chép sẵn dữ liệu"]:::ok
+
+    N3 -- "LUÔN hiển thị" --> N3a{"Enable được không?"}
+    N3a -- "LaDinhKhoanHeThong = true" --> N3b["Disable"]:::warn
+    N3a -- "Đã phát sinh sử dụng" --> N3b
+    N3a -- "Người dùng tạo và chưa dùng" --> N3c["Enable — mở popup xác nhận"]:::ok
+    N3c --> N3d["Kiểm lại lúc xử lý<br/>vừa phát sinh sử dụng thì chặn<br/>MSG_14741_014"]:::err
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Đây là màn duy nhất trong epic Disable nút thay vì ẩn nút.</b> Và nó kiểm hai lần — một lần lúc dựng lưới, một lần lúc thật sự xóa — vì định khoản có thể được dùng ngay sau khi danh sách đã tải.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Vì sao sửa thì thoải mái mà xóa thì bị khóa chặt</span>
+    <p><span class="chip c-br">BR07</span> màn Danh sách giải thích: chứng từ chỉ dùng định khoản để <em>auto-fill</em> rồi lưu số hiệu tài khoản lên chính nó, nên <strong>sửa định khoản không ảnh hưởng chứng từ đã lập</strong>. Nhưng chứng từ có lưu <span class="f">TaiKhoanNgamDinhId</span> để hiển thị mục đích thu-chi hay lý do nhập-xuất; xóa định khoản làm mất tham chiếu đó — nên xóa bị chặn còn sửa thì không.</p>
+    <p style="margin-top:10px">Chiều ngược lại cũng có: khi Hệ thống tài khoản <b>tách tài khoản con</b> (mục 06), định khoản tự cập nhật trong cùng giao dịch — TK ngầm định đang trỏ tài khoản cha thì đổi sang con vừa tạo, số hiệu cha trong Lọc tài khoản bị thay bằng con. Từ lần tách <em>thứ hai</em> trở đi thì không tự thêm nữa, phải khai tay <span class="chip c-br">BR06</span>. Còn tài khoản chỉ <em>Ngừng hoạt động</em> thì giữ nguyên khai báo, không cảnh báo, không chặn.</p>
+  </div>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — Lệch khuôn · chỉ đọc và chỉ sửa</span>
+  <h2>Loại chứng từ và Cấu hình đánh số: danh mục không có nút Thêm</h2>
+  <p class="lede">Loại chứng từ là <strong>47 bản ghi cố định toàn hệ thống</strong> — không thêm, không sửa, không xóa. Quy tắc đánh số là <strong>49 dòng cố định</strong> — chỉ sửa cấu hình, không thêm và không xóa dòng.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["mst_loai_chung_tu<br/>47 bản ghi · toàn hệ thống<br/>chỉ có quyền R"] --> B["cfg_quy_tac_danh_so<br/>49 quy tắc · seed khi tạo đơn vị<br/>chỉ có quyền R và U"]
+    A --> C["cfg_tai_khoan_ngam_dinh<br/>mỗi định khoản thuộc đúng 1 loại"]
+
+    B --> D["Mẫu số ghép 4 phần theo thứ tự<br/>Tiền tố → Ngày tháng → Phần số → Hậu tố<br/>chèn Ký tự ngăn cách<br/>giữa 2 phần liền nhau<br/>tổng độ dài ≤ 50 ký tự — BR20"]
+    D --> E["Bộ đếm lưu trên chính quy tắc<br/>KyHienTai + SoKeTiep<br/>tăng nguyên tử theo Tenant"]
+
+    E --> F{"Người dùng sửa Số chứng từ<br/>và Tự động cập nhật đang Bật?"}
+    F -- "Số mới vẫn khớp mẫu số" --> F1["Chỉ dời bộ đếm theo cụm số<br/>các thành phần khác giữ nguyên"]:::ok
+    F -- "Không khớp · mẫu số đơn giản" --> F2["Tách lại từ trái sang<br/>cụm chữ đầu thành Tiền tố<br/>cụm số đầu thành bộ đếm<br/>phần còn lại thành Hậu tố"]:::warn
+    F -- "Không khớp · mẫu có ngày tháng<br/>hoặc ký tự ngăn cách" --> F3["KHÔNG cập nhật quy tắc<br/>số chỉ lưu cho chứng từ đó<br/>MSG_14741_025"]:::err
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>49 quy tắc trên 47 loại chứng từ — không phải quan hệ một-một.</b> Phiếu chi tiền gửi là <em>một</em> loại chứng từ nhưng có <em>ba</em> quy tắc theo phương thức thanh toán, mỗi quy tắc một dãy số riêng và một tiền tố riêng.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Điều dễ hiểu nhầm</th><th>Đúng theo tài liệu</th></tr></thead>
+    <tbody>
+      <tr><td>Tiền tố là thuộc tính của Loại chứng từ</td><td>Không. <span class="f">Code</span> của Loại chứng từ là mã kỹ thuật cố định; Tiền tố là cấu hình của <em>quy tắc</em> và sửa được <span class="chip c-br">BR02</span></td></tr>
+      <tr><td>Đổi cấu hình thì đánh số lại chứng từ cũ</td><td>Không. Chỉ áp cho chứng từ lập từ thời điểm đó trở đi <span class="chip c-br">BR06</span> <span class="chip c-br">BR07</span></td></tr>
+      <tr><td>Bộ đếm luôn lấp khoảng trống</td><td>Không. Nhập số lớn hơn thì bộ đếm nhảy theo, khoảng giữa bỏ luôn <span class="chip c-br">BR05</span></td></tr>
+      <tr><td>Reset theo tháng dùng được với mẫu số bất kỳ</td><td>Không. Chọn Theo tháng hoặc Theo năm thì mẫu số <b>bắt buộc</b> có thành phần ngày tháng phân biệt được kỳ</td></tr>
+      <tr><td>“Cho phép sửa số” và “Tự động cập nhật” cùng phạm vi</td><td>Không. Cho phép sửa số khai <em>theo từng quy tắc</em>; Tự động cập nhật và Quy tắc cập nhật là cấu hình <em>chung toàn đơn vị</em> <span class="chip c-br">BR04</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — Bảng tra</span>
+  <h2>36 danh mục con: dạng · mã · ràng buộc xóa</h2>
+  <p class="lede">Mọi danh mục có dấu <span class="chip c-ok">vẽ</span> đã có sơ đồ riêng ở các mục trên. Các danh mục còn lại <strong>chỉ được tổng hợp qua bảng này</strong> — chúng chạy đúng khuôn chung ở mục 01–04, không có sơ đồ riêng.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Danh mục</th><th class="mono">Entity gốc</th><th>Dạng</th><th>Quy tắc mã</th><th>Ràng buộc xóa</th><th>Ghi chú đặc thù</th></tr></thead>
+    <tbody>
+      <tr><td>Chức danh</td><td class="mono">mst_chuc_danh</td><td>Phẳng</td><td class="mono">Code · 50 · Tenant</td><td><span class="f">doi_tuong_vai_tro.ChucDanhId</span> <span class="chip c-msg">00093_005</span></td><td>Bản mẫu chuẩn nhất của epic — 3 trường, 5 màn</td></tr>
+      <tr><td>Đơn vị tính</td><td class="mono">mst_don_vi_tinh</td><td>Phẳng</td><td class="mono">Code · 50 · Tenant</td><td>Đang được sử dụng <span class="chip c-msg">00107_…</span></td><td>Danh mục duy nhất Kế toán viên có đủ CRUD</td></tr>
+      <tr><td>Kho</td><td class="mono">mst_kho</td><td>Phẳng</td><td class="mono">Code · 50 · Tenant</td><td>Đang được sử dụng <span class="chip c-msg">00109_009</span></td><td>Có Tài khoản kho, Thủ kho, cờ Là kho hàng đi đường</td></tr>
+      <tr><td>Nhóm kho</td><td class="mono">mst_nhom_kho</td><td>Phẳng</td><td class="mono">Code · 50 · Tenant</td><td>Bị Kho tham chiếu <span class="chip c-msg">00137_009</span></td><td>Chuẩn khuôn, không lệch</td></tr>
+      <tr><td>Nguồn vốn</td><td class="mono">mst_nguon_von</td><td>Phẳng</td><td class="mono">Code · 50 · Tenant</td><td>Reference ở module khác <span class="chip c-msg">05802_009</span></td><td>Chuẩn khuôn, không lệch</td></tr>
+      <tr><td>Nhóm hợp đồng</td><td class="mono">mst_nhom_hop_dong</td><td>Phẳng</td><td class="mono">Code · 50 · Tenant</td><td>Đang được sử dụng <span class="chip c-msg">00562_010</span></td><td>Form chỉ 3 trường, không có Mô tả</td></tr>
+      <tr><td>Điều khoản thanh toán</td><td class="mono">mst_dieu_khoan<br>_thanh_toan</td><td>Phẳng</td><td class="mono">Code · 50 · Tenant</td><td>Đang được sử dụng <span class="chip c-msg">00162_010</span></td><td>Số ngày được nợ auto-fill sang màn Khách hàng</td></tr>
+      <tr><td>Loại tiền</td><td class="mono">mst_loai_tien</td><td>Phẳng</td><td class="mono">Code · 50 · Tenant</td><td><span class="f">doi_tuong_vai_tro.LoaiTienId</span> và chứng từ <span class="chip c-msg">00114_015</span></td><td>Có Tỷ giá, số thực &gt; 0 <span class="chip c-br">BR18</span>; seed từ template Excel</td></tr>
+      <tr><td>Loại tiền dùng chung</td><td class="mono">mst_loai_tien<br>_dung_chung</td><td>Phẳng</td><td class="mono">Code · 50</td><td>Như trên</td><td><span class="chip c-ok">vẽ · mục 07</span> Chỉ Admin DN có CRUD</td></tr>
+      <tr><td>Ngân hàng</td><td class="mono">mst_ngan_hang</td><td>Phẳng</td><td class="mono">Code = Tên viết tắt · 50</td><td><span class="f">tai_khoan_ngan_hang.NganHangId</span> <span class="chip c-msg">00115_016</span></td><td>Không có ô “Mã”; seed từ <span class="mono">Danh_sach_ngan_hang.xlsx</span></td></tr>
+      <tr><td>Tài khoản ngân hàng</td><td class="mono">mst_tai_khoan<br>_ngan_hang</td><td>Phẳng</td><td class="mono">SoTaiKhoan + NganHangId</td><td><span class="f">cash_phieu_thu</span> · <span class="f">cash_phieu_chi</span> <span class="chip c-msg">00117_011</span></td><td>Khóa duy nhất là một <b>cặp</b>, không phải một trường</td></tr>
+      <tr><td>Ngành nghề</td><td class="mono">mst_nganh_nghe</td><td>Phẳng</td><td class="mono">Code · 50 · không phân biệt hoa thường · trim</td><td>Đang được sử dụng <span class="chip c-msg">00123_015</span></td><td>Seed từ <span class="mono">Danh_sach_nganh_nghe.xlsx</span></td></tr>
+      <tr><td>Nhóm ngành nghề</td><td class="mono">mst_nhom_nganh_nghe</td><td>Phẳng</td><td class="mono">Code · 50 · không phân biệt hoa thường · trim</td><td>Chi tiết CTBH, hóa đơn, Phiếu KTTH, Vật tư, Cấu hình đơn vị <span class="chip c-msg">00093_123</span></td><td>Có Tỷ lệ % tính thuế GTGT trực tiếp; mã quyền dùng <span class="mono">.Read</span>/<span class="mono">.Update</span> lệch chuẩn</td></tr>
+      <tr><td>Thuế tiêu thụ đặc biệt</td><td class="mono">mst_thue_tieu_thu<br>_dac_biet</td><td>Phẳng</td><td class="mono">Code · 50 · Tenant</td><td><span class="f">mst_vat_tu.ThueTieuThuDacBietId</span> <span class="chip c-msg">00126_008</span></td><td>Có Thuế suất % và Tài khoản thuế</td></tr>
+      <tr><td>Thuế tài nguyên</td><td class="mono">mst_thue_tai_nguyen</td><td>Phẳng</td><td class="mono">Code · 50 · Tenant</td><td>Đang được sử dụng <span class="chip c-msg">00127_008</span></td><td>Cùng bộ trường với Thuế TTĐB</td></tr>
+      <tr><td>Mẫu số hóa đơn</td><td class="mono">mst_mau_so_hoa_don</td><td>Phẳng</td><td class="mono">MauSo · 50 · Tenant</td><td><span class="f">pur_hoa_don_mua</span> · <span class="f">sal_hoa_don_ban_hang</span> <span class="chip c-msg">03504_015</span></td><td>Danh mục duy nhất chặn <b>trước khi mở popup</b> xác nhận</td></tr>
+      <tr><td>Thông tư</td><td class="mono">mst_thong_tu</td><td>Phẳng</td><td class="mono">Code = Số hiệu · 50</td><td><span class="f">thong_tu_tai_khoan</span> và bản dùng chung <span class="chip c-msg">00161_008</span></td><td>Ngày hiệu lực ≥ Ngày ban hành; chỉ Admin DN có CRUD</td></tr>
+      <tr><td>Vật tư</td><td class="mono">mst_vat_tu</td><td>Phẳng</td><td class="mono">Code · 50 · Tenant</td><td>3 nguồn, cùng mã <span class="chip c-msg">00106_017</span></td><td><span class="chip c-ok">vẽ · mục 08</span> 5 tab · 2 lưới con · 7 tài khoản ngầm định</td></tr>
+      <tr><td>Khách hàng</td><td class="mono">mst_doi_tuong</td><td>Phẳng</td><td class="mono">Code · 50 · Tenant</td><td>Chứng từ bán, hóa đơn bán, phiếu xuất <span class="chip c-msg">042 / 055</span></td><td><span class="chip c-ok">vẽ · mục 09</span> Cá nhân và Tổ chức tách bộ trường và bộ MSG</td></tr>
+      <tr><td>Nhà cung cấp</td><td class="mono">mst_doi_tuong</td><td>Phẳng</td><td class="mono">Code · 50 · Tenant</td><td>Đã được sử dụng <span class="chip c-msg">068 / 081</span></td><td><span class="chip c-ok">vẽ · mục 09</span> Cùng entity với Khách hàng, khác vai trò</td></tr>
+      <tr><td>Nhân viên</td><td class="mono">mst_doi_tuong</td><td>Phẳng</td><td class="mono">Code · 50 · Tenant<br>+ MaSoThue bắt buộc</td><td>Đã phát sinh nghiệp vụ <span class="chip c-msg">00093_029</span></td><td><span class="chip c-ok">vẽ · mục 09</span> Nhánh xóa kéo theo người dùng liên kết</td></tr>
+      <tr><td>Tài khoản ngầm định</td><td class="mono">cfg_tai_khoan<br>_ngam_dinh</td><td>Phẳng</td><td>Không có mã · <b>không kiểm trùng tên</b></td><td>Định khoản hệ thống hoặc đã dùng → Disable <span class="chip c-msg">14741_014</span></td><td><span class="chip c-ok">vẽ · mục 10</span> 154 định khoản dựng sẵn · có Nhân bản</td></tr>
+      <tr><td>Cơ cấu tổ chức</td><td class="mono">mst_don_vi</td><td><b>Cây</b> · <span class="mono">ChaId</span> bắt buộc</td><td class="mono">Code · 50 · Tenant</td><td>Cấp 1 ẩn nút Xóa · còn đơn vị con <span class="chip c-msg">00116_016</span> · <span class="f">doi_tuong_vai_tro.DonViId</span> và chứng từ hạch toán <span class="chip c-msg">00116_017</span></td><td><span class="chip c-ok">vẽ · mục 05</span> Chọn Chi nhánh thì hiện thêm 6 trường</td></tr>
+      <tr><td>Nhóm KH / NCC</td><td class="mono">mst_nhom_doi_tuong</td><td><b>Cây</b> · <span class="mono">ChaId</span></td><td class="mono">Code · 50 · Tenant</td><td>Còn nhóm con <span class="chip c-msg">00093_017</span> · <span class="f">doi_tuong_vai_tro</span> <span class="chip c-msg">00093_016</span></td><td>Gán vào đối tượng bằng MultiSelect, một đối tượng nhiều nhóm</td></tr>
+      <tr><td>Nhóm vật tư</td><td class="mono">mst_nhom_vat_tu</td><td><b>Cây</b> · <span class="mono">ChaId</span></td><td class="mono">Code · 50 · Tenant</td><td>Còn nhóm con <span class="chip c-msg">00105_014</span> · đang dùng <span class="chip c-msg">00105_009</span></td><td>Nối vào Vật tư qua bảng <span class="mono">mst_vat_tu_nhom_vat_tu</span></td></tr>
+      <tr><td>Loại CCDC</td><td class="mono">mst_loai_cong_cu<br>_dung_cu</td><td><b>Cây</b> · <span class="mono">ChaId</span></td><td class="mono">Code · 50 · Tenant</td><td>Còn loại con <span class="chip c-msg">00111_009</span> · <span class="f">ccdc_cong_cu_dung_cu</span> <span class="chip c-msg">00111_013</span></td><td><span class="mono">CapLoai</span> là giá trị suy ra từ chuỗi <span class="mono">ChaId</span>, không lưu vật lý</td></tr>
+      <tr><td>Loại TSCĐ</td><td class="mono">mst_loai_tai_san<br>_co_dinh</td><td><b>Cây</b> · <span class="mono">ChaId</span></td><td class="mono">Code · 50 · Tenant</td><td>Còn loại con · bị TSCĐ tham chiếu — <b>cùng một mã</b> <span class="chip c-msg">00112_010</span></td><td>Danh mục cây duy nhất gộp hai nhánh chặn về một mã</td></tr>
+      <tr><td>Công trình</td><td class="mono">mst_cong_trinh</td><td><b>Cây</b> · <span class="mono">ChaId</span></td><td class="mono">Code · 50 · Tenant</td><td>Còn công trình con <span class="chip c-msg">00129_013</span> · module khác <span class="chip c-msg">00129_008</span></td><td>Trỏ tới Loại công trình qua <span class="mono">LoaiCongTrinhId</span></td></tr>
+      <tr><td>Loại công trình</td><td class="mono">mst_loai_cong_trinh</td><td><b>Cây</b> · <span class="mono">ChaId</span></td><td class="mono">Code · 50 · Tenant</td><td>Còn loại con <span class="chip c-msg">00128_011</span> · <span class="f">cong_trinh.LoaiCongTrinhId</span> <span class="chip c-msg">00128_007</span></td><td>Chuẩn khuôn cây, không lệch thêm</td></tr>
+      <tr><td>Khoản mục chi phí</td><td class="mono">mst_khoan_muc<br>_chi_phi</td><td><b>Cây</b> · <span class="mono">ChaId</span></td><td class="mono">Code · 50 · Tenant</td><td>Còn khoản mục con <span class="chip c-msg">00560_012</span> · module khác <span class="chip c-msg">00560_009</span></td><td>Là một trong 5 đối tượng theo dõi của Hệ thống tài khoản</td></tr>
+      <tr><td>Hệ thống tài khoản</td><td class="mono">mst_he_thong<br>_tai_khoan</td><td><b>Cây</b> · <span class="mono">TaiKhoanTongHopId</span></td><td class="mono">SoHieuTaiKhoan · 50 · ≥ 3 chữ số</td><td><b>Không có thao tác Xóa</b> — bộ quyền chỉ View · Create · Edit</td><td><span class="chip c-ok">vẽ · mục 06</span> <span class="mono">CapTaiKhoan</span> và <span class="mono">ChoPhepHachToan</span> tự tính, không lên form</td></tr>
+      <tr><td>HTTK dùng chung</td><td class="mono">mst_he_thong_tai<br>_khoan_dung_chung</td><td><b>Cây</b></td><td class="mono">SoHieu + ThongTuId</td><td><b>Không có thao tác Xóa</b></td><td><span class="chip c-ok">vẽ · mục 07</span> Thêm mới lan tỏa xuống mọi tenant Hoạt động</td></tr>
+      <tr><td>Loại vật tư</td><td class="mono">mst_loai_vat_tu</td><td>Cố định</td><td>Mã chỉ đọc</td><td><b>Chỉ R và U</b> — không thêm, không xóa</td><td>Giữ 7 tài khoản ngầm định mà Vật tư auto-fill theo</td></tr>
+      <tr><td>Loại chứng từ</td><td class="mono">mst_loai_chung_tu</td><td>Cố định</td><td class="mono">Code · toàn hệ thống</td><td><b>Chỉ R</b> — 47 bản ghi dựng sẵn</td><td><span class="chip c-ok">vẽ · mục 11</span> Đích tham chiếu của TK ngầm định và Quy tắc đánh số</td></tr>
+      <tr><td>Quy tắc đánh số</td><td class="mono">cfg_quy_tac_danh_so</td><td>Cố định</td><td>Không có mã</td><td><b>Chỉ R và U</b> — 49 dòng, không thêm không xóa</td><td><span class="chip c-ok">vẽ · mục 11</span> Bộ đếm <span class="mono">KyHienTai</span> + <span class="mono">SoKeTiep</span> nằm trên chính quy tắc</td></tr>
+      <tr><td>Tỉnh thành phố · Phường xã</td><td class="mono">mst_tinh_thanh_pho<br>mst_phuong_xa</td><td>Cố định</td><td>—</td><td><b>Chỉ R</b> với cả bốn vai trò</td><td>Dữ liệu địa giới, dùng ở combogrid địa chỉ của Đối tượng</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Những danh mục CHƯA có sơ đồ riêng trong trang này</span>
+    <p>Toàn bộ dòng <strong>không</strong> mang nhãn <span class="chip c-ok">vẽ</span> ở bảng trên chỉ được tổng hợp qua bảng, không có sơ đồ riêng: Đơn vị tính · Kho · Nhóm kho · Nguồn vốn · Nhóm hợp đồng · Điều khoản thanh toán · Loại tiền · Ngân hàng · Tài khoản ngân hàng · Ngành nghề · Nhóm ngành nghề · Thuế TTĐB · Thuế tài nguyên · Mẫu số hóa đơn · Thông tư · Chức danh · Nhóm KH-NCC · Nhóm vật tư · Loại CCDC · Loại TSCĐ · Công trình · Loại công trình · Khoản mục chi phí · Loại vật tư · Tỉnh-Phường xã.</p>
+    <p style="margin-top:10px">Đó là <em>chủ ý</em>: 25 danh mục này chạy đúng chuỗi ở mục 02, 03, 04 — vẽ lại 25 sơ đồ giống nhau chỉ khác tên entity thì không thêm thông tin nào. Muốn dựng luồng cho một trong số đó: lấy sơ đồ mục 03 và 04, thay <span class="mono">&lt;Entity&gt;</span> và mã MSG theo đúng dòng bảng trên; danh mục cây thì bật thêm cửa 1 ở mục 04 và cascade ở mục 05.</p>
+  </div>
+</section>
+
+<!-- ============ 13 ============ -->
+<section id="s13">
+  <span class="snum">13 — Tra cứu</span>
+  <h2>Ma trận quyền, mã thông báo, và chỗ tài liệu còn hở</h2>
+  <p class="lede">Epic có <strong>474 mã MSG</strong> trải trên 37 khối, đánh số theo hai họ tiền tố khác nhau. Bảng dưới gom theo <em>ý nghĩa</em>, không theo số.</p>
+
+  <h3>Mã quyền: một bộ bốn nhân với từng danh mục</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th><th>Thiếu thì</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">DMXxx.View</td><td>Vào được màn danh sách</td><td><b>Ẩn cả chức năng</b> khỏi menu</td></tr>
+      <tr><td class="mono">DMXxx.View.Detail</td><td>Nút Xem chi tiết</td><td>Ẩn nút, hoặc chuyển hướng về danh sách</td></tr>
+      <tr><td class="mono">DMXxx.Create</td><td>Nút Thêm mới · Lưu · Lưu và thêm mới</td><td>Ẩn nút Thêm mới</td></tr>
+      <tr><td class="mono">DMXxx.Edit</td><td>Nút Sửa · Lưu ở màn Chỉnh sửa</td><td>Ẩn nút Sửa</td></tr>
+      <tr><td class="mono">DMXxx.Delete</td><td>Nút Xóa · popup xác nhận</td><td>Ẩn nút Xóa</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Tiền tố <span class="mono">Xxx</span> đặt theo danh mục: <span class="mono">DMChucDanh</span> · <span class="mono">DMDonVi</span> · <span class="mono">DMDonViTinh</span> · <span class="mono">DMKho</span> · <span class="mono">DMNhomKho</span> · <span class="mono">DMVatTu</span> · <span class="mono">DMNhomVatTu</span> · <span class="mono">DMKhachHang</span> · <span class="mono">DMNhaCungCap</span> · <span class="mono">DMNhanVien</span> · <span class="mono">DMNhomKHNCC</span> · <span class="mono">DMLoaiTien</span> · <span class="mono">DMNganHang</span> · <span class="mono">DMCongTrinh</span> · <span class="mono">DMLoaiCongTrinh</span> · <span class="mono">DMKhoanMucChiPhi</span> · <span class="mono">DMNguonVon</span> · <span class="mono">DMNhomHopDong</span> · <span class="mono">DMDieuKhoanTT</span> · <span class="mono">DMBieuThueTTDB</span> · <span class="mono">DMBieuThueTaiNguyen</span> · <span class="mono">DMLoaiTSCD</span> · <span class="mono">DMNhomCCDC</span>.</p>
+
+  <h3>Bốn bộ quyền không theo khuôn</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Danh mục</th><th class="mono">Bộ quyền thật trong tài liệu</th><th>Điều lệch</th></tr></thead>
+    <tbody>
+      <tr><td>Hệ thống tài khoản</td><td class="mono">DMTaiKhoan.View · .View.Detail<br>.Create · .Edit</td><td><b>Không có</b> <span class="mono">.Delete</span> — danh mục không cho xóa</td></tr>
+      <tr><td>HTTK dùng chung</td><td class="mono">DMTaiKhoanDungChung.Create · .Edit</td><td>Không có <span class="mono">.Delete</span></td></tr>
+      <tr><td>Nhóm ngành nghề</td><td class="mono">DMNhomNganhNghe.Read · .Create<br>.Update · .Delete</td><td>Dùng <span class="mono">.Read</span>/<span class="mono">.Update</span> thay vì <span class="mono">.View</span>/<span class="mono">.Edit</span></td></tr>
+      <tr><td>Cấu hình đánh số</td><td class="mono">HTCauHinhDanhSo.View.Detail · .Edit</td><td>Tiền tố <span class="mono">HT</span> chứ không phải <span class="mono">DM</span>; không có Create/Delete</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Bảy khối thông báo lặp lại ở mọi danh mục</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tình huống</th><th>Nội dung chuẩn</th><th>Loại</th></tr></thead>
+    <tbody>
+      <tr><td>Thêm mới thành công</td><td>Thêm mới &lt;danh mục&gt; thành công</td><td><span class="chip c-ok">Success</span></td></tr>
+      <tr><td>Cập nhật thành công</td><td>Cập nhật &lt;danh mục&gt; thành công</td><td><span class="chip c-ok">Success</span></td></tr>
+      <tr><td>Xóa thành công</td><td>Xóa &lt;danh mục&gt; thành công</td><td><span class="chip c-ok">Success</span></td></tr>
+      <tr><td>Trùng mã</td><td>Giá trị đã tồn tại</td><td><span class="chip c-msg">Error</span></td></tr>
+      <tr><td>Chặn xóa vì đã dùng</td><td>Danh mục đã phát sinh dữ liệu nghiệp vụ, không thể xóa.</td><td><span class="chip c-msg">Error</span></td></tr>
+      <tr><td>Danh sách rỗng</td><td>Không có dữ liệu</td><td><span class="chip c-warn">Info</span></td></tr>
+      <tr><td>Không có quyền</td><td>Bạn không có quyền truy cập chức năng này. Vui lòng liên hệ quản trị viên.</td><td><span class="chip c-perm">Error</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Hai họ tiền tố cùng tồn tại: <span class="mono">MSG_PMKT-E-00093_xxx</span> dùng cho các danh mục quanh Đối tượng — Chức danh, Nhóm đối tượng, Nhân viên, Khách hàng, Nhà cung cấp, Nhóm ngành nghề; <span class="mono">MSG_PMKT-U-&lt;mã U&gt;_xxx</span> dùng cho phần còn lại. Khi tra cứu phải bám đúng họ của danh mục đó.</p>
+
+  <h3>Chỗ tài liệu BA chưa quy định — không suy diễn, chỉ ghi lại</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Khoảng trống</th><th>Biểu hiện</th></tr></thead>
+    <tbody>
+      <tr><td><b>Loại hình kinh doanh</b> và <b>Lĩnh vực hoạt động</b></td><td>Có trong <span class="mono">1.function-breakdown.md</span> nhưng <b>không có</b> thư mục màn hình lẫn use case trong epic. CRUD matrix ghi <span class="mono">mst_linh_vuc_hoat_dong</span> thuộc PMKT-E-00420; Loại hình kinh doanh không được nhắc lại ở đâu.</td></tr>
+      <tr><td>Mã quyền của <b>Tài khoản ngân hàng</b></td><td>UC Thêm mới và UC Xóa ghi <span class="mono">DMNganHang.Create</span> / <span class="mono">DMNganHang.Delete</span> — mã quyền của danh mục <em>Ngân hàng</em>, trong khi UC Xem và Sửa lại dùng <span class="mono">DMTaiKhoanNganHang.*</span>. Tài liệu không nói đây là cố ý hay nhầm.</td></tr>
+      <tr><td>Ngưỡng số cấp của cây</td><td>Chỉ Cơ cấu tổ chức ghi rõ “không giới hạn số cấp”. Chín danh mục cây còn lại không nêu ngưỡng, cũng không nêu quy tắc chống vòng lặp khi chọn chính mình hoặc con của mình làm cha.</td></tr>
+      <tr><td>Thao tác hàng loạt</td><td>Mọi màn danh sách đều có cột checkbox chọn nhiều dòng, nhưng không màn nào mô tả nút xóa hàng loạt hay đổi trạng thái hàng loạt <span class="chip c-br">BR45</span>.</td></tr>
+      <tr><td>Xuất Excel · nhập Excel</td><td>Thư mục <span class="mono">7.templates</span> có 4 file <span class="mono">.xlsx</span>, nhưng chỉ màn Ngân hàng nhắc tới việc seed từ file; không màn nào mô tả chức năng nhập hoặc xuất Excel <span class="chip c-br">BR39</span>.</td></tr>
+      <tr><td>Mức yêu cầu của đối tượng theo dõi</td><td><span class="chip c-br">BR04</span> màn Thêm mới Hệ thống tài khoản nói enum “gồm 2 giá trị” rồi liệt kê hai giá trị, nhưng bảng trường và <span class="chip c-br">BR05</span> lại liệt kê ba giá trị kèm “Không yêu cầu”.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-00093 · Danh mục dùng chung</span>
+  <span>Dựng từ 170 UC · 171 Activity Diagram · 162 màn hình · 474 mã MSG</span>
+  <span>Khuôn chung + 7 danh mục lệch khuôn · 25 danh mục chỉ có trong bảng tra</span>
+</footer>
+
+</div>

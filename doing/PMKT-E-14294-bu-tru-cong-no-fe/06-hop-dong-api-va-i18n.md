@@ -287,7 +287,7 @@ ngoài vào **phải Zod `parse`**, không ép kiểu.
 | Endpoint **cấu hình TK chênh lệch tỷ giá** | ❓ chưa xác định | Không có thì `MSG_..._016` lùi về bước Lưu (mất yêu cầu chặn sớm của UC) |
 
 **Mã chức năng thì đã có** ở BE: `PHIEU_KE_TOAN = "PhieuKeToan"` và `BU_TRU_CONG_NO = "BuTruCongNo"`
-(`cell-app/src/main/java/vn/dopai/pmkt/cell/common/constant/MaChucNang.java:354,366`) — nhưng chưa có
+(`cell-app/src/main/java/vn/vtt/pmkt/cell/common/constant/MaChucNang.java:354,366`) — nhưng chưa có
 controller nào tiêu thụ chúng, nên **tên động từ** (`.Create`, `.Post`, `.Unpost`, `.Delete`,
 `.View.Detail`) vẫn là **giả định theo tài liệu BA**.
 

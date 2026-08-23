@@ -1,0 +1,568 @@
+<title>Luồng Định dạng số</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-14701 · Cài đặt hệ thống</p>
+  <h1>Luồng xử lý Định dạng số</h1>
+  <p>Epic cấu hình gốc: một form duy nhất, 12 trường, một bản ghi <span class="f">ENT_cfg_tenant</span> của tenant hiện hành. Trang này vẽ vòng đời bản ghi cấu hình đó — xem · sửa · lấy lại ngầm định · lưu · hủy — rồi vẽ tiếp con đường cấu hình chạm tới mọi nơi hệ thống hiển thị số.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 1 use case · 1 màn hình · BR1–BR6</span>
+    <span><b>Entity gốc:</b> ENT_cfg_tenant (chỉ U)</span>
+    <span><b>Quyền:</b> HTDinhDangSo.Edit</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Vòng đời bản ghi cấu hình</a></li>
+    <li><a href="#s1"><span>01</span>Vào màn hình &amp; gác quyền</a></li>
+    <li><a href="#s2"><span>02</span>Ba nhóm · 12 trường</a></li>
+    <li><a href="#s3"><span>03</span>Chọn cặp ngăn cách</a></li>
+    <li><a href="#s4"><span>04</span>Lấy lại ngầm định</a></li>
+    <li><a href="#s5"><span>05</span>Lưu</a></li>
+    <li><a href="#s6"><span>06</span>Hủy &amp; đóng form</a></li>
+    <li><a href="#s7"><span>07</span>Cấu hình chạm tới đâu</a></li>
+    <li><a href="#s8"><span>08</span>Giảm số thập phân</a></li>
+    <li><a href="#s9"><span>09</span>Tra cứu &amp; khoảng trống</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Vòng đời một bản ghi cấu hình</h2>
+  <p class="lede">Không có Thêm mới, không có Xóa, không có màn danh sách. Bản ghi cấu hình <strong>sinh ra cùng tenant</strong> với bộ giá trị ngầm định <span class="chip c-br">BR6</span> và từ đó chỉ đi qua đúng một thao tác: cập nhật. CRUD matrix của epic vì thế chỉ có một chữ <span class="f">U</span>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S["<b>KHỞI TẠO TENANT</b><br/>Hoàn tất onboarding<br/>Ghi bộ ngầm định BR6"] --> A
+    A["<b>ĐANG ÁP DỤNG</b><br/>ENT_cfg_tenant · 12 trường<br/>Mọi nơi hiển thị số đọc từ đây"]
+    A -- "Mở màn Định dạng số" --> B["<b>BẢN NHÁP TRÊN FORM</b><br/>Chỉ nằm trong bộ nhớ giao diện<br/>DB chưa đổi một byte nào"]
+    B -- "Lấy lại tất cả · Lấy lại ngầm định" --> R["Điền đè giá trị ngầm định<br/>lên form — vẫn là bản nháp"]
+    R --> B
+    B -- "Lưu hợp lệ · commit — MSG_101" --> A
+    B -- "Hủy · lỗi validate · rollback" --> A
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class A ok;
+    class R warn;
+</pre>
+    </div>
+    <figcaption><b>Chỉ có một đường ghi xuống DB.</b> Ba nút "Lấy lại tất cả", "Lấy lại ngầm định" và mọi thao tác gõ tay đều dừng ở bản nháp trên form; DB chỉ đổi khi người dùng bấm <em>Lưu</em> và qua được validate.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Vì sao epic này không có trạng thái</span>
+    <p>Bản ghi cấu hình <strong>không mang trạng thái nghiệp vụ</strong> — không ghi sổ, không xóa mềm, không duyệt. Vì vậy các quy chuẩn chung về trạng thái chứng từ <span class="chip c-br">BR12</span>, ghi sổ <span class="chip c-br">BR36</span>, bỏ ghi sổ <span class="chip c-br">BR42</span> và chính sách xóa <span class="chip c-br">BR29</span> <em>không</em> áp vào epic này. Bộ trường hệ thống <span class="chip c-br">BR46</span> vẫn phải có, nhóm vết ghi sổ để trống.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — UC_DinhDangSo_ChinhSua</span>
+  <h2>Vào màn hình: một quyền gác cả chức năng</h2>
+  <p class="lede">Epic chỉ khai đúng <strong>một permission</strong>. Có nó thì vừa xem được vừa sửa được; không có nó thì menu bị ẩn hẳn và mọi đường vòng qua URL hoặc gọi thẳng API đều bị chặn.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Mở menu Thiết lập → Định dạng số"]) --> B{"Có quyền HTDinhDangSo.Edit?"}
+    B -- "Không" --> B1["Ẩn hoàn toàn mục menu<br/>Gọi thẳng URL hoặc API vẫn chặn<br/>MSG_PMKT-E-14701_002"]:::err
+    B -- "Có" --> C{"Tenant đang hoạt động<br/>và đã hoàn tất onboarding?"}
+    C -- "Không" --> C1["Tiền điều kiện không thỏa<br/>BA chưa quy định thông báo riêng"]:::warn
+    C -- "Có" --> D["Đọc ENT_cfg_tenant theo<br/>TenantId của phiên đăng nhập"]
+    D --> E["Hiển thị SCR_DinhDangSo<br/>12 trường ở chế độ cho phép sửa"]
+    E --> F["Không có chế độ chỉ đọc<br/>Không có Thêm mới · không có Xóa"]:::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Màn hình mở thẳng ở chế độ Chỉnh sửa.</b> Ba chế độ form của <span class="chip c-br">BR14.1</span> rút lại còn một: đã vào được là sửa được, mọi trường "Cho phép sửa = Y", không trường nào disable hay ẩn có điều kiện.</figcaption>
+  </figure>
+
+  <p>Việc đọc dữ liệu bám <span class="chip c-br">BR28</span> — <span class="f">TenantContext</span> lấy từ access token, cấu hình của tenant khác không bao giờ được trả về. Ẩn menu thay vì disable nút là đúng <span class="chip c-br">BR25.2</span>.</p>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — SCR_DinhDangSo</span>
+  <h2>Ba nhóm, mười hai trường, một bộ ngầm định</h2>
+  <p class="lede">Form chia làm ba khối. Nắm bảng này là nắm toàn bộ dữ liệu của epic — phần còn lại chỉ là cách đưa dữ liệu vào và cách đọc nó ra.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nhóm</th><th>Trường</th><th class="mono">Field</th><th>Control</th><th class="num">Ngầm định BR6</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="2">Ký tự ngăn cách</td><td>Trên giao diện</td><td class="mono">NganCachHangNghinTrenGiaoDien<br>+ NganCachHangThapPhanTrenGiaoDien</td><td>Radio cặp</td><td>Chấm ngăn nghìn, phẩy thập phân</td></tr>
+      <tr><td>Trên báo cáo</td><td class="mono">NganCachHangNghinTrenBaoCao<br>+ NganCachHangThapPhanTrenBaoCao</td><td>Radio cặp</td><td>Chấm ngăn nghìn, phẩy thập phân</td></tr>
+      <tr><td rowspan="8">Số chữ số của phần thập phân</td><td>Tiền quy đổi</td><td class="mono">SoChuSoThapPhanTienQuyDoi</td><td>InputNumber</td><td class="num">0</td></tr>
+      <tr><td>Tiền ngoại tệ</td><td class="mono">SoChuSoThapPhanTienNgoaiTe</td><td>InputNumber</td><td class="num">2</td></tr>
+      <tr><td>Đơn giá quy đổi</td><td class="mono">SoChuSoThapPhanDonGiaQuyDoi</td><td>InputNumber</td><td class="num">5</td></tr>
+      <tr><td>Đơn giá ngoại tệ</td><td class="mono">SoChuSoThapPhanDonGiaNgoaiTe</td><td>InputNumber</td><td class="num">2</td></tr>
+      <tr><td>Số lượng</td><td class="mono">SoChuSoThapPhanSoLuong</td><td>InputNumber</td><td class="num">5</td></tr>
+      <tr><td>Tỷ giá</td><td class="mono">SoChuSoThapPhanTyGia</td><td>InputNumber</td><td class="num">2</td></tr>
+      <tr><td>Hệ số, tỷ lệ</td><td class="mono">SoChuSoThapPhanHeSoTyLe</td><td>InputNumber</td><td class="num">2</td></tr>
+      <tr><td>Số công</td><td class="mono">SoChuSoThapPhanSoCong</td><td>InputNumber</td><td class="num">0</td></tr>
+      <tr><td rowspan="2">Cách thể hiện số âm</td><td>Ký hiệu</td><td class="mono">CachTheHienSoAmKyHieu</td><td>Radio</td><td>(n) — dấu ngoặc</td></tr>
+      <tr><td>Màu sắc</td><td class="mono">CachTheHienSoAmMauSac</td><td>Radio</td><td>Đỏ</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Cả 12 trường đều <strong>bắt buộc</strong> và đều <strong>cho phép sửa</strong>. Ma trận ẩn/hiện của epic vì thế rút về một bảng trạng thái tĩnh một cột: không trường nào điều khiển ẩn/hiện/disable trường nào khác.</p>
+
+  <div class="note">
+    <span class="lbl">Hai lựa chọn cố định của nhóm Số âm</span>
+    <p><span class="chip c-br">BR3</span> Ký hiệu chỉ có <span class="f">-n</span> (dấu trừ) và <span class="f">(n)</span> (dấu ngoặc); Màu sắc chỉ có <em>Đỏ</em> và <em>Đen</em>. Không có ô nhập tự do, nên "để trống" ở nhóm này chỉ xảy ra khi dữ liệu cũ hỏng — vẫn phải chặn bằng <span class="chip c-msg">MSG_202</span> theo bảng validation.</p>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — BR1 · BR2</span>
+  <h2>Chọn cặp ngăn cách: một cú click ghi hai field</h2>
+  <p class="lede">Ràng buộc "ngăn cách hàng nghìn không được trùng hàng thập phân" <strong>không</strong> được cài bằng validate. Nó được cài bằng thiết kế: người dùng không chọn từng ký tự mà chọn nguyên một cặp, và mỗi cặp ghi đồng thời cả hai field.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Radio của một loại hiển thị<br/>Trên giao diện HOẶC Trên báo cáo"] --> B{"Chọn cặp nào?"}
+    B -- "Chấm ngăn nghìn, phẩy thập phân" --> C1["Ghi 2 field cùng lúc<br/>nghìn = dấu chấm<br/>thập phân = dấu phẩy"]
+    B -- "Phẩy ngăn nghìn, chấm thập phân" --> C2["Ghi 2 field cùng lúc<br/>nghìn = dấu phẩy<br/>thập phân = dấu chấm"]
+    C1 --> D["Không tồn tại tổ hợp trùng ký tự<br/>nên KHÔNG cần validate<br/>và KHÔNG có cơ chế tự hoán đổi"]:::ok
+    C2 --> D
+    D --> E["Lựa chọn của 2 loại hiển thị<br/>hoàn toàn độc lập nhau"]
+    E --> F["Cập nhật tức thời chuỗi ví dụ<br/>cạnh mỗi lựa chọn — BR2"]
+    F --> F1["Ví dụ cố định của cặp<br/>1.234.567,89 hoặc 1,234,567.89"]
+    F --> F2["Ví dụ của 8 ô số thập phân<br/>ghép cấu hình Trên giao diện với n"]
+    F --> F3["Ví dụ của nhóm Số âm<br/>ký hiệu và màu đang chọn"]
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Chuỗi ví dụ luôn dựng theo cấu hình "Trên giao diện".</b> Tài liệu chỉ quy định ví dụ ghép từ ngăn cách trên giao diện với số chữ số thập phân tương ứng; ví dụ minh họa không đọc cấu hình "Trên báo cáo".</figcaption>
+  </figure>
+
+  <p>Chuỗi ví dụ là <strong>thành phần hiển thị đọc kèm</strong>, không phải ô nhập liệu: nó cập nhật theo giá trị đang gõ, không có validate riêng và không lên ma trận ẩn/hiện.</p>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — Luồng phụ 5</span>
+  <h2>Lấy lại ngầm định: bốn nút, hai phạm vi</h2>
+  <p class="lede">Màn hình có <strong>bốn</strong> nút hồi giá trị: một nút "Lấy lại tất cả" ở đầu màn hình và ba nút "Lấy lại ngầm định" đặt ở góc phải tiêu đề từng nhóm. Chúng khác nhau đúng một thứ — phạm vi trường bị ghi đè.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Lấy lại tất cả<br/>đặt ở đầu màn hình"]) --> N1
+    A --> N2
+    A --> N3
+    B1(["Lấy lại ngầm định<br/>tiêu đề nhóm 1"]) --> N1["Nhóm Ký tự ngăn cách<br/>2 trường"]
+    B2(["Lấy lại ngầm định<br/>tiêu đề nhóm 2"]) --> N2["Nhóm Số chữ số thập phân<br/>8 trường"]
+    B3(["Lấy lại ngầm định<br/>tiêu đề nhóm 3"]) --> N3["Nhóm Cách thể hiện số âm<br/>2 trường"]
+    N1 --> R["Điền đè giá trị BR6 lên form<br/>Nhóm không thuộc phạm vi<br/>giữ nguyên giá trị đang nhập"]
+    N2 --> R
+    N3 --> R
+    R --> S["KHÔNG gọi API lưu<br/>Phải bấm Lưu mới xuống DB"]:::warn
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Không nút nào trong bốn nút này chạm tới database.</b> Chúng chỉ ghi đè bản nháp trên form; bấm Hủy ngay sau đó thì cấu hình cũ vẫn nguyên vẹn.</figcaption>
+  </figure>
+
+  <p>Cùng bộ giá trị ngầm định này được dùng ở <strong>hai thời điểm</strong>: khi tenant mới hoàn tất onboarding (hệ thống tự ghi thẳng vào <span class="f">ENT_cfg_tenant</span>) và khi người dùng bấm nút hồi giá trị (chỉ điền lên form). Sửa bộ ngầm định là sửa cả hai chỗ.</p>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — Luồng chính bước 6–9</span>
+  <h2>Lưu: hai lớp kiểm, một transaction</h2>
+  <p class="lede">Chuỗi lưu ngắn vì epic chỉ có hai điều kiện chặn. Điểm cần bám sát là <strong>hành vi khi hỏng</strong>: dù hỏng ở lớp validate hay lớp ghi DB, màn hình đều phải giữ nguyên toàn bộ dữ liệu đang nhập.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Bấm Lưu"]) --> P{"Còn quyền HTDinhDangSo.Edit?"}
+    P -- "Không" --> PE["MSG_PMKT-E-14701_002<br/>Chặn ngay tại API"]:::err
+    P -- "Có" --> V1{"Đủ 12 trường bắt buộc?"}
+    V1 -- "Có trường trống" --> X1["MSG_PMKT-E-14701_202"]:::err
+    V1 -- "Đủ" --> V2{"Mọi ô thập phân<br/>nằm trong khoảng 0 đến 10?"}
+    V2 -- "Ngoài khoảng" --> X2["MSG_PMKT-E-14701_203"]:::err
+    V2 -- "Hợp lệ" --> T["Mở transaction<br/>UPDATE ENT_cfg_tenant<br/>của tenant hiện hành"]
+    T --> W{"Ghi thành công?"}
+    W -- "Lỗi kết nối hoặc lỗi DB" --> X3["Rollback transaction<br/>MSG_PMKT-E-14701_003"]:::err
+    W -- "Thành công" --> OK["Commit<br/>MSG_PMKT-E-14701_101<br/>Giữ lại màn hình, không đóng form"]:::ok
+    X1 --> K["Giữ nguyên toàn bộ dữ liệu<br/>đang nhập, không tải lại trang<br/>BR4"]:::warn
+    X2 --> K
+    X3 --> K
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Lưu xong form vẫn mở.</b> Khác với popup nhập liệu thường thấy ở <span class="chip c-br">BR13.2</span> (Lưu thì đóng popup), nút Lưu ở màn này lưu xong <em>giữ lại màn hình</em> để người dùng xem lại chuỗi ví dụ vừa đổi.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Hai lớp kiểm, hai thời điểm</span>
+    <p>Bảng validation ghi rõ tầng kiểm tra là <strong>Giao diện <em>và</em> Hệ thống</strong> cho cả hai điều kiện — chặn ở client không miễn cho server. Riêng khoảng <span class="f">0–10</span> còn phải kiểm <strong>ngay khi nhập liệu</strong>, không đợi tới lúc bấm Lưu; điều kiện "không để trống" chỉ kiểm khi bấm Lưu.</p>
+  </div>
+
+  <p>Toàn bộ 12 trường được cập nhật trong <strong>một</strong> transaction, không có ghi từng phần: hoặc cả bộ cấu hình mới có hiệu lực, hoặc không đổi gì. Vết sửa ghi theo <span class="chip c-br">BR46</span> vào <span class="f">NguoiCapNhatId</span> · <span class="f">NgayCapNhat</span>; thông báo thành công hiển thị dạng toast theo <span class="chip c-br">BR26</span>.</p>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — Luồng phụ 4</span>
+  <h2>Hủy: chỉ hỏi lại khi form đã bẩn</h2>
+  <p class="lede">Nút Hủy đóng màn hình và quay về màn trước. Popup xác nhận <strong>chỉ</strong> bật khi dữ liệu trên form đã khác so với lúc mở — form còn nguyên thì đóng thẳng, không hỏi.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Bấm Hủy"]) --> B{"Dữ liệu trên form<br/>đã thay đổi?"}
+    B -- "Không" --> C["Đóng form ngay<br/>Quay lại màn hình trước"]:::ok
+    B -- "Có" --> D["Popup xác nhận đóng form<br/>MSG_PMKT-E-14701_401"]
+    D -- "Chọn Có" --> C
+    D -- "Chọn Không" --> E["Giữ nguyên form<br/>Mọi giá trị đang nhập còn nguyên"]:::warn
+    C --> F["Cấu hình trong DB không đổi<br/>Kể cả khi vừa bấm Lấy lại tất cả"]
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>"Đã thay đổi" tính cả thay đổi do máy sinh ra.</b> Bấm "Lấy lại ngầm định" rồi bấm Hủy vẫn phải bật popup xác nhận — nút hồi giá trị làm form bẩn y như gõ tay.</figcaption>
+  </figure>
+
+  <p>Theo <span class="chip c-br">BR3</span>, nhấn <span class="f">ESC</span> và click ra ngoài vùng popup tương đương chọn đóng; nút xác nhận đặt bên phải, nút hủy bên trái. Tài liệu epic không nhắc lại các điểm này nhưng chúng vẫn áp.</p>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — BR5</span>
+  <h2>Cấu hình chạm tới đâu: đường đi của một con số</h2>
+  <p class="lede">Đây là phần nặng nhất của epic dù nó không nằm trên màn hình nào. Nguyên tắc xuyên suốt: <strong>làm tròn chỉ tồn tại ở tầng hiển thị</strong>. Bộ nhớ giao diện và database luôn giữ giá trị gốc chưa làm tròn.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    K(["Người dùng gõ hoặc dán vào ô số"]) --> K1{"Vượt quá n chữ số thập phân?"}
+    K1 -- "Vượt" --> K2["Chặn cứng tại bàn phím<br/>Ký tự thừa không vào ô<br/>Không bật message lỗi"]:::warn
+    K1 -- "Trong giới hạn" --> G
+    C1["Chuỗi công thức tự động<br/>TUYỆT ĐỐI không làm tròn<br/>ở mọi bước trung gian"] --> G
+    G["<b>GIÁ TRỊ GỐC</b><br/>Độ chính xác tối đa<br/>trong bộ nhớ giao diện"]
+    G --> D["Lưu DB kiểu decimal 22 phẩy 10<br/>đúng giá trị gốc chưa làm tròn"]:::ok
+    G --> V["Tầng hiển thị<br/>Làm tròn Half-Up về n chữ số<br/>Đệm 0 · ngăn cách nghìn · số âm"]
+    V --> V1(["Chuỗi số trên màn hình và báo cáo"])
+    G -- "đầu vào cho công thức kế tiếp" --> C1
+    V1 -. "KHÔNG lấy số đã làm tròn tính tiếp" .-> C1
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Cấu hình định dạng số không bao giờ làm mất dữ liệu.</b> Nó chỉ can thiệp hai chỗ: chặn gõ ở đầu vào và làm tròn ở đầu ra. Mũi tên đứt là đường <em>cấm</em> — lấy số đã hiển thị làm đầu vào tính tiếp là lỗi sai số tích lũy.</figcaption>
+  </figure>
+
+  <h3>Tám cấu hình ánh xạ vào loại trường nào</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cấu hình</th><th>Áp cho loại trường</th><th>Ví dụ trường thật</th></tr></thead>
+    <tbody>
+      <tr><td>Tiền quy đổi</td><td>Số tiền theo đồng tiền hạch toán, kể cả trường tính ngầm rồi hiển thị</td><td>Thành tiền · Tiền thuế · Giá trị nhập kho · Dư Nợ/Có · Giá thành</td></tr>
+      <tr><td>Tiền ngoại tệ</td><td>Số tiền theo loại tiền khác đồng tiền hạch toán</td><td>Thành tiền NT · Dư Nợ/Có NT</td></tr>
+      <tr><td>Đơn giá quy đổi</td><td>Giá trị của <b>1 đơn vị</b> theo đồng tiền hạch toán</td><td>Đơn giá · Giá vốn · Giá thành đơn vị</td></tr>
+      <tr><td>Đơn giá ngoại tệ</td><td>Giá trị của <b>1 đơn vị</b> theo ngoại tệ</td><td>Đơn giá NT</td></tr>
+      <tr><td>Số lượng</td><td>Định lượng vật lý của hàng hóa, vật tư, dịch vụ</td><td>Số lượng · Khối lượng</td></tr>
+      <tr><td>Tỷ giá</td><td>Tỷ lệ quy đổi ngoại tệ trên form chứng từ</td><td>Tỷ giá</td></tr>
+      <tr><td>Hệ số, tỷ lệ</td><td><b>Mọi</b> trường mang tính phần trăm, hệ số nhân, tỷ lệ phân bổ</td><td>% chiết khấu · % thuế · hệ số lương · tỷ lệ phân bổ</td></tr>
+      <tr><td>Số công</td><td>Đếm ngày công, giờ công</td><td>Số công chấm công · tiền lương</td></tr>
+      <tr><td><em>Số cộng</em></td><td><b>Không có trường cấu hình riêng</b> — dòng tổng kế thừa định dạng của chính cột dữ liệu</td><td>Dòng Tổng cộng chân lưới · cuối báo cáo</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Phạm vi áp dụng là <strong>mọi màn hình nhập liệu, lưới chi tiết chứng từ và báo cáo</strong>, ngoại trừ Danh mục.</p>
+
+  <h3>Ghi đè thủ công đổi cả giá trị gốc</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Cấu hình Tiền quy đổi = 0<br/>Thành tiền tự tính<br/>1,5 nhân 15.001 = 22.501,5"] --> B["Màn hình hiển thị 22.502<br/>Half-Up ở tầng hiển thị"]
+    B --> C{"Người dùng gõ tay đè lên ô?"}
+    C -- "Không sửa" --> D["Thuế lấy GỐC<br/>22.501,5 nhân 10% = 2.250,15<br/>Hiển thị 2.250"]:::ok
+    C -- "Gõ 22500" --> E["Bàn phím chặn nhập thập phân<br/>vì n = 0"]:::warn
+    E --> F["22.500 trở thành GIÁ TRỊ GỐC MỚI<br/>xóa bỏ 22.501,5 cũ"]
+    F --> G["DB lưu 22.500<br/>Thuế = 22.500 nhân 10% = 2.250"]:::ok
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Sửa tay là thay giá trị gốc, không phải thay chuỗi hiển thị.</b> Ngay khi người dùng gõ vào một ô vốn được tính tự động, ô đó chịu quy tắc chặn nhập và con số vừa gõ thành đầu vào mới cho mọi công thức phía sau.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Đệm 0 ở đuôi</span>
+    <p>Nếu phần thập phân sau khi làm tròn còn ngắn hơn <span class="f">n</span>, hệ thống <strong>đệm thêm số 0</strong>. Cấu hình Đơn giá quy đổi = 5, dữ liệu gốc <span class="f">12.500,5</span> lên lưới hiển thị thành <span class="f">12.500,50000</span>.</p>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Lệch với quy chuẩn chung</span>
+    <p>BR5 của epic quy định cột số trên database dùng <span class="f">decimal(22,10)</span>, trong khi <span class="chip c-br">BR7.1</span> chung quy định <span class="f">decimal(18,2)</span> cho tiền, <span class="f">decimal(18,4)</span> ngoại tệ, <span class="f">decimal(18,6)</span> tỷ giá, <span class="f">decimal(18,3)</span> số lượng. Epic mô tả sâu hơn nên <strong>thắng trong phạm vi epic này</strong>, nhưng đây là điểm cần BA chốt lại để tránh hai chuẩn precision cùng tồn tại. Cũng vậy, BR7.2 nói làm tròn mặc định 2 chữ số khi <em>chưa có cấu hình</em> — epic này chính là cấu hình đó, nên nhánh mặc định của BR7.2 không còn dùng tới.</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — Cảnh báo cố định</span>
+  <h2>Giảm số thập phân: rủi ro nằm ngoài màn hình này</h2>
+  <p class="lede">Ngay dưới các ô nhập của nhóm "Số chữ số của phần thập phân" luôn có một panel cảnh báo tĩnh — không phải toast, không phải popup, không tắt được.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A["Đổi n từ NHIỀU sang ÍT<br/>và bấm Lưu"] --> B["Dữ liệu gốc trong DB<br/>KHÔNG thay đổi"]:::ok
+    A --> C["Chỉ tầng hiển thị đổi<br/>số bị làm tròn mạnh hơn"]
+    C --> D["Lệch giữa báo cáo tổng hợp<br/>và báo cáo chi tiết"]:::warn
+    C --> E["Tính sai giá xuất kho<br/>do làm tròn số"]:::warn
+    D --> F["Phải sửa tay số tiền của<br/>từng chứng từ bị ảnh hưởng"]
+    E --> F
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hệ thống không tự chữa lệch.</b> Tài liệu nêu rõ trách nhiệm thuộc về người dùng: muốn số liệu đúng thì phải sửa trực tiếp số tiền của từng chứng từ chịu ảnh hưởng bởi định dạng mới.</figcaption>
+  </figure>
+
+  <p>Panel này là <strong>văn bản cố định</strong> nên nằm ngoài ma trận ẩn/hiện; nó không thuộc nhóm cảnh báo nghiệp vụ theo ngữ cảnh của <span class="chip c-br">BR16</span> và cũng không phải toast <span class="chip c-br">BR26</span>.</p>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — Tra cứu</span>
+  <h2>Điều kiện chặn, quyền, và những chỗ BA chưa quy định</h2>
+  <p class="lede">Bảng gom mọi nhánh chặn trong các sơ đồ trên. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-14701_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện</th><th class="mono">Mã</th><th>Loại</th></tr></thead>
+    <tbody>
+      <tr><td>Truy cập màn hình</td><td>Không có quyền <span class="f">HTDinhDangSo.Edit</span> — kể cả gọi thẳng URL hoặc API</td><td class="mono">002</td><td>Lỗi</td></tr>
+      <tr><td rowspan="3">Lưu</td><td>Còn trường bắt buộc để trống — kiểm khi bấm Lưu</td><td class="mono">202</td><td>Lỗi</td></tr>
+      <tr><td>Số chữ số thập phân ngoài khoảng 0 đến 10 — kiểm cả lúc nhập liệu</td><td class="mono">203</td><td>Lỗi</td></tr>
+      <tr><td>Lỗi kết nối hoặc lỗi DB khi cập nhật, đã rollback</td><td class="mono">003</td><td>Lỗi</td></tr>
+      <tr><td>Lưu thành công</td><td>Commit transaction xong, form vẫn mở</td><td class="mono">101</td><td>Thành công</td></tr>
+      <tr><td>Hủy</td><td>Form đã có thay đổi</td><td class="mono">401</td><td>Cảnh báo</td></tr>
+      <tr><td>Ký tự ngăn cách trùng nhau</td><td><em>Không tồn tại</em> — chặn bằng thiết kế chọn theo cặp, không có mã lỗi</td><td class="mono">—</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Phạm vi</th><th>Mở khóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">HTDinhDangSo.Edit</td><td>Tenant-scoped</td><td>Hiện mục menu · vào màn hình · đọc cấu hình · bấm Lưu. Đây là <b>quyền duy nhất</b> của chức năng — không tách View và Edit.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Khoảng trống tài liệu — không vẽ vì chưa có quy định</h3>
+  <ul>
+    <li><strong>Tenant chưa hoạt động hoặc chưa onboarding:</strong> là tiền điều kiện của UC nhưng BA không quy định thông báo hay hành vi cụ thể khi không thỏa.</li>
+    <li><strong>Cấu hình "Trên báo cáo" áp thế nào:</strong> BR5 chỉ nói hiển thị đầy đủ ký tự ngăn cách theo cấu hình; BR2 lại chỉ dựng ví dụ từ cấu hình "Trên giao diện". Ranh giới giữa hai cấu hình khi kết xuất báo cáo chưa được nói rõ.</li>
+    <li><strong>Lịch sử thay đổi cấu hình:</strong> ngoài bộ trường audit chung <span class="chip c-br">BR46</span>, epic không quy định màn tra cứu ai đã đổi định dạng số vào lúc nào.</li>
+    <li><strong>Tác động ngược lên dữ liệu đã nhập:</strong> khi giảm <span class="f">n</span>, hệ thống không rà soát hay đánh dấu chứng từ bị ảnh hưởng — chỉ cảnh báo bằng panel tĩnh.</li>
+    <li><strong>Precision database:</strong> xung đột <span class="f">decimal(22,10)</span> của BR5 với <span class="chip c-br">BR7.1</span> chưa được chốt.</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-14701 · Định dạng số</span>
+  <span>Dựng từ 1 UC · 1 Activity Diagram · 1 màn hình · BR1–BR6 · 6 mã MSG</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

@@ -1,6 +1,6 @@
 # BE — Khung kiến trúc chuẩn cho một phiếu yêu cầu
 
-Bản trích từ `cell-app/src/main/java/vn/dopai/pmkt/cell/` (đo ngày 2026-08-11). Đây là **khung bắt
+Bản trích từ `cell-app/src/main/java/vn/vtt/pmkt/cell/` (đo ngày 2026-08-11). Đây là **khung bắt
 buộc**: mọi phiếu yêu cầu (module / API / bảng mới) làm ở backend phải sinh ra đúng bộ artefact dưới
 đây, đúng vị trí, đúng tên. Không có ngoại lệ cho "API nhỏ".
 
@@ -29,7 +29,7 @@ song song với bản FE: [docs/fe-khung-kien-truc-chuan.md](fe-khung-kien-truc-
 | `../../tenant-provisioning` | control-plane, cấp phát tenant | chia theo bounded context (`controlplane/<ctx>/`) |
 | `../../shared-kernel` | thư viện dùng chung | như trên |
 
-Base package chung: `vn.dopai.pmkt`. Stack: Java 21 · Spring Boot · Gradle Kotlin DSL.
+Base package chung: `vn.vtt.pmkt`. Stack: Java 21 · Spring Boot · Gradle Kotlin DSL.
 
 **Tài liệu này mô tả chuẩn của `cell-app`.** Dịch vụ khác giữ shape riêng đã có; trước khi sửa phải
 đọc `../../CLAUDE.md` trong đúng thư mục đó (luật cộng dồn — xem CLAUDE.md gốc).
@@ -78,6 +78,9 @@ cell/<module>/<sub>/api|internal/…       vd platform_iam/quyen/{api,internal}
                                             integration_ops/outbox/{api,internal}
                                             accounting_core/hach_toan/{api,internal}
 ```
+
+**Test đặt song ánh cây `main`** — `…/<module>/internal/service/` ở `main` thì test ở
+`src/test/java/…/<module>/internal/service/`. Test thuần JVM gắn `@Tag("unit")`.
 
 ### 2.1 File mới đặt đâu — cây quyết định (dừng ở dòng đầu tiên đúng)
 
@@ -143,16 +146,11 @@ phân trang, chi tiết, export) vẫn dùng `core` như mọi màn danh sách.
 Controller  →  Service  →  Repository  →  Entity
 ```
 
-- **Controller**: nhận request, `@Valid`, gọi Service, trả DTO. KHÔNG business logic, KHÔNG gọi
-  Repository trực tiếp.
-- **Service**: toàn bộ business logic, quản lý `@Transactional`.
-- **Repository**: chỉ truy cập dữ liệu.
-- **Entity KHÔNG ĐƯỢC** trả ra Controller — luôn map sang DTO.
-- **Response**: mọi API bọc `ApiResponse<T>` (`code`, `message`, `data`, `timestamp`).
-- **Lỗi**: xử lý tập trung bằng `@RestControllerAdvice` + `@ExceptionHandler`. KHÔNG `try/catch` trả
-  lỗi thủ công trong Controller, KHÔNG nuốt exception, KHÔNG trả stacktrace ra client.
-- **DI**: constructor injection — `private final` + `@RequiredArgsConstructor`. Hạn chế `@Autowired`
-  trên field.
+Controller không chứa business logic, không gọi Repository, không trả Entity ra ngoài. Mọi response
+bọc `ApiResponse<T>`; lỗi xử lý tập trung bằng `@RestControllerAdvice`. DI bằng constructor injection
+(`private final` + `@RequiredArgsConstructor`).
+
+📄 Chi tiết từng tầng, chuẩn API, DI, JPA: [`conventions-be.md` §3.2–3.6](conventions-be.md).
 
 ---
 
@@ -210,39 +208,25 @@ thêm file mới. Chi tiết: [migration-danh-so-theo-timestamp.md](migration-da
 
 ---
 
-## 7. Cổng nghiệm thu (DoD) — chạy trước khi báo hoàn thành
+## 7. Cổng nghiệm thu (DoD)
 
 ```bash
-cd cell-app && ./gradlew build
+cd cell-app && ./gradlew unitTest     # CỔNG CHÍNH — chỉ @Tag("unit"), ~1 phút, KHÔNG cần Docker
 ```
 
-⚠ **`../../cell-app` là Gradle project ĐỘC LẬP** (có wrapper riêng, `rootProject.name = "cell-app"`); repo
-gốc **không** có `gradlew`. Lệnh `./gradlew :cell-app:build` ở gốc repo sẽ báo "no such file or
-directory".
+🚫 **KHÔNG `./gradlew build`.** Nó kéo ~25 test Testcontainers và bắt buộc có Docker — thứ đã bị cấm
+ở [`CLAUDE.md` §CHẠY CODE](../../CLAUDE.md). Mục này trước đây ghi `./gradlew build` là cổng DoD;
+**đó là bản cũ đã sai**, giữ lại ghi chú này để không ai chép lại.
 
-Hai làn test:
+⚠ `cell-app/` là Gradle project ĐỘC LẬP; `./gradlew :cell-app:build` ở gốc repo luôn báo "no such file
+or directory".
 
-| Lệnh | Chạy gì | Khi nào dùng |
-|---|---|---|
-| `./gradlew unitTest` | chỉ `@Tag("unit")`, thuần JVM, ~1 phút | cổng xanh thực tế, luôn chạy được |
-| `./gradlew build` | cả bộ tích hợp qua Testcontainers | cần **Docker đang chạy** |
+📄 Cách kiểm ranh giới Modulith (vì sao `ApplicationModules.verify()` không chạy trần được, mẫu
+`ProxyModularityTest`), và cổng đầy đủ: [`cell-app/CLAUDE.md`](../../cell-app/CLAUDE.md).
 
-Không có Docker thì `build` đỏ ở ~25 test Testcontainers (`Could not find a valid Docker
-environment`) — đó là giới hạn môi trường, **không phải hồi quy**. Đối chiếu danh sách lớp lỗi trước
-khi kết luận, và nói rõ cho user là đã dùng `unitTest` làm cổng thay thế.
-
-**Ranh giới Modulith:** `ApplicationModules.verify()` hiện **không** chạy trần được — `cell-app` còn
-**96 vi phạm ranh giới có sẵn từ trước** (`core → platform_iam`, `platform_iam → master_data`,
-`chung_tu_* → accounting_core.hach_toan.api.dto`). Mẫu xử lý đúng: viết test chỉ soi vi phạm **có
-nhắc tới module mình** (xem `cell/arch/ProxyModularityTest.java`) — module mới bị giữ ở chuẩn đầy đủ
-ngay từ đầu, nợ cũ vẫn nhìn thấy mà không chặn ai.
-
-Luật nghiệm thu:
-
-1. **Không làm xấu hơn baseline** — không lệnh nào được tăng số lỗi, số vi phạm ranh giới không tăng.
-2. **Module mới phải sạch tuyệt đối** về ranh giới Modulith — không mang nợ ngay từ ngày đầu.
-3. Lệnh nào fail thì **dán output thật**, không báo "đã xong".
-4. Báo cáo hoàn thành phải **liệt kê BR đã áp dụng** và BR chưa đạt (kèm lý do) — §9.
+Luật nghiệm thu: (1) không làm xấu hơn baseline; (2) **module mới phải sạch tuyệt đối** về ranh giới
+Modulith — không mang nợ ngay từ ngày đầu; (3) lệnh fail thì **dán output thật**; (4) báo cáo phải
+**liệt kê BR đã áp dụng** và BR chưa đạt.
 
 ---
 
@@ -263,41 +247,17 @@ Luật áp **từ nay về sau**: module mới đủ chuẩn; module cũ chuyể
 
 ---
 
-## 9. Quy chuẩn nghiệp vụ (BR) phải đối chiếu
+## 9. BR và luật cứng — KHÔNG lặp lại ở đây
 
-Mọi phiếu phải code theo [pmkt-docs/ba/Common/business_rules.md](../../pmkt-docs/ba/Common/business_rules.md).
-Epic chỉ mô tả phần đặc thù; phần chung **mặc định lấy theo BR**. Epic không nhắc BR ≠ được bỏ BR.
+Hai mục này từng được chép lại trong file này và đã bắt đầu lệch (bảng BR ở đây còn thiếu BR35 và
+BR47–49). Đọc thẳng bản gốc:
 
-BR hay dùng ở BE:
-
-| Phạm vi | BR phải đọc |
+| Cần gì | Bản gốc (SSOT) |
 |---|---|
-| Entity / DB / API | BR7 precision · BR19 kiểm tra trùng · BR20 số chứng từ & mã danh mục · BR28 multi-tenant · BR29 chính sách xóa · BR46 trường hệ thống bắt buộc |
-| Chứng từ & hạch toán | BR4 loại chứng từ · BR9 mã chứng từ · BR12 trạng thái · BR17 kỳ kế toán · BR36 ghi sổ · BR37 ngày hạch toán · BR41 tham chiếu chéo · BR42 bỏ ghi sổ |
-| Số liệu / tiền tệ | BR7 precision & làm tròn · BR18 ngoại tệ |
-| Quyền | BR25 phân quyền |
-| Thông báo | BR16 cảnh báo nghiệp vụ |
+| Bảng tra BR + cách trích | [`CLAUDE.md` §BR](../../CLAUDE.md) → `./docs/rules/br.sh <số BR>` |
+| 8 luật cứng toàn repo | [`CLAUDE.md`](../../CLAUDE.md) |
+| Quy ước Java (đặt tên, API, DI, JPA) | [`conventions-be.md`](conventions-be.md) |
+| Quy tắc chung + Git + checklist commit | [`conventions-chung.md`](conventions-chung.md) |
+| Cổng chạy, tiền tố bảng, Modulith | [`cell-app/CLAUDE.md`](../../cell-app/CLAUDE.md) |
 
-**Quy ước tiền tệ (BR9/BR18):** trường gốc (`thanh_tien`, `chiet_khau`, `tien_thue_gtgt`…) lưu theo
-LOẠI TIỀN đã chọn; trường `*_quy_doi` lưu theo ĐỒNG TIỀN HẠCH TOÁN (`= gốc × tỷ giá`). Sổ cái luôn ghi
-bằng đồng tiền hạch toán, phần nguyên tệ đi kèm qua `DinhKhoan.voiNgoaiTe(...)`.
-
-**Xung đột / thiếu quy định:** epic khác BR → epic thắng trong đúng phạm vi epic, và phải **báo rõ**
-đang lệch BR nào. BR chưa phủ → **hỏi user**, không tự đặt luật mới rồi code luôn.
-
----
-
-## 10. Luật cứng áp cho mọi phiếu
-
-1. **Không hardcode magic value** — `private static final` có tên, đặt gần nơi dùng nhất.
-2. **Không commit secret** — dùng env / `application.yml` / `@ConfigurationProperties`.
-3. **Phân tầng** `Controller → Service → Repository → Entity`; Controller không chứa business logic,
-   không gọi Repository, không trả Entity.
-4. **API chuẩn**: mọi response bọc `ApiResponse<T>`; lỗi tập trung ở `@RestControllerAdvice`.
-5. **Đặt tên**: Class/Interface/Enum/Record PascalCase · package chữ thường (`snake_case` khi cần) ·
-   method/variable camelCase · constant SCREAMING_SNAKE_CASE + `static final` · bảng/cột DB
-   snake_case · DTO có hậu tố `…Request` / `…Response` / `…Dto`.
-6. **Commit & branch đúng chuẩn**: `<type>(<scope>): <mô tả>` và `loại-nhánh/tên-mo-ta`. Không commit
-   trực tiếp vào `master`/`develop`. Không tự commit/push khi user không yêu cầu rõ ràng.
-7. **Code cũ vi phạm quy tắc**: code mới tuân thủ 100%; code cũ chỉ dọn trong phạm vi đang sửa —
-   không refactor hàng loạt, không mở rộng diff. Vi phạm diện rộng thì báo để mở ticket riêng.
+Riêng của phiếu BE: báo cáo hoàn thành phải **liệt kê BR đã áp dụng** và BR chưa đạt (kèm lý do).

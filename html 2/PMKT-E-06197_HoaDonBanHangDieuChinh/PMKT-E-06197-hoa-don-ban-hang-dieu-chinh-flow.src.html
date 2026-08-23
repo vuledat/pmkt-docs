@@ -1,0 +1,944 @@
+<title>Luồng Hóa đơn điều chỉnh</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-06197 · Phân hệ Bán hàng</p>
+  <h1>Luồng xử lý Hóa đơn bán hàng điều chỉnh</h1>
+  <p>Toàn bộ vòng đời một hóa đơn điều chỉnh — từ việc chọn hóa đơn gốc còn được phép điều chỉnh, chọn dòng hàng để sinh dòng chênh lệch, nhập giá trị mang dấu, kiểm soát giá trị còn lại lũy kế, tới nhân bản, chỉnh sửa, xóa và tác động lên Sổ thuế GTGT đầu ra. Mỗi sơ đồ bám đúng Activity Diagram và BR trong bộ tài liệu BA.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 6 use case · 6 AD · 2 màn hình · BR1–BR22 · 25 mã MSG</span>
+    <span><b>Entity gốc:</b> DieuChinhHoaDonBanHang</span>
+    <span><b>Neo về HĐ gốc:</b> HoaDonBanHangGocId</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Bản đồ vòng đời</a></li>
+    <li><a href="#s1"><span>01</span>Xem danh sách</a></li>
+    <li><a href="#s2"><span>02</span>Chọn hóa đơn gốc</a></li>
+    <li><a href="#s3"><span>03</span>Đổi hóa đơn gốc</a></li>
+    <li><a href="#s4"><span>04</span>Sinh dòng chênh lệch</a></li>
+    <li><a href="#s5"><span>05</span>Nhập liệu năm vùng</a></li>
+    <li><a href="#s6"><span>06</span>Tự động tính toán</a></li>
+    <li><a href="#s7"><span>07</span>Thuế GTGT &amp; cờ tờ khai</a></li>
+    <li><a href="#s8"><span>08</span>Giá trị còn lại lũy kế</a></li>
+    <li><a href="#s9"><span>09</span>Luồng Lưu</a></li>
+    <li><a href="#s10"><span>10</span>Nhân bản</a></li>
+    <li><a href="#s11"><span>11</span>Sửa · Xóa · Xem chi tiết</a></li>
+    <li><a href="#s12"><span>12</span>Ma trận ẩn hiện</a></li>
+    <li><a href="#s13"><span>13</span>Tra cứu chặn &amp; quyền</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Bản đồ vòng đời: hai bản ghi đổi trạng thái cùng lúc</h2>
+  <p class="lede">Mỗi lần lập hóa đơn điều chỉnh, hệ thống động tới <strong>hai</strong> bản ghi: sinh mới một hóa đơn điều chỉnh, đồng thời đẩy hóa đơn gốc sang <em>Hóa đơn bị điều chỉnh</em>. Một hóa đơn được phép điều chỉnh nhiều lần, nên trạng thái gốc là <strong>trạng thái hấp thụ</strong> — điều chỉnh lần thứ hai không đổi gì thêm.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    G1["<b>HÓA ĐƠN GỐC</b><br/>TrangThaiLoaiHoaDon =<br/>HoaDonGoc"]
+    G2["<b>HĐ BỊ ĐIỀU CHỈNH</b><br/>HoaDonBiDieuChinh<br/>vẫn chọn điều chỉnh tiếp"]
+    D1["<b>HĐ ĐC · CHƯA PHÁT HÀNH</b><br/>Sửa · Xóa · Nhân bản<br/>Chưa tính vào lũy kế BR14"]
+    D2["<b>HĐ ĐC · ĐÃ PHÁT HÀNH</b><br/>MSG_202 chặn sửa<br/>MSG_201 chặn xóa"]
+    X["<b>ĐÃ XÓA</b><br/>Xóa mềm theo BR29<br/>Chi tiết xóa lan theo"]
+
+    G1 -- "Lưu HĐ ĐC lần đầu" --> G2
+    G2 -- "Điều chỉnh lần kế tiếp" --> G2
+    G1 -. "Sinh bản ghi HĐ ĐC" .-> D1
+    D1 -- "Phát hành" --> D2
+    D1 -- "Xóa · gốc về HoaDonGoc" --> X
+    D2 -. "chưa có đường xóa" .-> X
+
+    classDef gone fill:#faf8f3,stroke:#cdc7b9,color:#6f6a61;
+    class X gone;
+</pre>
+    </div>
+    <figcaption><b>Trạng thái phát hành là bản lề, không phải trạng thái ghi sổ.</b> Tài liệu epic gác Sửa và Xóa vào <span class="f">Chưa phát hành</span> chứ không vào <span class="f">TrangThaiChungTu</span>; toàn epic không có use case Ghi sổ, không có mã MSG ghi sổ nào.</figcaption>
+  </figure>
+
+  <h3>Năm giá trị của Loại trạng thái hóa đơn</h3>
+  <p>Trục trạng thái này nằm trên <span class="f">ENT_sal_hoa_don_ban_hang.TrangThaiLoaiHoaDon</span> và vừa là bộ lọc của màn danh sách, vừa là điều kiện lọc hóa đơn gốc hợp lệ.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Giá trị</th><th>Ý nghĩa</th><th>Được chọn làm HĐ gốc?</th><th>Ai đặt giá trị này</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">HoaDonGoc</td><td>Hóa đơn bán hàng bình thường</td><td><span class="chip c-ok">Có</span></td><td>Luồng lập hóa đơn bán hàng</td></tr>
+      <tr><td class="mono">HoaDonBiDieuChinh</td><td>Đã có ít nhất một HĐ điều chỉnh</td><td><span class="chip c-ok">Có</span> — điều chỉnh nhiều lần</td><td>Hậu điều kiện UC Thêm mới</td></tr>
+      <tr><td class="mono">HoaDonDieuChinh</td><td>Chính là bản ghi HĐ điều chỉnh</td><td><span class="chip c-msg">Không</span></td><td>Hậu điều kiện UC Thêm mới · Nhân bản</td></tr>
+      <tr><td class="mono">HoaDonThayThe</td><td>Hóa đơn thay thế</td><td><span class="chip c-msg">Không</span></td><td>Ngoài phạm vi epic này</td></tr>
+      <tr><td class="mono">HoaDonBiThayThe</td><td>Hóa đơn đã bị thay thế</td><td><span class="chip c-msg">Không</span></td><td>Ngoài phạm vi epic này</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Mâu thuẫn cần BA chốt</span>
+    <p>Hậu điều kiện <strong>UC Xóa</strong> ghi: xóa HĐ điều chỉnh thì đưa hóa đơn gốc <em>về</em> <span class="f">HoaDonGoc</span>. Nhưng <strong>UC Danh sách BR1</strong> cho phép một hóa đơn được điều chỉnh nhiều lần — nếu gốc còn HĐ điều chỉnh khác chưa xóa mà vẫn hạ trạng thái thì dữ liệu sai. Tài liệu BA <em>chưa quy định</em> điều kiện đếm số HĐ điều chỉnh còn lại trước khi hạ trạng thái, nên sơ đồ trên vẽ đúng nguyên văn hậu điều kiện và không tự suy diễn thêm nhánh.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — UC_DanhSachHDC</span>
+  <h2>Xem danh sách: màn dùng chung, lọc bằng loại trạng thái</h2>
+  <p class="lede">Epic <strong>không có màn danh sách riêng</strong>. <span class="f">SCR_DanhSachTepMoi</span> nói rõ: dùng chung màn Danh sách hóa đơn bán hàng, phần bổ sung duy nhất là bộ lọc theo <span class="f">TrangThaiLoaiHoaDon</span> và quyền riêng.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Mở chức năng HĐ điều chỉnh"]) --> B{"Có quyền DanhSach?"}
+    B -- "Không" --> B1["Ẩn chức năng<br/>MSG_005"]:::err
+    B -- "Có" --> C["Tải danh sách<br/>Sắp xếp Ngày HĐ mới nhất trước"]
+    C --> C1{"Có bản ghi?"}
+    C1 -- "Không" --> C2["MSG_301 Không tìm thấy dữ liệu"]:::warn
+    C1 -- "Lỗi tải" --> C3["MSG_004 Lỗi hệ thống"]:::err
+    C1 -- "Có" --> D["Lưới + phân trang BR1<br/>Lọc loại trạng thái hóa đơn"]
+
+    D --> E1["Tìm kiếm · lọc tự động"]
+    D --> E2["Thêm mới → popup chọn HĐ gốc"]
+    D --> E3["Xem chi tiết"]
+    D --> E4["Cập nhật"]
+    D --> E5["Xóa · có xác nhận"]
+    D --> E6["Nhân bản"]
+
+    E2 --> F1{"Có HĐ gốc hợp lệ?"}
+    F1 -- "Không" --> F2["MSG_302"]:::warn
+    F1 -- "Có" --> F3["Sang mục 02"]:::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Năm nút trên dòng, một điều kiện quyền duy nhất.</b> UC Danh sách khẳng định cả năm nút <em>luôn hiển thị</em>; không có nút nào bị gác theo trạng thái phát hành ở màn này.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Hai tài liệu nói ngược nhau</span>
+    <p><strong>UC_DanhSachHDC · BR2</strong>: “Cho phép Cập nhật, Xóa, Xem chi tiết, Nhân bản <em>không phụ thuộc trạng thái</em>”. <strong>AD_DanhSachHDC</strong> lại ghi trên chính hai nhánh đó: “chỉ khi Chưa phát hành”, và <strong>AD_ChinhSuaHDC</strong> · <strong>AD_XoaHDC</strong> có nhánh chặn <span class="chip c-msg">MSG_202</span> · <span class="chip c-msg">MSG_201</span> khi hóa đơn đã phát hành. Sơ đồ mục 11 vẽ theo AD (có chặn) vì đó là nơi mô tả cơ chế; cần BA chốt lại BR2.</p>
+  </div>
+
+  <h3>Bộ lọc bổ sung của epic</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tiêu chí lọc</th><th class="mono">Field</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td>Loại trạng thái hóa đơn</td><td class="mono">TrangThaiLoaiHoaDon</td><td>5 giá trị ở mục 00 — riêng của epic này</td></tr>
+      <tr><td>Ngày hóa đơn · Số hóa đơn · Tên khách hàng · Trạng thái phát hành</td><td class="mono">NgayHoaDon · SoHoaDon<br>TenKhachHang</td><td>Theo UC Danh sách, dùng chung màn HĐ bán hàng</td></tr>
+      <tr><td>Sắp xếp mặc định</td><td class="mono">NgayHoaDon</td><td>Mới nhất tới cũ nhất <span class="chip c-br">BR2</span></td></tr>
+      <tr><td>Phân trang</td><td>—</td><td>Theo <span class="chip c-br">BR1</span> chung</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — SCR_TaoMoiHDDC · BR1, BR2</span>
+  <h2>Chọn hóa đơn gốc: hai đường vào, một bộ lọc</h2>
+  <p class="lede">Không chọn được hóa đơn gốc thì không có gì để điều chỉnh — đây là bước bắt buộc mở đầu. Combobox chọn nhanh và popup chọn nguồn khác nhau ở giao diện nhưng <strong>dùng chung đúng một điều kiện lọc</strong>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Mở form Tạo mới HĐ ĐC"]) --> B["Không ngầm định load dữ liệu<br/>vì Khách hàng đang trống"]
+    B --> C{"Chọn nguồn theo cách nào?"}
+    C -- "Cách 1 · Combobox" --> C1["CombogridSearchFlatGrid<br/>Số HĐ · Ngày HĐ · Tên KH"]
+    C -- "Cách 2 · Popup chọn nguồn" --> C2["Tham số: Khách hàng bắt buộc<br/>Số HĐ · Khoảng ngày bắt buộc<br/>mặc định đầu tháng tới nay"]
+
+    C1 --> D["Bộ lọc chung BR1"]
+    C2 --> D
+    D --> D1["TrangThaiHoaDon thuộc<br/>HoaDonGoc · HoaDonBiDieuChinh"]
+    D1 --> D2["Cùng tenant và chi nhánh<br/>IsDeleted = false"]
+    D2 --> D3["Không xét HoaDonBanHangGocId<br/>chỉ xét TrangThaiHoaDon"]
+    D3 --> D4["Sắp xếp Ngày HĐ giảm dần<br/>rồi tới Số hóa đơn"]
+
+    D4 --> E{"Có dòng thỏa mãn?"}
+    E -- "Không" --> E1["MSG_302 Không có HĐ gốc hợp lệ"]:::err
+    E -- "Có" --> F["Lưới kết quả · mỗi HĐ một dòng"]
+    F --> G{"Đã chọn dòng nào chưa?"}
+    G -- "Chưa · nhấn Đồng ý" --> G1["Cảnh báo chọn 1 hóa đơn"]:::warn
+    G -- "Chưa · nhấn Lưu form" --> G2["MSG_111"]:::err
+    G -- "Rồi · single-select" --> H["Kế thừa thông tin chung<br/>Hiện dòng: điều chỉnh cho hóa đơn<br/>mẫu số · ký hiệu · số · ngày"]:::ok
+    H --> I["Mở lưới chọn dòng hàng — mục 04"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Khả năng điều chỉnh chỉ đọc từ trạng thái, không đọc từ khóa ngoại.</b> <span class="chip c-br">BR1</span> cấm dùng <span class="f">HoaDonBanHangGocId</span> để xét — một hóa đơn đã bị điều chỉnh vẫn nằm trong danh sách chọn được, nhờ vậy mới điều chỉnh được nhiều lần.</figcaption>
+  </figure>
+
+  <h3>Tham số tìm kiếm của popup chọn nguồn</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th>Control</th><th>Bắt buộc</th><th>Mặc định</th></tr></thead>
+    <tbody>
+      <tr><td>Khách hàng</td><td class="mono">CombogridSearchFlatGrid</td><td><span class="chip c-msg">Y</span></td><td>Trống — vì vậy lần đầu không load</td></tr>
+      <tr><td>Số hóa đơn</td><td class="mono">TextField</td><td>N</td><td>—</td></tr>
+      <tr><td>Ngày hóa đơn</td><td class="mono">DateRangePicker</td><td><span class="chip c-msg">Y</span></td><td>Từ đầu tháng tới hiện tại <span class="chip c-br">BR8</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Lưới kết quả hiển thị bảy cột: STT · Ngày hóa đơn · Số hóa đơn · Mẫu số · Ký hiệu · Giá trị hóa đơn · Khách hàng. Chọn dòng là <strong>single-select</strong> theo <span class="chip c-br">BR2</span> — dòng đang focus chính là dòng được chọn, tích dòng khác thì dòng cũ tự bỏ chọn.</p>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — SCR_TaoMoiHDDC · nút Đổi hóa đơn</span>
+  <h2>Đổi hóa đơn gốc: xác nhận trước, xóa sau</h2>
+  <p class="lede">Đây là chỗ dễ code sai nhất của màn Tạo mới. Thứ tự đúng là <strong>hỏi → chọn được HĐ mới → mới xóa chi tiết</strong>. Hủy giữa chừng phải trả về nguyên trạng, không được mất dữ liệu đã nhập.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Nhấn nút Đổi hóa đơn"]) --> B{"Chi tiết điều chỉnh có<br/>ít nhất 1 dòng?"}
+    B -- "Không có dòng nào" --> D["Mở popup chọn HĐ gốc"]
+    B -- "Có · dòng sinh hoặc nhập tay" --> C["Hiện hộp xác nhận<br/>CHƯA xóa gì ở bước này"]:::warn
+    C -- "Người dùng hủy" --> C1["Giữ nguyên HĐ gốc<br/>Giữ nguyên toàn bộ chi tiết"]:::ok
+    C -- "Người dùng đồng ý" --> D
+    D --> E{"Chọn thành công HĐ gốc mới?"}
+    E -- "Hủy popup hoặc không chọn" --> C1
+    E -- "Có" --> F["Thay HĐ gốc<br/>Xóa toàn bộ chi tiết hiện tại"]
+    F --> G["Sinh lại dòng theo HĐ gốc mới<br/>nếu có tích chọn dòng"]:::ok
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Xác nhận không phải là điểm phá hủy.</b> Dữ liệu chi tiết chỉ bị xóa tại đúng một thời điểm: sau khi người dùng đã chọn xong hóa đơn gốc mới. Mọi đường thoát khác đều quay về nguyên trạng.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — BR3, BR12, BR13</span>
+  <h2>Sinh dòng chênh lệch: ánh xạ một dòng gốc thành một dòng</h2>
+  <p class="lede">Lưới chọn dòng đứng giữa hóa đơn gốc và lưới chi tiết điều chỉnh. Mỗi dòng được tích sinh <strong>đúng một</strong> dòng chênh lệch và ghi nhận liên kết ngược về dòng gốc — chính liên kết này là đầu vào của ràng buộc lũy kế ở mục 08.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Đã chọn HĐ gốc"] --> B["Nạp dòng hàng của HĐ gốc"]
+    B --> B1{"Lọc nguồn theo BR12"}
+    B1 -- "LoaiDongHang = false" --> B2["Dòng ghi chú · không hiện"]:::warn
+    B1 -- "LaHangKhuyenMai = true" --> B3["Hàng khuyến mại · không hiện"]:::warn
+    B1 -- "Dòng hàng hóa dịch vụ" --> C["Hiện trên lưới chọn dòng"]
+
+    C --> D{"Người dùng tích dòng"}
+    D -- "Không tích dòng nào" --> D1["Nhấn Chọn vẫn hợp lệ<br/>Chi tiết để trống · tự nhập tay"]:::ok
+    D -- "Tích 1..n dòng" --> E{"Dòng đã có trong chi tiết?"}
+    E -- "Đã có · BR13" --> E1["MSG_114 và bỏ tích dòng đó"]:::err
+    E -- "Chưa có" --> F["Sinh 1 dòng chênh lệch<br/>cho 1 dòng gốc<br/>Ghi liên kết ChiTietHoaDonGocId"]
+
+    F --> G["Autofill: Mã hàng · Tên hàng · ĐVT<br/>% thuế Mới · cờ tờ khai GTGT"]
+    G --> H["Disable: Mã KH · Loại tiền<br/>Mã hàng · ĐVT của dòng kế thừa"]
+    H --> I["Mọi trường chênh lệch = 0<br/>và cho phép sửa"]:::ok
+
+    D --> J["Thêm dòng tay trên lưới Vùng 4"]
+    J --> J1["Không gắn liên kết dòng gốc<br/>Chọn Mã hàng từ Danh mục VTHH"]
+    J1 --> J2["Dùng cho: chiết khấu thương mại<br/>nội dung Khác · dòng ghi chú"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Chọn dòng là tùy chọn, liên kết dòng thì không.</b> Dòng sinh từ lưới mang <span class="f">ChiTietHoaDonBanHangGocId</span> nên bị ràng buộc lũy kế; dòng nhập tay không mang liên kết nên nằm ngoài ràng buộc đó.</figcaption>
+  </figure>
+
+  <h3>Dòng sinh ra khác dòng nhập tay ở đâu</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Khía cạnh</th><th>Dòng sinh từ lưới chọn dòng</th><th>Dòng thêm tay</th></tr></thead>
+    <tbody>
+      <tr><td>Liên kết dòng gốc</td><td class="mono">ChiTietHoaDonBanHangGocId</td><td>Không có</td></tr>
+      <tr><td>Mã hàng · ĐVT</td><td><span class="chip c-perm">Disable</span> — kế thừa, khóa đổi ĐVT</td><td><span class="chip c-ok">Chọn từ Danh mục VTHH</span></td></tr>
+      <tr><td>% thuế (Mới)</td><td>Kế thừa Thuế suất GTGT dòng gốc</td><td>Lấy theo vật tư, trống nếu chưa có</td></tr>
+      <tr><td>Cờ không tổng hợp tờ khai</td><td>Kế thừa, tính lại nếu % thuế đổi</td><td>Mặc định <span class="f">false</span>, cho sửa</td></tr>
+      <tr><td>Tỷ lệ quy đổi ĐVT</td><td>Giữ nguyên bản ghi gốc — bảo toàn lịch sử, không lấy tỷ lệ danh mục hiện tại</td><td>Lấy theo danh mục quy đổi hiện hành</td></tr>
+      <tr><td>Ràng buộc lũy kế BR14</td><td><span class="chip c-msg">Có</span></td><td>Không áp dụng</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — SCR_TaoMoiHDDC · BR15, BR16</span>
+  <h2>Năm vùng nhập liệu và thứ tự phụ thuộc</h2>
+  <p class="lede">Form Tạo mới chia năm vùng, và chúng <strong>không độc lập</strong>: vùng 1 quyết định dữ liệu vùng 2 và vùng 4, vùng 3 quyết định các cột quy đổi, vùng 5 chỉ là kết quả cộng dồn read-only.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    V1["<b>Vùng 1</b><br/>Hóa đơn gốc cần điều chỉnh"] --> V2["<b>Vùng 2</b><br/>Thông tin khách hàng"]
+    V1 --> V3["<b>Vùng 3</b><br/>Thông tin HĐ điều chỉnh"]
+    V1 --> V4["<b>Vùng 4</b><br/>Chi tiết điều chỉnh"]
+    V4 --> V5["<b>Vùng 5</b><br/>Tổng cộng · read-only"]
+
+    V2 --> A1["Mã KH autofill và khóa sửa<br/>Tên · MST · Địa chỉ cho sửa"]
+    V2 --> A2["KH cá nhân: CCCD · Hộ chiếu<br/>KH tổ chức: Mã số ĐVQHNS"]
+    V2 --> A3["Tài khoản NH chỉ hiện khi<br/>thanh toán Chuyển khoản · TM/CK"]
+    V2 --> A4["Loại điều chỉnh · Lý do<br/>đều bắt buộc"]
+
+    V3 --> B1["Số HĐ ĐC tự sinh theo BR20<br/>vẫn cho sửa tay"]
+    V3 --> B2["Ngày HĐ ≥ ngày HĐ gốc<br/>vi phạm là MSG_110"]
+    V3 --> B3["Loại tiền kế thừa HĐ gốc<br/>và bị khóa sửa"]
+
+    V5 --> C1["Tổng tiền hàng = Σ Thành tiền"]
+    V5 --> C2["Tổng CK = Σ Tiền CK"]
+    V5 --> C3["Tổng thuế = Σ Tiền thuế"]
+    V5 --> C4["Tổng thanh toán = hàng − CK + thuế"]
+</pre>
+    </div>
+    <figcaption><b>Hóa đơn gốc là nguồn của mọi autofill.</b> Mã khách hàng và Loại tiền kế thừa từ hóa đơn gốc rồi khóa lại — đổi chúng đồng nghĩa với đổi hóa đơn gốc, và việc đó phải đi qua nút Đổi hóa đơn ở mục 03.</figcaption>
+  </figure>
+
+  <h3>Vùng 3 — bốn ràng buộc dễ bỏ sót</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th class="mono">Field</th><th>Quy tắc</th><th>Chặn</th></tr></thead>
+    <tbody>
+      <tr><td>Số hóa đơn ĐC</td><td class="mono">SoHoaDon</td><td>Tự sinh <span class="chip c-br">BR20</span>, cho sửa, tối đa 8 ký tự; check trùng theo Số + Ký hiệu + Mẫu số trong cùng tenant</td><td><span class="chip c-msg">304</span> · <span class="chip c-msg">101</span></td></tr>
+      <tr><td>Ngày hóa đơn</td><td class="mono">NgayHoaDon</td><td>Mặc định ngày hiện tại, phải ≥ ngày hóa đơn gốc</td><td><span class="chip c-msg">110</span> · <span class="chip c-msg">104</span></td></tr>
+      <tr><td>Loại tiền</td><td class="mono">LoaiTienId</td><td>Kế thừa HĐ gốc, không cho sửa</td><td><span class="chip c-msg">106</span></td></tr>
+      <tr><td>Tỷ giá</td><td class="mono">TyGia</td><td>= 1 và read-only khi loại tiền là đồng tiền hạch toán; nhập được và phải lớn hơn 0 khi khác <span class="chip c-br">BR18</span></td><td><span class="chip c-msg">107</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Kỳ kế toán</span>
+    <p>Hóa đơn gốc thuộc kỳ đã đóng thì không được điều chỉnh — <span class="chip c-msg">MSG_203</span>. Đây là điểm nối với <span class="chip c-br">BR17</span> chung: ngày hạch toán rơi vào kỳ đã khóa sổ thì chặn cả Lưu lẫn thao tác ghi sổ. Tài liệu epic chỉ khai báo mã thông báo mà <em>chưa mô tả</em> bước kiểm này nằm ở vị trí nào trong luồng Lưu, nên mục 09 đặt nó ở nhánh kiểm tra hóa đơn gốc.</p>
+  </div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — BR5, BR17, BR18, BR19, BR20</span>
+  <h2>Tự động tính toán: một checkbox bật cả chuỗi công thức</h2>
+  <p class="lede">Giá trị nhập ở lưới chi tiết là <strong>chênh lệch mang dấu</strong> — dương là tăng, âm là giảm. Checkbox <em>Tự động tính toán số liệu</em> quyết định hệ thống có tự suy ra các ô còn lại hay để người dùng gõ tay toàn bộ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A{"Tích Tự động tính toán?"} -- "Không" --> A1["Mọi ô do người dùng nhập<br/>Hệ thống không tính gì cả"]:::warn
+    A -- "Có" --> B["Thành tiền = Số lượng × Đơn giá"]
+
+    B --> C{"Dòng có tính chất gì?"}
+    C -- "Hàng khuyến mại · BR6" --> C1["Đơn giá = 0 · Thành tiền = 0<br/>Khóa nhóm chiết khấu<br/>Khóa ô Chiết khấu thương mại"]
+    C -- "Chiết khấu thương mại · BR7" --> C2["Thành tiền = trừ trị tuyệt đối<br/>của Số lượng × Đơn giá<br/>Khóa ô Hàng khuyến mại"]
+    C -- "Dòng thường" --> C3["Giữ nguyên dấu người dùng nhập"]
+
+    C1 --> D["Tiền CK = Thành tiền × Tỷ lệ CK"]
+    C2 --> D
+    C3 --> D
+    D --> D1{"Sửa trực tiếp Tiền CK?"}
+    D1 -- "Có" --> D2["Tỷ lệ CK = Tiền CK × 100<br/>chia cho Thành tiền<br/>Thành tiền = 0 thì Tỷ lệ CK = 0"]
+    D1 -- "Không" --> E["Tiền thuế = Thành tiền − Tiền CK<br/>rồi nhân Thuế suất"]
+    D2 --> E
+
+    E --> F{"Sửa ngược Đơn giá từ Thành tiền"}
+    F -- "Số lượng khác 0" --> F1["Đơn giá = Thành tiền ÷ Số lượng"]:::ok
+    F -- "Số lượng = 0 và Thành tiền = 0" --> F2["Không tính ngược · Đơn giá giữ 0"]:::ok
+    F -- "Số lượng = 0 và Thành tiền khác 0" --> F3["MSG_115 · chặn lưu"]:::err
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Không tích thì không có ràng buộc tính toán nào.</b> Nhánh tính ngược Đơn giá và cảnh báo <span class="chip c-msg">MSG_115</span> chỉ tồn tại trong nhánh có tích — <span class="chip c-br">BR18</span> nói rõ “chỉ khi tích Tự động tính toán số liệu”.</figcaption>
+  </figure>
+
+  <h3>Khối quy đổi ngoại tệ</h3>
+  <p>Ba cột quy đổi chỉ hiện khi loại tiền khác đồng tiền hạch toán. Chúng là <strong>một chiều</strong>: sửa cột quy đổi không kéo theo tính lại cột gốc.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Field</th><th>Công thức khi tích tự động</th><th>Khi sửa tay ô quy đổi</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">ThanhTienQuyDoi</td><td>Thành tiền × Tỷ giá</td><td rowspan="3">Không tính lại trường nào khác <span class="chip c-br">BR20</span></td></tr>
+      <tr><td class="mono">TienChietKhauQuyDoi</td><td>Tiền CK × Tỷ giá</td></tr>
+      <tr><td class="mono">TienThueGTGTQuyDoi</td><td>Thành tiền quy đổi − Tiền CK quy đổi, nhân Thuế suất</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Hai cột hiển thị <span class="f">Hệ số quy đổi</span> và <span class="f">Số lượng quy đổi</span> không lưu field riêng, chỉ hiện khi ĐVT đã chọn khác ĐVT cơ bản <span class="chip c-br">BR9</span>. Riêng dòng kế thừa từ hóa đơn gốc thì <span class="f">TyLeQuyDoi</span>, <span class="f">PhepTinh</span>, <span class="f">SoLuongTheoDVTChinh</span>, <span class="f">DonGiaTheoDVTChinh</span> giữ nguyên bản ghi gốc để bảo toàn lịch sử.</p>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — BR8, BR11</span>
+  <h2>Thuế GTGT và cờ loại khỏi tờ khai</h2>
+  <p class="lede">Một lựa chọn <em>% thuế (Mới)</em> điều khiển ba thứ cùng lúc: hiển thị ô <span class="f">ThueSuatKhac</span>, hệ số nhân trong công thức tiền thuế, và trạng thái cờ <span class="f">KhongTongHopToKhaiGTGT</span> — cờ này quyết định dòng có lên Sổ thuế đầu ra hay không.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Chọn hoặc kế thừa % thuế Mới"] --> B{"Dòng kế thừa từ HĐ gốc?"}
+    B -- "Có · % thuế giữ nguyên" --> B1["Giữ nguyên cờ đã kế thừa"]
+    B -- "Có · % thuế đã đổi" --> C
+    B -- "Không · dòng thêm tay" --> C
+
+    C{"Giá trị % thuế Mới"} -- "KHAC" --> C1["Hiện ô Giá trị thuế GTGT<br/>Bắt buộc · từ 0 đến dưới 100<br/>Tối đa 2 chữ số thập phân"]
+    C -- "KKKNT" --> C2["Thuế suất = 0"]
+    C -- "KCT" --> C3["Thuế suất = 0"]
+    C -- "0 · 5 · 8 · 10" --> C4["Thuế suất = giá trị chia 100"]
+
+    C1 --> D1["Thuế suất = Giá trị thuế ÷ 100"]
+    D1 --> E1["Cờ tờ khai tự tích và khóa sửa"]:::warn
+    C2 --> E1
+    C3 --> E2["Cờ tờ khai tự bỏ tích<br/>Người dùng tự quyết định"]:::ok
+    C4 --> E2
+
+    E1 --> F["Tiền thuế = Thành tiền − Tiền CK<br/>rồi nhân Thuế suất"]
+    E2 --> F
+    F --> G{"Người dùng sửa tay Tiền thuế?"}
+    G -- "Có" --> G1["Một chiều · KHÔNG cập nhật<br/>ngược lại Thuế suất"]
+    G -- "Không" --> G2["Giữ kết quả công thức"]
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Cờ tờ khai độc lập với Loại điều chỉnh và với dấu của chênh lệch.</b> <span class="chip c-br">BR11</span> nói rõ: nó không phụ thuộc Sai sót / Điều chỉnh giá / Trả lại hàng bán / Khác, cũng không phụ thuộc giá trị đang tăng hay giảm — chỉ phụ thuộc <span class="f">ThueSuatGTGT</span> và lựa chọn của người dùng.</figcaption>
+  </figure>
+
+  <h3>Bảng tra cờ theo thuế suất</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">ThueSuatGTGT</th><th class="mono">KhongTongHopToKhaiGTGT</th><th>Cho sửa?</th><th>Hệ quả trên Sổ thuế đầu ra</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">KHAC</td><td>Tự động tích</td><td><span class="chip c-perm">Disable</span></td><td rowspan="2">Không sinh bản ghi <span class="f">SoThueDauRa</span> cho dòng</td></tr>
+      <tr><td class="mono">KKKNT</td><td>Tự động tích</td><td><span class="chip c-perm">Disable</span></td></tr>
+      <tr><td class="mono">0 · 5 · 8 · 10 · KCT</td><td>Tự động bỏ tích</td><td><span class="chip c-ok">Enable</span></td><td>Tổng hợp bình thường, giữ nguyên dấu chênh lệch</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Ba giao cắt của BR11</span>
+    <p><strong>Với BR5:</strong> cờ không ảnh hưởng công thức Thành tiền · Tiền CK · Tiền thuế. <strong>Với BR6:</strong> hàng khuyến mại vẫn nhập thuế GTGT và vẫn theo đúng bảng trên. <strong>Với BR7:</strong> dòng chiết khấu thương mại được phép tích cờ nếu muốn loại khỏi tờ khai. Khi cờ bật, <em>toàn bộ</em> giá trị điều chỉnh của dòng — cả tăng lẫn giảm — đều bị loại khỏi tờ khai.</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — BR14</span>
+  <h2>Giá trị còn lại lũy kế: ràng buộc nặng nhất của epic</h2>
+  <p class="lede">Một hóa đơn được điều chỉnh nhiều lần, nên tổng phần <strong>điều chỉnh giảm</strong> của một dòng không được ăn quá giá trị dòng đó trên hóa đơn gốc. Phép trừ này chạy trên <em>lũy kế</em> các hóa đơn điều chỉnh đã phát hành, không phải trên một hóa đơn đơn lẻ.</p>
+
+  <h3>Kiểm lúc nhập và lúc lưu bản nháp</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Nhập Thành tiền chênh lệch của dòng"] --> B{"Giá trị mang dấu gì?"}
+    B -- "Dương · điều chỉnh tăng" --> B1["Không thuộc phạm vi BR14"]:::ok
+    B -- "Âm · điều chỉnh giảm" --> C["Xác định dòng HĐ gốc<br/>qua ChiTietHoaDonBanHangGocId"]
+
+    C --> D["Lấy Thành tiền gốc của dòng"]
+    D --> E["Cộng dồn trị tuyệt đối Thành tiền<br/>của các dòng chênh lệch ÂM"]
+    E --> E1["Chỉ HĐ ĐC ĐÃ PHÁT HÀNH"]
+    E1 --> E2["Cùng tenant và chi nhánh"]
+    E2 --> E3["Bỏ bản ghi IsDeleted = true"]
+    E3 --> F["Giá trị còn lại = gốc − tổng đã giảm"]
+
+    F --> G{"Trị tuyệt đối giá trị nhập<br/>vượt giá trị còn lại?"}
+    G -- "Vượt" --> G1["MSG_109 kèm mã hàng<br/>Không cho lưu"]:::err
+    G -- "Không vượt" --> G2["Cho lưu bản nháp"]:::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Mẫu số của phép trừ là dòng, không phải hóa đơn.</b> Ràng buộc tính riêng cho từng <span class="f">ChiTietHoaDonBanHangGocId</span>; dòng nhập tay không có liên kết này nên không tham gia phép cộng dồn.</figcaption>
+  </figure>
+
+  <h3>Kiểm lại nguyên tử tại thời điểm phát hành</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Phát hành HĐ điều chỉnh"]) --> B["Mở transaction<br/>hoặc khóa dòng tương đương"]
+    B --> C["Tính LẠI giá trị còn lại<br/>theo đúng bộ lọc của BR14"]
+    C --> D["Tính cả HĐ ĐC đang phát hành<br/>vào tổng phần giảm"]
+    D --> E{"Tổng phần giảm vượt<br/>Thành tiền gốc của dòng?"}
+    E -- "Vượt" --> E1["Rollback thao tác phát hành<br/>Trả về MSG_109"]:::err
+    E -- "Không vượt" --> E2["Commit · HĐ ĐC Đã phát hành"]:::ok
+
+    F["Vì sao phải kiểm lại"] -.-> G["Hai HĐ ĐC lập đồng thời<br/>cùng qua được kiểm lúc nhập<br/>vì lúc đó cả hai chưa phát hành"]:::warn
+    G -.-> C
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Kiểm lúc nhập là chưa đủ.</b> <span class="chip c-br">BR14</span> yêu cầu tính lại trong cùng transaction khi phát hành — vì tổng lũy kế chỉ đếm hóa đơn <em>đã phát hành</em>, hai bản nháp song song đều thấy giá trị còn lại như nhau.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thành phần công thức</th><th>Điều kiện lọc chính xác</th></tr></thead>
+    <tbody>
+      <tr><td>Số bị trừ</td><td>Thành tiền gốc của dòng trên hóa đơn gốc</td></tr>
+      <tr><td>Số trừ</td><td>Tổng trị tuyệt đối <span class="f">ThanhTien</span> của các dòng chênh lệch có <span class="f">ThanhTien</span> âm</td></tr>
+      <tr><td>Phạm vi cộng dồn</td><td>Cùng <span class="f">ChiTietHoaDonBanHangGocId</span> — vật lý <span class="f">ChiTietHoaDonGocId</span></td></tr>
+      <tr><td>Bộ lọc bắt buộc</td><td>Hóa đơn điều chỉnh <b>đã phát hành</b> · cùng tenant và chi nhánh · <span class="f">IsDeleted = false</span></td></tr>
+      <tr><td>Thời điểm kiểm</td><td>Khi nhập, khi lưu, và <b>kiểm lại nguyên tử</b> khi phát hành</td></tr>
+      <tr><td>Mã chặn</td><td><span class="chip c-msg">MSG_109</span> — nội dung có tham số <span class="f">maHang</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — UC_ThemMoiHDC · AD_ThemMoiHDC</span>
+  <h2>Luồng Lưu: chuỗi chặn và bản ghi sinh ra</h2>
+  <p class="lede">Nút Lưu chạy đủ chuỗi validate rồi mới ghi. Điểm đặc thù của epic là thao tác Lưu <strong>ghi vào hai bản ghi</strong>: tạo hóa đơn điều chỉnh và cập nhật trạng thái hóa đơn gốc.</p>
+
+  <h3>Chuỗi validate</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Nhấn Lưu"]) --> P{"Có quyền Create?"}
+    P -- "Không" --> PE["MSG_005 · nút vốn đã bị ẩn"]:::err
+    P -- "Có" --> V0{"Đã chọn hóa đơn gốc?"}
+    V0 -- "Chưa" --> X0["MSG_111"]:::err
+    V0 -- "Rồi" --> V1{"HĐ gốc còn trong kỳ mở?"}
+    V1 -- "Kỳ đã đóng" --> X1["MSG_203"]:::err
+    V1 -- "Kỳ mở" --> V2{"Đủ trường bắt buộc?"}
+    V2 -- "Thiếu" --> X2["MSG_101 tới 106<br/>MSG_108 · MSG_112"]:::err
+    V2 -- "Đủ" --> V3{"Tỷ giá lớn hơn 0?"}
+    V3 -- "Không" --> X3["MSG_107"]:::err
+    V3 -- "Có" --> V4{"Ngày HĐ ≥ ngày HĐ gốc?"}
+    V4 -- "Không" --> X4["MSG_110"]:::err
+    V4 -- "Có" --> V5{"Số HĐ trùng trong tenant?"}
+    V5 -- "Trùng" --> X5["MSG_304"]:::err
+    V5 -- "Không" --> V6{"Dòng nào Số lượng = 0<br/>mà Thành tiền khác 0?"}
+    V6 -- "Có" --> X6["MSG_115"]:::err
+    V6 -- "Không" --> V7{"Giá trị giảm vượt<br/>giá trị còn lại — BR14?"}
+    V7 -- "Vượt" --> X7["MSG_109"]:::err
+    V7 -- "Không" --> OK(["Sang bước ghi dữ liệu"]):::ok
+
+    X0 --> R["Giữ nguyên form · không đóng<br/>Không ghi bản ghi nào"]:::warn
+    X2 --> R
+    X4 --> R
+    X7 --> R
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hai chặn riêng của epic nằm ở hai đầu chuỗi.</b> Đầu chuỗi là <span class="chip c-msg">MSG_111</span> — chưa chọn hóa đơn gốc; cuối chuỗi là <span class="chip c-msg">MSG_109</span> — vượt giá trị còn lại. Các chặn ở giữa là validate trường bắt buộc thông thường theo <span class="chip c-br">BR15</span>.</figcaption>
+  </figure>
+
+  <h3>Chuỗi ghi dữ liệu</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    W(["Validate đã qua"]) --> W1["Ghi DieuChinhHoaDonBanHang<br/>TrangThaiLoaiHoaDon =<br/>HoaDonDieuChinh"]
+    W1 --> W2["Ghi các dòng chi tiết điều chỉnh<br/>Kèm liên kết dòng HĐ gốc"]
+    W2 --> W3["Cập nhật HĐ gốc thành<br/>HoaDonBiDieuChinh"]
+    W3 --> W4["Trạng thái phát hành =<br/>Chưa phát hành"]
+    W4 --> W5["MSG_001 · đóng form<br/>Làm mới danh sách"]:::ok
+
+    W5 -.-> Z["Lỗi ở bất kỳ bước nào:<br/>MSG_004 và không giữ lại<br/>bản ghi nào · gốc không đổi"]:::err
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Cập nhật hóa đơn gốc là một phần của thao tác Lưu.</b> Không được để tồn tại hóa đơn điều chỉnh mà hóa đơn gốc vẫn mang <span class="f">HoaDonGoc</span> — hai bước phải cùng thành công hoặc cùng thất bại.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Khoảng trắng trong tài liệu</span>
+    <p>Epic <em>không</em> mô tả luồng <strong>phát hành hóa đơn</strong>, dù trạng thái phát hành là điều kiện gác của gần như mọi thao tác và là bộ lọc của <span class="chip c-br">BR14</span>. Cũng không có use case Ghi sổ, không có mã MSG ghi sổ, nên trang này không vẽ bút toán sổ cái cho hóa đơn điều chỉnh.</p>
+  </div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — UC_NhanBanHDC</span>
+  <h2>Nhân bản: sao chép nội dung, giữ nguyên hóa đơn gốc</h2>
+  <p class="lede">Nhân bản tạo một hóa đơn điều chỉnh mới ở trạng thái <em>Chưa phát hành</em>, kế thừa Loại điều chỉnh và cờ tờ khai từ bản gốc. Điểm mấu chốt: hóa đơn <strong>bị</strong> điều chỉnh không đổi trạng thái lần nữa.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Chọn HĐ ĐC · nhấn Nhân bản"]) --> B{"Có quyền thêm mới?"}
+    B -- "Không" --> B1["MSG_005"]:::err
+    B -- "Có" --> C["Tạo bản sao trên bộ nhớ"]
+    C --> C1["Giống hệt bản gốc<br/>TRỪ Id và Số hóa đơn"]
+    C1 --> C2["Kế thừa Loại điều chỉnh<br/>và cờ không tổng hợp tờ khai"]
+    C2 --> D["Mở popup chỉnh sửa"]
+    D --> E["Người dùng sửa rồi Lưu"]
+    E --> F["HĐ mới: HoaDonDieuChinh<br/>Chưa phát hành"]:::ok
+    E --> G["HĐ gốc: giữ nguyên<br/>HoaDonBiDieuChinh"]:::ok
+    F --> H["MSG_303 Nhân bản thành công"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Bản sao vẫn phải qua đủ validate của luồng Lưu.</b> Đặc biệt là <span class="chip c-br">BR14</span>: bản gốc đã phát hành thì phần giảm của nó đã nằm trong lũy kế, nên bản sao giữ nguyên số liệu rất dễ vượt giá trị còn lại và bị <span class="chip c-msg">MSG_109</span> chặn.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — UC_ChinhSuaHDC · UC_XoaHDC · UC_XemChiTietHDC</span>
+  <h2>Sửa, Xóa và Xem chi tiết</h2>
+  <p class="lede">Ba use case cuối chia nhau một cấu trúc gác giống nhau: kiểm quyền, kiểm trạng thái phát hành, rồi mới mở màn. Khác biệt nằm ở hậu điều kiện — chỉ Xóa mới chạm vào trạng thái hóa đơn gốc.</p>
+
+  <h3>Sửa và Xóa</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Chọn HĐ ĐC trên danh sách"]) --> B{"Có quyền chức năng?"}
+    B -- "Không" --> B1["MSG_005"]:::err
+    B -- "Có" --> C{"Thao tác nào?"}
+
+    C -- "Chỉnh sửa" --> D{"HĐ chưa phát hành?"}
+    D -- "Đã phát hành" --> D1["MSG_202 · không được sửa"]:::err
+    D -- "Chưa phát hành" --> D2["Mở popup chỉnh sửa"]
+    D2 --> D3["KHÔNG cho đổi hóa đơn gốc<br/>Lý do điều chỉnh vẫn bắt buộc"]
+    D3 --> D4{"Validate hợp lệ?"}
+    D4 -- "Không" --> D5["Hiện lỗi · giữ form"]:::err
+    D4 -- "Có" --> D6["MSG_002 · giữ HoaDonDieuChinh<br/>HĐ gốc không đổi trạng thái"]:::ok
+    D2 -- "Người dùng hủy" --> D7["Đóng popup · không lưu gì"]
+
+    C -- "Xóa" --> E{"HĐ chưa phát hành?"}
+    E -- "Đã phát hành" --> E1["MSG_201 · không được xóa"]:::err
+    E -- "Chưa phát hành" --> E2["Popup xác nhận xóa"]
+    E2 -- "Không" --> E3["Đóng popup"]
+    E2 -- "Có" --> E4["Xóa mềm HĐ ĐC và chi tiết<br/>theo BR29"]
+    E4 --> E5["Đưa HĐ gốc về HoaDonGoc"]:::warn
+    E5 --> E6["MSG_003 · tải lại danh sách"]:::ok
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Chỉ Xóa mới viết ngược lên hóa đơn gốc.</b> Sửa và Nhân bản đều ghi rõ hậu điều kiện “không thay đổi Loại trạng thái của HĐ gốc”; ô màu vàng ở nhánh Xóa là điểm còn tranh cãi đã nêu ở mục 00.</figcaption>
+  </figure>
+
+  <h3>Xem chi tiết — ba khối bắt buộc hiển thị</h3>
+  <p>Popup xem chi tiết chỉ có một điều kiện gác duy nhất là quyền; không tồn tại thì trả <span class="chip c-msg">MSG_005</span>. Nội dung phải đủ ba khối, vì đây là nơi kiểm chứng quan hệ giữa hai hóa đơn.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Khối</th><th>Nội dung bắt buộc theo UC</th></tr></thead>
+    <tbody>
+      <tr><td>Hóa đơn điều chỉnh</td><td>Đầy đủ thông tin, kèm Loại trạng thái = <span class="f">HoaDonDieuChinh</span>, Loại điều chỉnh, trạng thái cờ không tổng hợp tờ khai GTGT</td></tr>
+      <tr><td>Hóa đơn gốc</td><td>Thông tin hóa đơn bị điều chỉnh, kèm Loại trạng thái = <span class="f">HoaDonBiDieuChinh</span></td></tr>
+      <tr><td>Chi tiết hàng hóa</td><td>Toàn bộ dòng điều chỉnh, giữ nguyên dấu của giá trị chênh lệch</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Từ màn này mở tiếp Chỉnh sửa hoặc Xóa; theo <span class="chip c-br">BR34</span> chung, Lưu hoặc Hủy trên popup chỉnh sửa phải quay lại đúng màn xem chi tiết chứ không nhảy về danh sách.</p>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — Ma trận ẩn hiện · đã BA duyệt</span>
+  <h2>Điều gì bật tắt trường nào trên form Tạo mới</h2>
+  <p class="lede">Ma trận Ẩn/Hiện/Disable của <span class="f">SCR_TaoMoiHDDC</span> rút gọn về <strong>một trục cột duy nhất</strong> — Loại tiền. Mọi điều kiện còn lại chỉ tác động một trường hoặc chỉ ở mức từng dòng lưới, nên chúng được hạ xuống thành điều kiện phụ.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    F["Form Tạo mới HĐ ĐC"] --> I1{"Loại tiền = đồng tiền<br/>hạch toán?"}
+    I1 -- "Bằng · cột C1" --> P1["Ẩn Thành tiền quy đổi<br/>Tiền CK quy đổi<br/>Tiền thuế quy đổi<br/>Tỷ giá disable = 1"]
+    I1 -- "Khác · cột C2" --> P2["Hiện đủ khối cột quy đổi<br/>Tỷ giá nhập được"]
+
+    F --> T{"Hình thức thanh toán"}
+    T -- "Chuyển khoản · TM/CK" --> T1["Hiện Tài khoản NH"]
+    T -- "Tiền mặt" --> T2["Ẩn Tài khoản NH"]
+
+    F --> R["Điều kiện mức dòng lưới"]
+    R --> R1["Hàng khuyến mại<br/>khóa nhóm chiết khấu"]
+    R --> R2["Chiết khấu thương mại<br/>khóa nhóm chiết khấu"]
+    R --> R3["% thuế = KHAC<br/>hiện Giá trị thuế GTGT"]
+    R --> R4["% thuế KHAC hoặc KKKNT<br/>khóa cờ tờ khai đã tự tích"]
+    R --> R5["ĐVT khác ĐVT cơ bản<br/>hiện Hệ số và SL quy đổi"]
+</pre>
+    </div>
+    <figcaption><b>Loại tiền là input cấp form duy nhất đổi cấu trúc lưới.</b> Hình thức thanh toán chỉ đổi một trường nên không lên cột; hàng khuyến mại và chiết khấu thương mại là điều kiện theo dữ liệu từng dòng, không phải theo form.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thành phần</th><th>C1 — loại tiền là đồng tiền hạch toán</th><th>C2 — khác đồng tiền hạch toán</th></tr></thead>
+    <tbody>
+      <tr><td>Mã khách hàng · Loại tiền</td><td colspan="2"><span class="chip c-perm">Disable</span> — kế thừa HĐ gốc, chỉ đọc ở cấp hóa đơn</td></tr>
+      <tr><td>Tỷ giá</td><td><span class="chip c-perm">Disable</span> = 1</td><td><span class="chip c-ok">Show</span>, phải lớn hơn 0</td></tr>
+      <tr><td>Thành tiền quy đổi · Tiền CK quy đổi · Tiền thuế quy đổi</td><td><span class="chip c-msg">Hide</span></td><td><span class="chip c-ok">Show</span></td></tr>
+      <tr><td>Tài khoản NH</td><td colspan="2">Ẩn mặc định, hiện khi thanh toán là Chuyển khoản hoặc TM/CK</td></tr>
+      <tr><td>Giá trị thuế GTGT</td><td colspan="2">Ẩn mặc định, hiện khi % thuế (Mới) = KHAC</td></tr>
+      <tr><td>Hệ số quy đổi · Số lượng quy đổi</td><td colspan="2">Ẩn mặc định, hiện dạng chỉ đọc khi ĐVT khác ĐVT cơ bản</td></tr>
+      <tr><td>Mã hàng · ĐVT trên lưới</td><td colspan="2"><span class="chip c-perm">Disable</span> với dòng sinh từ lưới chọn dòng, <span class="chip c-ok">Show</span> với dòng thêm tay</td></tr>
+      <tr><td>STT · bốn ô Tổng cộng</td><td colspan="2"><span class="chip c-perm">Disable</span> — tự động tính, không cho sửa</td></tr>
+      <tr><td>Checkbox Tự động tính toán · nút Thêm dòng · Xóa dòng · Đổi hóa đơn · Lưu · Hủy</td><td colspan="2"><span class="chip c-ok">Show</span> ở mọi tổ hợp</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Checkbox <em>Tự động tính toán số liệu</em> chỉ bật tắt việc tính giá trị, <strong>không</strong> đổi Ẩn/Hiện/Disable của trường nào — vì vậy nó không phải là một trục cột <span class="chip c-br">BR30</span>.</p>
+</section>
+
+<!-- ============ 13 ============ -->
+<section id="s13">
+  <span class="snum">13 — Tra cứu</span>
+  <h2>Điều kiện chặn, mã thông báo và quyền</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> trong các sơ đồ trên theo thao tác. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-06197_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện chặn</th><th class="mono">Mã</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="4">Chọn hóa đơn gốc</td><td>Không có hóa đơn gốc hợp lệ để điều chỉnh</td><td class="mono">302</td></tr>
+      <tr><td>Nhấn Đồng ý khi chưa chọn dòng nào</td><td class="mono">— cảnh báo BR2, chưa có mã</td></tr>
+      <tr><td>Nhấn Lưu khi chưa chọn hóa đơn gốc</td><td class="mono">111</td></tr>
+      <tr><td>Chọn dòng hóa đơn gốc đã có trong chi tiết</td><td class="mono">114</td></tr>
+      <tr><td rowspan="9">Lưu · Cập nhật</td><td>Thiếu Số hóa đơn · Mẫu số · Ký hiệu · Ngày hóa đơn</td><td class="mono">101 · 102 · 103 · 104</td></tr>
+      <tr><td>Thiếu Khách hàng · Loại tiền</td><td class="mono">105 · 106</td></tr>
+      <tr><td>Tỷ giá không lớn hơn 0</td><td class="mono">107</td></tr>
+      <tr><td>Thiếu Lý do điều chỉnh · Loại điều chỉnh</td><td class="mono">108 · 112</td></tr>
+      <tr><td>Giá trị điều chỉnh giảm vượt giá trị còn lại của dòng</td><td class="mono">109</td></tr>
+      <tr><td>Ngày điều chỉnh nhỏ hơn ngày hóa đơn gốc</td><td class="mono">110</td></tr>
+      <tr><td>Số lượng bằng 0 nhưng Thành tiền khác 0</td><td class="mono">115</td></tr>
+      <tr><td>Số hóa đơn đã tồn tại cho khách hàng này</td><td class="mono">304</td></tr>
+      <tr><td>Hóa đơn gốc đã đóng kỳ kế toán</td><td class="mono">203</td></tr>
+      <tr><td>Chỉnh sửa</td><td>Hóa đơn đã phát hành</td><td class="mono">202</td></tr>
+      <tr><td>Xóa</td><td>Hóa đơn đã phát hành</td><td class="mono">201</td></tr>
+      <tr><td>Tìm kiếm</td><td>Không tìm thấy dữ liệu</td><td class="mono">301</td></tr>
+      <tr><td>Mọi chức năng</td><td>Không có quyền truy cập</td><td class="mono">005</td></tr>
+      <tr><td>Mọi chức năng</td><td>Lỗi hệ thống khi tải hoặc ghi dữ liệu</td><td class="mono">004</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Thông báo thành công</h3>
+  <p><span class="chip c-msg">001</span> Thêm mới thành công · <span class="chip c-msg">002</span> Cập nhật thành công · <span class="chip c-msg">003</span> Xóa thành công · <span class="chip c-msg">303</span> Nhân bản thành công.</p>
+
+  <h3>Quyền theo tài liệu epic</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th><th>Nguồn khai báo</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">PMKT.E06197.DanhSach</td><td>Vào màn danh sách hóa đơn bán hàng điều chỉnh</td><td class="mono">SCR_DanhSachTepMoi</td></tr>
+      <tr><td class="mono">HoaDonBanHangDieuChinh.Create</td><td>Nút Thêm mới · hành động Lưu · Nhân bản</td><td class="mono">SCR_TaoMoiHDDC</td></tr>
+      <tr><td>Quyền Sửa · Xóa · Xem chi tiết</td><td>Các UC đều yêu cầu kiểm quyền tương ứng</td><td><span class="chip c-warn">Chưa có mã quyền trong tài liệu</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Bốn khoảng trắng của tài liệu BA</span>
+    <p><strong>1. Quyền:</strong> <span class="f">DanhSachQuyen.md</span> mục B4 Bán hàng chưa có dòng nào cho hóa đơn bán hàng điều chỉnh, trong khi hai màn của epic tham chiếu tới nó bằng hai lối đặt tên khác nhau.<br>
+    <strong>2. Mã thông báo:</strong> <span class="f">MSG_115</span> được dùng ở BR18 và bảng Validate của <span class="f">SCR_TaoMoiHDDC</span> nhưng chưa được khai trong <span class="f">6.messages.md</span>; dãy mã cũng nhảy qua <span class="f">113</span>.<br>
+    <strong>3. Tên entity:</strong> CRUD matrix và các UC dùng <span class="f">ENT_DieuChinhHoaDonBanHang</span> · <span class="f">ENT_ChiTietHoaDonDieuChinh</span>, còn bảng trường của màn Tạo mới lại ánh xạ sang <span class="f">HoaDonBanHang.*</span> · <span class="f">ChiTietHoaDonBanHang.*</span>.<br>
+    <strong>4. Chức năng chưa có tài liệu:</strong> Xuất Excel danh sách và Xuất PDF hóa đơn điều chỉnh có trong bảng phân tích chức năng nhưng không có use case, không có màn hình, không có mã thông báo — nên không được vẽ ở trang này.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-06197 · Hóa đơn bán hàng điều chỉnh</span>
+  <span>Dựng từ 6 UC · 6 Activity Diagram · 2 màn hình · 1 ma trận · BR1–BR22</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

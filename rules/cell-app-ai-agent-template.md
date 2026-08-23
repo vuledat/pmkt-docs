@@ -36,7 +36,7 @@ Trước khi AI sinh kế hoạch hoặc code, phải đọc và tuân thủ the
 2. `../../cell-app/CLAUDE.md`
 3. `conventions.md`
 4. tài liệu kế hoạch/BA của đúng PYC đang làm
-5. module mẫu gần nhất về mặt kiến trúc, thường là `cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_ban_hang/**`
+5. module mẫu gần nhất về mặt kiến trúc, thường là `cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_ban_hang/**`
 
 > Nếu có mâu thuẫn, ưu tiên theo thứ tự trên và **báo rõ mâu thuẫn** thay vì tự chọn im lặng.
 
@@ -46,17 +46,17 @@ Trước khi AI sinh kế hoạch hoặc code, phải đọc và tuân thủ the
 
 ### 3.1 Được phép tham khảo
 
-- `cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/**`
-- `cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_ban_hang/**`
-- `cell-app/src/main/java/vn/dopai/pmkt/cell/platform_iam/**`
-- `cell-app/src/main/java/vn/dopai/pmkt/cell/integration_ops/**`
-- `cell-app/src/main/java/vn/dopai/pmkt/cell/core/**`
+- `cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/**`
+- `cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_ban_hang/**`
+- `cell-app/src/main/java/vn/vtt/pmkt/cell/platform_iam/**`
+- `cell-app/src/main/java/vn/vtt/pmkt/cell/integration_ops/**`
+- `cell-app/src/main/java/vn/vtt/pmkt/cell/core/**`
 - `docs/**`
 - `pmkt-docs/ba/**`
 
 ### 3.2 Cấm đọc / cấm dùng làm mẫu
 
-`cell-app/src/main/java/vn/dopai/pmkt/cell/master_data/**`
+`cell-app/src/main/java/vn/vtt/pmkt/cell/master_data/**`
 
 Lý do đã được chốt trong `../../CLAUDE.md` và `../../cell-app/CLAUDE.md`:
 
@@ -84,7 +84,7 @@ Khi đó AI phải:
 Với một PYC greenfield cho chứng từ, AI mặc định phải nghĩ theo cấu trúc sau:
 
 ```text
-cell-app/src/main/java/vn/dopai/pmkt/cell/<domain>/
+cell-app/src/main/java/vn/vtt/pmkt/cell/<domain>/
 ├── package-info.java
 └── internal/
     ├── controller/
@@ -183,9 +183,9 @@ Mọi PYC giao cho AI phải khai báo rõ vùng được sửa.
 
 Nếu ticket không ghi khác, coi các vùng sau là chỉ-đọc:
 
-- `cell-app/src/main/java/vn/dopai/pmkt/cell/core/**`
-- `cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/**`
-- `cell-app/src/main/java/vn/dopai/pmkt/cell/master_data/**`
+- `cell-app/src/main/java/vn/vtt/pmkt/cell/core/**`
+- `cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/**`
+- `cell-app/src/main/java/vn/vtt/pmkt/cell/master_data/**`
 
 ---
 
@@ -268,20 +268,20 @@ Nhiệm vụ: phát triển PYC <PYC_CODE> cho `cell-app`.
 
 ## Domain context
 - domain: <ten_domain>
-- module_root: cell-app/src/main/java/vn/dopai/pmkt/cell/<ten_domain>
+- module_root: cell-app/src/main/java/vn/vtt/pmkt/cell/<ten_domain>
 - use_case_docs:
   - <doc_1>
   - <doc_2>
 
 ## Reference modules / contracts bắt buộc tham chiếu
-- cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_ban_hang/**
-- cell-app/src/main/java/vn/dopai/pmkt/cell/accounting_core/chung_tu/**
-- cell-app/src/main/java/vn/dopai/pmkt/cell/core/entity/BaseChungTuEntity.java
-- cell-app/src/main/java/vn/dopai/pmkt/cell/core/entity/BaseChiTietChungTuEntity.java
+- cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_ban_hang/**
+- cell-app/src/main/java/vn/vtt/pmkt/cell/accounting_core/chung_tu/**
+- cell-app/src/main/java/vn/vtt/pmkt/cell/core/entity/BaseChungTuEntity.java
+- cell-app/src/main/java/vn/vtt/pmkt/cell/core/entity/BaseChiTietChungTuEntity.java
 - <them file khac neu can>
 
 ## Forbidden paths
-- cell-app/src/main/java/vn/dopai/pmkt/cell/master_data/**
+- cell-app/src/main/java/vn/vtt/pmkt/cell/master_data/**
 
 ## Change policy
 - allow_new_files: true
@@ -316,7 +316,7 @@ Nếu team thích metadata ngắn gọn hơn, dùng mẫu này:
 ```yaml
 pyc_code: PMKT-XXXX
 module: chung_tu_mua_hang
-module_root: cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_mua_hang
+module_root: cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_mua_hang
 scope: feature-only
 reference_modules:
   - chung_tu_ban_hang
@@ -378,7 +378,7 @@ Nếu môi trường không chạy hết integration test, phải báo trung th�
 
 Ví dụ nếu giao AI làm module `chung_tu_mua_hang`, mặc định nên chốt như sau:
 
-- **module đích:** `cell-app/src/main/java/vn/dopai/pmkt/cell/chung_tu_mua_hang/`
+- **module đích:** `cell-app/src/main/java/vn/vtt/pmkt/cell/chung_tu_mua_hang/`
 - **module tham chiếu:** `chung_tu_ban_hang/`, `accounting_core/chung_tu/`
 - **vùng cấm:** `master_data/**`
 - **phạm vi sửa mặc định:**

@@ -1,0 +1,601 @@
+<title>Luồng Cấu hình đơn vị kế toán</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-00420 · Cấu hình hệ thống</p>
+  <h1>Luồng Cấu hình thông tin đơn vị kế toán</h1>
+  <p>Epic này không có chứng từ, không có ghi sổ — chỉ có <strong>một bản ghi cấu hình duy nhất của tenant</strong> và hai chế độ hiển thị Xem / Sửa. Trang dựng theo vòng đời bản ghi cấu hình: mở màn · xem · sửa · điều kiện hiệu lực · ảnh hưởng tới nơi dùng.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 1 use case · 1 activity diagram · 1 màn hình · 11 message</span>
+    <span><b>Entity gốc:</b> ENT_cfg_tenant</span>
+    <span><b>BR riêng:</b> BR01 · BR02 · BR03</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Hai chế độ Xem &amp; Sửa</a></li>
+    <li><a href="#s1"><span>01</span>Mở màn hình</a></li>
+    <li><a href="#s2"><span>02</span>Ba nhóm trường &amp; quyền sửa</a></li>
+    <li><a href="#s3"><span>03</span>Phương pháp tính thuế GTGT</a></li>
+    <li><a href="#s4"><span>04</span>Kỳ kế toán &amp; ngày làm việc</a></li>
+    <li><a href="#s5"><span>05</span>Lưu thay đổi</a></li>
+    <li><a href="#s6"><span>06</span>Hủy &amp; Đóng</a></li>
+    <li><a href="#s7"><span>07</span>Cấu hình chi phối gì</a></li>
+    <li><a href="#s8"><span>08</span>Tra cứu chặn &amp; thông báo</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Vòng đời một bản ghi cấu hình: chỉ có hai chế độ</h2>
+  <p class="lede">Bản ghi cấu hình <span class="f">ENT_cfg_tenant</span> <strong>không được thêm và không được xóa</strong> từ màn này — nó sinh ra ở luồng khởi tạo tenant. Toàn bộ nghiệp vụ của epic gói trong việc chuyển qua lại giữa chế độ <em>Xem</em> và chế độ <em>Sửa</em>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(( )) -- "Mở từ màn danh sách" --> V
+    V["<b>CHẾ ĐỘ XEM</b><br/>Mọi trường read-only<br/>Toolbar: Đóng · Sửa"]
+    E["<b>CHẾ ĐỘ SỬA</b><br/>Enable trường Cho phép sửa = Y<br/>Toolbar: Đóng · Lưu · Hủy"]
+    X["<b>ĐÓNG MÀN HÌNH</b><br/>Quay về danh sách"]
+    V -- "Nút Sửa hoặc Toggle chế độ" --> E
+    E -- "Lưu hợp lệ — MSG_002 · MSG_005" --> V
+    E -- "Hủy — bỏ thay đổi chưa lưu" --> V
+    E -- "Lưu lỗi — MSG_008 · giữ chế độ Sửa" --> E
+    V -- "Nút Đóng" --> X
+    E -- "Nút Đóng" --> X
+</pre>
+    </div>
+    <figcaption><b>Chế độ là bản lề duy nhất.</b> Không có trạng thái ghi sổ, không có xóa, không có thêm mới. Mọi luật ẩn / hiện / khóa trường trong epic đều treo vào cặp Xem–Sửa của <span class="chip c-br">BR01</span>.</figcaption>
+  </figure>
+
+  <h3>Toolbar đổi theo chế độ</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nút</th><th>Chế độ Xem</th><th>Chế độ Sửa</th><th>Hành động</th></tr></thead>
+    <tbody>
+      <tr><td>Đóng</td><td>Hiện</td><td>Hiện</td><td>Đóng màn hình, quay về danh sách</td></tr>
+      <tr><td>Sửa</td><td>Hiện</td><td><b>Ẩn</b></td><td>Chuyển sang chế độ Sửa, enable trường có <span class="f">Cho phép sửa = Y</span></td></tr>
+      <tr><td>Lưu</td><td><b>Ẩn</b></td><td>Hiện</td><td>Validate → cập nhật → quay lại chế độ Xem</td></tr>
+      <tr><td>Hủy</td><td><b>Ẩn</b></td><td>Hiện</td><td>Bỏ thay đổi chưa lưu, quay lại chế độ Xem</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Toggle chế độ trên header là <strong>lối vào thứ hai</strong> của cùng hành động với nút Sửa — không phải một trạng thái riêng.</p>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — UC_CauHinhThongTinDonViKeToan</span>
+  <h2>Mở màn hình: ba việc hệ thống làm trước khi vẽ form</h2>
+  <p class="lede">Trước khi form hiện ra, hệ thống phải kiểm quyền, nạp <span class="f">ENT_cfg_tenant</span>, và <strong>dò xem tenant đã phát sinh dữ liệu kế toán chưa</strong> — bước thứ ba này quyết định badge và mức tự do của vùng thuế GTGT ở mục 03.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A([Nhấn vào đơn vị kế toán từ danh sách]) --> B{"Có quyền xem?"}
+    B -- Không --> B1["MSG_009<br/>Không có quyền truy cập"]:::err
+    B -- Có --> C["Nạp thông tin đơn vị kế toán<br/>ENT_cfg_tenant theo TenantId"]
+    C --> C1{"Nạp được dữ liệu?"}
+    C1 -- Không --> C2["MSG_007<br/>Lỗi khi tải dữ liệu"]:::err
+    C1 -- Có --> D["Dò tenant đã phát sinh<br/>dữ liệu kế toán chưa"]
+    D --> E["Dựng Header: Mã số thuế ·<br/>Tên doanh nghiệp · Trạng thái · Toggle"]
+    E --> F["Dựng 3 nhóm trường<br/>tất cả ở dạng read-only"]
+    F --> G([Màn hình mở ở chế độ Xem]):::ok
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Mặc định luôn là chế độ Xem.</b> Không có đường nào mở thẳng vào chế độ Sửa — kể cả khi người dùng có đủ quyền sửa. Kết quả bước dò dữ liệu được giữ lại cho suốt phiên làm việc trên màn hình.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Bản ghi đến từ đâu</span>
+    <p>Luồng khởi tạo bản ghi cấu hình <strong>không thuộc màn này</strong>: người dùng khởi tạo tenant với thông tin tổ chức, điền cấu hình đơn vị kế toán trong quy trình onboarding, hệ thống lưu <span class="f">ENT_cfg_tenant</span>. Tài liệu BA ghi rõ phần onboarding <em>đang bổ sung</em> — nên trang này không vẽ chuỗi khởi tạo.</p>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — BR02 · Ma trận ẩn/hiện</span>
+  <h2>Ba nhóm trường và hai mức khóa</h2>
+  <p class="lede">Chuyển sang chế độ Sửa <em>không</em> mở hết form. Có một lớp trường bị khóa cứng ở cả hai chế độ — khóa vì bản chất dữ liệu, không vì chế độ đang xem.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    F["<b>Nhóm 1</b><br/>Thông tin đơn vị kế toán"] --> N1
+    F --> Y1
+    G["<b>Nhóm 2</b><br/>Tiền tệ"] --> Y2
+    H["<b>Nhóm 3</b><br/>Chế độ kế toán"] --> Y3
+    N1["Mã số thuế · Tên doanh nghiệp<br/>Đơn vị kế toán · Chế độ kế toán"]
+    Y1["Người đại diện · Email<br/>Lĩnh vực hoạt động<br/>Ngành nghề kinh doanh chính<br/>Có chi nhánh<br/>PP tính giá xuất kho<br/>PP tính thuế GTGT"]
+    Y2["Loại tiền hạch toán"]
+    Y3["Thiết lập kỳ kế toán<br/>Ngày bắt đầu năm kế toán<br/>Ngày bắt đầu dữ liệu kế toán<br/>Thiết lập ngày làm việc"]
+    N1 --> R["<b>Khóa cứng — BR02</b><br/>Read-only ở CẢ hai chế độ"]:::warn
+    Y1 --> W["<b>Mở theo chế độ</b><br/>Read-only ở Xem<br/>Nhập được ở Sửa"]:::ok
+    Y2 --> W
+    Y3 --> W
+
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Bốn trường không bao giờ nhập được.</b> Mã số thuế và Tên doanh nghiệp khóa vì <span class="f">Cho phép sửa = N</span>; Đơn vị kế toán và Chế độ kế toán khóa vì <span class="chip c-br">BR02</span> — đổi chế độ kế toán là đổi cả hệ thống tài khoản, không phải việc của màn cấu hình.</figcaption>
+  </figure>
+
+  <h3>Ma trận Ẩn / Hiện / Disable theo chế độ</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nhóm</th><th>Trường / thành phần</th><th>Chế độ Xem</th><th>Chế độ Sửa</th></tr></thead>
+    <tbody>
+      <tr><td>Nhóm 1 · Thông tin đơn vị</td><td>Mã số thuế · Tên doanh nghiệp</td><td>Disable</td><td>Disable</td></tr>
+      <tr><td>Nhóm 1 · Thông tin đơn vị</td><td>Đơn vị kế toán · Chế độ kế toán</td><td>Disable</td><td>Disable</td></tr>
+      <tr><td>Nhóm 1 · Thông tin đơn vị</td><td>Người đại diện · Email</td><td>Disable</td><td><b>Show</b></td></tr>
+      <tr><td>Nhóm 1 · Thông tin đơn vị</td><td>Lĩnh vực hoạt động · Ngành nghề kinh doanh chính · Có chi nhánh</td><td>Disable</td><td><b>Show</b></td></tr>
+      <tr><td>Nhóm 1 · PP tính giá xuất kho</td><td>Áp dụng đối với · Phương pháp tính giá sử dụng</td><td>Disable</td><td><b>Show</b></td></tr>
+      <tr><td>Nhóm 1 · PP tính thuế GTGT</td><td>Phương pháp tính thuế GTGT</td><td>Disable</td><td><b>Show</b></td></tr>
+      <tr><td>Nhóm 1 · PP tính thuế GTGT</td><td>Vùng cảnh báo đổi PP thuế</td><td>Hide (luôn)</td><td>Hide → Show khi thỏa điều kiện</td></tr>
+      <tr><td>Nhóm 1 · Cơ cấu tổ chức</td><td>Phần danh mục cơ cấu tổ chức <em>(chưa đặc tả trường)</em></td><td colspan="2">Hide → hiện khi <span class="f">Có chi nhánh = Có</span></td></tr>
+      <tr><td>Nhóm 2 · Tiền tệ</td><td>Loại tiền hạch toán</td><td>Disable</td><td><b>Show</b></td></tr>
+      <tr><td>Nhóm 3 · Chế độ kế toán</td><td>Thiết lập kỳ kế toán · Ngày bắt đầu năm KT · Ngày bắt đầu dữ liệu KT · Thiết lập ngày làm việc</td><td>Disable</td><td><b>Show</b></td></tr>
+      <tr><td>Nhóm 3 · Chế độ kế toán</td><td>Ngày bắt đầu làm việc · Ngày kết thúc làm việc</td><td colspan="2">Hide → hiện khi <span class="f">ThietLapThoiGian = true</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Ở chế độ Xem, trường mô tả “hiển thị text + link” — Đơn vị kế toán, Lĩnh vực hoạt động, Ngành nghề kinh doanh chính, Loại tiền hạch toán — được coi là <strong>hiển thị read-only kèm link sang danh mục nguồn</strong>, không phải ẩn.</p>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — BR03</span>
+  <h2>Phương pháp tính thuế GTGT: nghiệp vụ nặng nhất của epic</h2>
+  <p class="lede">Đây là vùng duy nhất trong màn có <strong>điều kiện hiệu lực theo thời gian</strong>. Mọi trường khác lưu là áp dụng ngay; riêng phương pháp tính thuế GTGT còn phải trả lời câu hỏi <em>áp dụng từ năm nào</em>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A([Ở chế độ Sửa · vùng PP tính thuế GTGT]) --> B{"Tenant đã phát sinh<br/>dữ liệu kế toán?"}
+    B -- Chưa --> C["Badge <b>Chưa có dữ liệu</b>"]
+    C --> C1["Chọn năm áp dụng và đổi<br/>phương pháp tính thuế tự do"]
+    C1 --> Z(["Ghi nhận vào form · chờ Lưu"]):::ok
+    B -- Rồi --> D["Badge <b>Đã có dữ liệu</b><br/><i>Chế độ hạn chế</i>"]
+    D --> E{"Chọn PP khác PP<br/>đang áp dụng?"}
+    E -- Không --> Z
+    E -- Có --> F["Mở vùng cảnh báo<br/>hiển thị MSG_010"]:::warn
+    F --> G{"Năm áp dụng chọn là<br/>năm hiện tại?"}
+    G -- "Có" --> H["Cảnh báo · không cho đổi PP<br/>cho năm nay"]:::err
+    G -- "Từ năm tiếp theo trở đi" --> I{"Đã bấm Xác nhận?"}
+    I -- Chưa --> J["MSG_011<br/>Vui lòng chọn ngày áp dụng"]:::err
+    I -- Rồi --> K["Ghi nhận PP mới<br/>+ năm áp dụng"]:::ok
+    K --> Z
+    H --> L["Bấm Hủy bỏ: đóng vùng cảnh báo<br/>quay lại PP cũ"]
+    J --> L
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Đã phát sinh dữ liệu thì năm hiện tại bị khóa.</b> Điều kiện chặn là <span class="f">năm áp dụng ≥ năm hiện tại + 1</span>. Người dùng bắt buộc phải chọn năm áp dụng <em>và</em> bấm Xác nhận — chỉ mở vùng cảnh báo rồi bấm Lưu là bị chặn bằng <span class="chip c-msg">MSG_011</span>.</figcaption>
+  </figure>
+
+  <h3>Hai kịch bản, hai mức tự do</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tình trạng dữ liệu</th><th>Badge</th><th>Được đổi phương pháp?</th><th>Năm áp dụng cho phép</th><th>Vùng cảnh báo</th></tr></thead>
+    <tbody>
+      <tr><td>Chưa phát sinh dữ liệu</td><td><span class="chip c-ok">Chưa có dữ liệu</span></td><td>Có — tự do</td><td>Chọn tự do</td><td>Không hiện</td></tr>
+      <tr><td>Đã phát sinh dữ liệu</td><td><span class="chip c-warn">Đã có dữ liệu (Chế độ hạn chế)</span></td><td>Có — kèm xác nhận</td><td>Từ năm tiếp theo trở đi<br><span class="f">năm áp dụng ≥ năm hiện tại + 1</span></td><td>Hiện khi chọn PP khác PP hiện tại, hoặc chọn năm áp dụng trong năm hiện tại</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Bốn thành phần trong vùng cảnh báo</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Field</th><th>Control</th><th>Vai trò</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">thongBaoThayDoi</td><td>Text — read-only</td><td>Nội dung <span class="chip c-msg">MSG_010</span></td></tr>
+      <tr><td class="mono">NamApDungPTGTGT</td><td>Select — bắt buộc</td><td>Danh sách năm tiếp theo</td></tr>
+      <tr><td class="mono">huyBo</td><td>Button</td><td>Đóng vùng cảnh báo, quay lại phương pháp cũ</td></tr>
+      <tr><td class="mono">xacNhan</td><td>Button</td><td>Ghi nhận thay đổi và thời điểm áp dụng</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Điểm dễ sai</span>
+    <p>Badge <strong>không phải trường nhập liệu</strong> và không lên ma trận ẩn/hiện — nó là chỉ báo trạng thái, luôn hiển thị read-only ở cả chế độ Xem lẫn Sửa. Còn <em>vùng cảnh báo</em> thì ngược lại: ở chế độ Xem <strong>luôn ẩn</strong>, không có ngoại lệ nào.</p>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — Nhóm 3</span>
+  <h2>Kỳ kế toán và khoảng thời gian làm việc</h2>
+  <p class="lede">Nhóm 3 gồm bốn trường luôn hiện và một cặp ngày chỉ hiện khi được bật. Cặp ngày này là nguồn duy nhất sinh ra cảnh báo <span class="chip c-msg">MSG_001</span> ở các nghiệp vụ khác.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Nhóm 3 — Chế độ kế toán<br/>ở chế độ Sửa"] --> B["Thiết lập kỳ kế toán<br/>Năm · Quý · Tháng"]
+    A --> C["Ngày bắt đầu năm kế toán<br/>mặc định ngày tạo tài khoản"]
+    A --> D["Ngày bắt đầu dữ liệu kế toán<br/>ngày bắt đầu dùng phần mềm"]
+    A --> E{"Tick Thiết lập ngày làm việc?"}
+    E -- Không --> E0["Ẩn hẳn cặp ngày làm việc"]
+    E -- Có --> F["Hiện Ngày bắt đầu làm việc<br/>mặc định ngày tạo tài khoản"]
+    F --> G["Hiện Ngày kết thúc làm việc<br/>mặc định ngày cuối tháng đã chọn"]
+    G --> H{"Ngày kết thúc sau<br/>ngày bắt đầu?"}
+    H -- Không --> I["MSG_006"]:::err
+    H -- Có --> J["Nhận khoảng thời gian làm việc"]:::ok
+    J --> K["Về sau: tạo dữ liệu ngoài khoảng<br/>này sẽ hiện cảnh báo MSG_001"]:::warn
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Ẩn / hiện đi trước validate.</b> Khi <span class="f">ThietLapThoiGian = false</span> thì cặp ngày không render, nên ràng buộc “ngày kết thúc sau ngày bắt đầu” cũng không chạy — không được báo lỗi trường đang ẩn.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Hai mốc ngày dễ nhầm nhau</span>
+    <p><strong>Ngày bắt đầu dữ liệu kế toán</strong> là mốc bắt đầu hạch toán của tenant — mọi chứng từ có ngày hạch toán trước mốc này đều bị chặn <span class="chip c-br">BR17.2</span>, dữ liệu trước mốc phải khai báo dưới dạng số dư đầu kỳ.<br>
+    <strong>Khoảng thời gian làm việc</strong> (bắt đầu – kết thúc) chỉ sinh <em>cảnh báo</em> <span class="chip c-msg">MSG_001</span>, không chặn. Đây là warning, không phải error.</p>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — Luồng Lưu</span>
+  <h2>Lưu: chuỗi validate rồi mới tới chuỗi ghi</h2>
+  <p class="lede">Nút Lưu chỉ tồn tại ở chế độ Sửa. Validate chạy đủ bốn lớp; lỗi ở bất kỳ lớp nào cũng <strong>giữ nguyên chế độ Sửa</strong> và không ghi gì vào <span class="f">ENT_cfg_tenant</span>.</p>
+
+  <h3>Chuỗi validate</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S([Bấm Lưu ở chế độ Sửa]) --> V1{"Trường bắt buộc đủ?"}
+    V1 -- Không --> X1["MSG_004<br/>Nhập đầy đủ trường bắt buộc"]:::err
+    V1 -- Có --> V2{"Email đúng định dạng?"}
+    V2 -- Không --> X2["MSG_003<br/>Email không đúng định dạng"]:::err
+    V2 -- Có --> V3{"Có bật Thiết lập ngày làm việc?"}
+    V3 -- Có --> V4{"Ngày kết thúc sau<br/>ngày bắt đầu?"}
+    V4 -- Không --> X3["MSG_006"]:::err
+    V4 -- Có --> V5
+    V3 -- Không --> V5{"Vùng cảnh báo đổi PP<br/>thuế GTGT đang mở?"}
+    V5 -- Có --> V6{"Đã chọn năm áp dụng<br/>và bấm Xác nhận?"}
+    V6 -- Chưa --> X4["MSG_011"]:::err
+    V6 -- Rồi --> OK([Sang chuỗi ghi dữ liệu]):::ok
+    V5 -- Không --> OK
+    X1 --> R["Giữ nguyên chế độ Sửa<br/>báo lỗi ngay tại trường tương ứng"]:::warn
+    X2 --> R
+    X3 --> R
+    X4 --> R
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Lỗi hiển thị tại trường, không phải toast.</b> Border đỏ + text đỏ dưới ô, form cuộn tới ô lỗi đầu tiên <span class="chip c-br">BR15.4</span>. Trường văn bản được trim khoảng trắng trước khi kiểm bắt buộc <span class="chip c-br">BR43</span>.</figcaption>
+  </figure>
+
+  <h3>Chuỗi ghi và thông báo kết quả</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    W([Dữ liệu hợp lệ]) --> W1["Cập nhật ENT_cfg_tenant<br/>trong phạm vi TenantId"]
+    W1 --> W2{"Cập nhật thành công?"}
+    W2 -- Không --> X["MSG_008<br/>Lỗi khi lưu · giữ chế độ Sửa"]:::err
+    W2 -- Có --> W3{"Có thay đổi phương pháp<br/>tính thuế GTGT?"}
+    W3 -- Có --> Y1["MSG_002 — kèm ngayHieuLuc<br/>theo năm áp dụng đã xác nhận"]:::ok
+    W3 -- Không --> Y2["MSG_005<br/>Cập nhật thành công"]:::ok
+    Y1 --> Z["Tự động quay lại chế độ Xem<br/>hiển thị dữ liệu vừa cập nhật"]
+    Y2 --> Z
+
+    classDef err  fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok   fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Hai message thành công, chọn theo một câu hỏi duy nhất.</b> Có đổi phương pháp tính thuế GTGT thì dùng <span class="chip c-msg">MSG_002</span> vì phải nói ra <em>ngày hiệu lực</em>; không đổi thì dùng <span class="chip c-msg">MSG_005</span>. Lỗi lưu thì <strong>không</strong> rời chế độ Sửa — dữ liệu người dùng đang nhập được giữ nguyên.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Điều kiện lưu chung vẫn áp</span>
+    <p>Bản ghi cấu hình luôn nằm trong đúng một <span class="f">TenantId</span> và không được truy cập chéo tenant <span class="chip c-br">BR28</span>. Mỗi lần lưu ghi vết <span class="f">NguoiCapNhatId</span> / <span class="f">NgayCapNhat</span> <span class="chip c-br">BR46</span> — các trường này hệ thống tự gán, không hiển thị trên form.</p>
+  </div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — Thoát khỏi chế độ Sửa</span>
+  <h2>Hủy và Đóng: hai lối ra khác nhau</h2>
+  <p class="lede">Hủy trả về chế độ Xem của <em>cùng màn hình</em>; Đóng rời hẳn màn hình. Cả hai đều bỏ thay đổi chưa lưu.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A["Đang ở chế độ Sửa"] -- "Nút Hủy" --> B["Bỏ mọi thay đổi chưa lưu"]
+    B --> C["Về chế độ Xem<br/>hiện lại nút Sửa · ẩn Lưu và Hủy"]
+    A -- "Nút Đóng" --> D["Đóng màn hình<br/>quay về danh sách"]
+    E["Đang ở chế độ Xem"] -- "Nút Đóng" --> D
+    E -- "Nút Sửa hoặc Toggle" --> A
+</pre>
+    </div>
+    <figcaption><b>Hủy không đóng màn hình.</b> Người dùng vẫn ở lại trang cấu hình, chỉ mất các thay đổi chưa lưu và quay về trạng thái read-only.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Chưa có quy định riêng</span>
+    <p>Tài liệu BA của epic <strong>không mô tả popup xác nhận</strong> khi bấm Hủy hoặc Đóng lúc form đang có thay đổi chưa lưu. Theo quy chuẩn chung <span class="chip c-br">BR3</span>, form dirty khi Đóng phải hiện popup “Xác nhận đóng” — trang này ghi nhận là <em>điểm cần BA xác nhận</em>, không tự vẽ thành nhánh trong sơ đồ.</p>
+  </div>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — Ảnh hưởng</span>
+  <h2>Sửa xong rồi thì cái gì đổi theo</h2>
+  <p class="lede">Đây là màn cấu hình nên giá trị của nó nằm ở <strong>nơi khác</strong>: sáu trường dưới đây chi phối hành vi của toàn hệ thống chứ không chỉ hiển thị trên form.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    CFG["<b>ENT_cfg_tenant</b><br/>Cấu hình đơn vị kế toán"]
+    CFG --> A["Ngày bắt đầu dữ liệu kế toán"]
+    CFG --> B["Loại tiền hạch toán"]
+    CFG --> C["PP tính thuế GTGT<br/>+ năm áp dụng"]
+    CFG --> D["PP tính giá xuất kho"]
+    CFG --> E["Thiết lập kỳ kế toán"]
+    CFG --> F["Khoảng thời gian làm việc"]
+    A --> A1["Chặn chứng từ có ngày hạch toán<br/>trước mốc — BR17.2"]
+    B --> B1["Là đồng tiền hạch toán: tỷ giá = 1<br/>ẩn cột quy đổi — BR18"]
+    C --> C1["Có hiệu lực từ năm áp dụng<br/>MSG_002 nêu rõ ngayHieuLuc"]
+    D --> D1["Dùng chung một phương pháp hoặc<br/>mỗi vật tư một phương pháp"]
+    E --> E1["Kỳ sổ sách theo Năm · Quý · Tháng"]
+    F --> F1["Cảnh báo MSG_001 khi tạo dữ liệu<br/>ngoài khoảng — không chặn"]
+</pre>
+    </div>
+    <figcaption><b>Hai loại hệ quả rất khác nhau.</b> Ngày bắt đầu dữ liệu <em>chặn cứng</em> nghiệp vụ khác; khoảng thời gian làm việc chỉ <em>cảnh báo</em>. Phương pháp tính thuế GTGT là trường duy nhất có độ trễ hiệu lực — lưu hôm nay nhưng áp dụng từ năm đã xác nhận.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Chưa có quy định</span>
+    <p>Tài liệu BA <strong>không mô tả</strong>: (1) hệ thống dò “đã phát sinh dữ liệu kế toán” dựa trên bảng/điều kiện nào; (2) cách lưu trữ lịch sử phương pháp tính thuế GTGT theo năm; (3) danh sách trường bên trong khu vực cơ cấu tổ chức khi <span class="f">Có chi nhánh = Có</span>; (4) trường <em>Trạng thái</em> trên header nhận những giá trị nào. Bốn điểm này cần BA bổ sung trước khi code.</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — Tra cứu</span>
+  <h2>Điều kiện chặn, cảnh báo và mã thông báo</h2>
+  <p class="lede">Toàn bộ 11 message của epic, gom theo thao tác. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-U-00424_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện</th><th class="mono">Mã</th><th>Loại</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="2">Mở màn hình</td><td>Không có quyền xem/sửa</td><td class="mono">009</td><td><span class="chip c-msg">Error</span></td></tr>
+      <tr><td>Lỗi khi tải dữ liệu</td><td class="mono">007</td><td><span class="chip c-msg">Error</span></td></tr>
+      <tr><td rowspan="4">Lưu — validate</td><td>Thiếu trường bắt buộc</td><td class="mono">004</td><td><span class="chip c-msg">Error</span></td></tr>
+      <tr><td>Email sai định dạng</td><td class="mono">003</td><td><span class="chip c-msg">Error</span></td></tr>
+      <tr><td>Ngày kết thúc làm việc không sau ngày bắt đầu</td><td class="mono">006</td><td><span class="chip c-msg">Error</span></td></tr>
+      <tr><td>Đổi PP tính thuế GTGT nhưng chưa chọn ngày áp dụng / chưa Xác nhận</td><td class="mono">011</td><td><span class="chip c-msg">Error</span></td></tr>
+      <tr><td>Lưu — ghi dữ liệu</td><td>Lỗi hệ thống khi cập nhật</td><td class="mono">008</td><td><span class="chip c-msg">Error</span></td></tr>
+      <tr><td rowspan="2">Lưu thành công</td><td>Có thay đổi PP tính thuế GTGT</td><td class="mono">002</td><td><span class="chip c-ok">Success</span></td></tr>
+      <tr><td>Không thay đổi PP tính thuế GTGT</td><td class="mono">005</td><td><span class="chip c-ok">Success</span></td></tr>
+      <tr><td>Đổi PP tính thuế GTGT</td><td>Đã phát sinh dữ liệu — nội dung vùng cảnh báo</td><td class="mono">010</td><td><span class="chip c-warn">Warning</span></td></tr>
+      <tr><td>Nghiệp vụ khác</td><td>Tạo dữ liệu ngoài khoảng thời gian làm việc</td><td class="mono">001</td><td><span class="chip c-warn">Warning</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Validate theo trường</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trường</th><th>Điều kiện</th><th class="mono">Message</th></tr></thead>
+    <tbody>
+      <tr><td>Email</td><td>Đúng dạng <span class="f">tên@tênmiền</span> theo <span class="chip c-br">BR15.2</span></td><td class="mono">003</td></tr>
+      <tr><td>Ngày kết thúc làm việc</td><td>Phải sau ngày bắt đầu làm việc</td><td class="mono">006</td></tr>
+      <tr><td>Mọi trường bắt buộc</td><td>Không được để trống — trim trước khi kiểm <span class="chip c-br">BR43</span></td><td class="mono">004</td></tr>
+      <tr><td>Mã số thuế</td><td>Tối đa 14 ký tự — read-only, không nhập từ màn này</td><td class="mono">—</td></tr>
+      <tr><td>Tên doanh nghiệp · Người đại diện · Email</td><td>Tối đa 255 ký tự <span class="chip c-br">BR14.4</span></td><td class="mono">—</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Quyền</th><th>Mở khóa</th><th>Nguồn</th></tr></thead>
+    <tbody>
+      <tr><td>Quyền <b>xem</b> thông tin đơn vị kế toán</td><td>Vào được màn hình ở chế độ Xem</td><td>UC — Tiền điều kiện</td></tr>
+      <tr><td>Quyền <b>sửa</b> thông tin đơn vị kế toán</td><td>Nút Sửa · Toggle chế độ · nút Lưu</td><td>UC — Tiền điều kiện</td></tr>
+      <tr><td><span class="chip c-perm">Mã quyền cụ thể</span></td><td colspan="2">Tài liệu BA chỉ nêu “Người dùng có quyền quản lý hệ thống” — <b>chưa đặt mã permission</b>. Áp mặc định <span class="chip c-br">BR25</span>: không quyền thì ẩn nút, truy cập URL không quyền thì về trang 403.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-00420 · Cấu hình thông tin đơn vị kế toán</span>
+  <span>Dựng từ 1 UC · 1 Activity Diagram · 1 màn hình · 11 message · BR01–BR03</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>

@@ -54,7 +54,7 @@ Cả hai đặt trong **cùng** package `…/bu_tru_cong_no/api/` với `package
 ### 3.1 Interface
 
 ```java
-package vn.dopai.pmkt.cell.ke_toan_tong_hop.bu_tru_cong_no.api;
+package vn.vtt.pmkt.cell.ke_toan_tong_hop.bu_tru_cong_no.api;
 
 /**
  * Cổng ĐẢO CHIỀU: mỗi module chứng từ tự cài một bean để bù trừ công nợ đọc và
@@ -142,7 +142,7 @@ public record LenhCapNhatCongNo(
 ### 4.1 Interface
 
 ```java
-package vn.dopai.pmkt.cell.ke_toan_tong_hop.bu_tru_cong_no.api;
+package vn.vtt.pmkt.cell.ke_toan_tong_hop.bu_tru_cong_no.api;
 
 /**
  * Cổng công khai của Bù trừ công nợ. Module chứng từ gọi vào TRƯỚC khi Bỏ ghi sổ.
@@ -198,7 +198,7 @@ ke_toan_tong_hop   ──► core, common.cau_hinh_he_thong.api             (nh�
 
 Hợp lệ với Modulith **miễn là** `api/` và `api/dto/` đều khai `@NamedInterface`. `bu_tru_cong_no` **không bao giờ** import `chung_tu_*.internal` — đó là toàn bộ lý do SPI đảo chiều tồn tại.
 
-`ProxyModularityTest` (`src/test/java/vn/dopai/pmkt/cell/arch/ProxyModularityTest.java`) chỉ soi vi phạm **có nhắc tới module mình** ⇒ phải xanh ngay từ commit đầu; module mới "phải sạch tuyệt đối về ranh giới" (`cell-app/CLAUDE.md:179`).
+`ProxyModularityTest` (`src/test/java/vn/vtt/pmkt/cell/arch/ProxyModularityTest.java`) chỉ soi vi phạm **có nhắc tới module mình** ⇒ phải xanh ngay từ commit đầu; module mới "phải sạch tuyệt đối về ranh giới" (`cell-app/CLAUDE.md:179`).
 
 ---
 

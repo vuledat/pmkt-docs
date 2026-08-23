@@ -4,7 +4,7 @@
 > **Ngày khảo sát:** 2026-08-09 · **Migration lớn nhất:** V353 (307 file, 275 bảng)
 > **Cập nhật 2026-08-09 (sau họp):** **bỏ yêu cầu tiền tố `chung_tu`.** Phạm vi giảm từ 70 → 52 bảng.
 > **Phạm vi:** toàn hệ thống — phương án (a) của DB-Q6 trong
-> [10-thiet-ke-db.md](doing/PMKT-E-06194-chung-tu-ban-hang-api/10-thiet-ke-db.md) §2
+> [10-thiet-ke-db.md](../doing/PMKT-E-06194-chung-tu-ban-hang-api/_cu-2026-08-10-KHONG-DUNG/10-thiet-ke-db.md) *(bản lưu trữ — đã chuyển vào `_cu-2026-08-10-KHONG-DUNG/`)* §2
 
 ## 1. Quy ước
 
@@ -210,5 +210,5 @@ SELECT conname, length(conname) FROM pg_constraint WHERE length(conname) >= 63;
 - [docs/conventions.md](conventions.md) — bổ sung quy ước §1 vào mục đặt tên DB sau khi chốt.
 - [thiet-ke-quan-he-chung-tu.md](../done/thiet-ke-quan-he-chung-tu.md) — bảng `ctu_quan_he_chung_tu`; **đợt rename 1 (`sal_`) và 2 (`pur_`) phải xong trước pha P1** của tài liệu đó, không chồng lấn.
 - [CLAUDE.md](../../CLAUDE.md) — vùng đóng băng `master_data/**`.
-- [10-thiet-ke-db.md](doing/PMKT-E-06194-chung-tu-ban-hang-api/10-thiet-ke-db.md) §2 — nguồn gốc quyết định.
+- [10-thiet-ke-db.md](../doing/PMKT-E-06194-chung-tu-ban-hang-api/_cu-2026-08-10-KHONG-DUNG/10-thiet-ke-db.md) *(bản lưu trữ — đã chuyển vào `_cu-2026-08-10-KHONG-DUNG/`)* §2 — nguồn gốc quyết định.
 - `../../pmkt-docs/ba/Common/business_rules.md` — BR28 (multi-tenant), BR29 (chính sách xóa).

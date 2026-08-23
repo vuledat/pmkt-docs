@@ -1,0 +1,767 @@
+<title>Luồng Kỳ tính giá thành</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+    --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+    --blue:#6fb3d0; --blue-soft:#1a2b34;
+    --seal:#e0705f; --seal-soft:#2e1c1a;
+    --ok:#63b992; --ok-soft:#152720;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cdc7b9;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dfe5ec; --ink-soft:#a3aeba; --ink-faint:#7a8592;
+  --bg:#10151b; --surface:#171e26; --rule:#2a333d; --rule-soft:#212a33;
+  --blue:#6fb3d0; --blue-soft:#1a2b34;
+  --seal:#e0705f; --seal-soft:#2e1c1a;
+  --ok:#63b992; --ok-soft:#152720;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cdc7b9;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:236px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+/* ---------- masthead ---------- */
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--seal); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- rail ---------- */
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover{color:var(--blue)}
+nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+/* ---------- sections ---------- */
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+/* ---------- figure / plate ---------- */
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+
+/* ---------- font nhãn sơ đồ — PHẢI khai phạm vi TOÀN TRANG ----------
+   mermaid dựng sơ đồ trong container tạm gắn ở <body>, đo bề rộng từng nhãn ở đó rồi mới
+   chuyển SVG vào pre.mermaid. Khai font scope vào .plate thì lúc đo chưa áp, lúc vẽ mới áp
+   → hộp hẹp hơn chữ → lẹm đuôi chữ. font-size phải ĐÚNG BẰNG themeVariables.fontSize. */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+/* lưới an toàn: sai số đo vài px cũng không cắt chữ */
+foreignObject{overflow:visible !important}
+
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- chips ---------- */
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+.c-perm{color:var(--ink-soft); border-color:var(--rule); background:var(--rule-soft)}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-05908 · Phân hệ Giá thành</p>
+  <h1>Luồng xử lý Kỳ tính giá thành</h1>
+  <p>Kỳ tính giá thành là cái khung thời gian mà mọi bước tính giá thành treo vào. Trang này đi theo vòng đời một kỳ — khởi tạo, mở ra cho các bước chi tiết chạy, chốt lại khi kết chuyển được ghi sổ — và chỉ ra chỗ nào trạng thái kỳ khóa thao tác nào. Mỗi sơ đồ bám đúng Activity Diagram và BR trong bộ tài liệu BA.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 5 use case · 5 màn hình · BR1–BR15</span>
+    <span><b>Entity gốc:</b> ENT_cost_ky_tinh_gia_thanh</span>
+    <span><b>Quyền:</b> GTTT.AllPermission</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Vòng đời một kỳ</a></li>
+    <li><a href="#s1"><span>01</span>Xem danh sách</a></li>
+    <li><a href="#s2"><span>02</span>Bốn cột tiền dẫn xuất</a></li>
+    <li><a href="#s3"><span>03</span>Thêm mới</a></li>
+    <li><a href="#s4"><span>04</span>Phương pháp tính</a></li>
+    <li><a href="#s5"><span>05</span>Chỉnh sửa</a></li>
+    <li><a href="#s6"><span>06</span>Section chi tiết</a></li>
+    <li><a href="#s7"><span>07</span>Cảnh báo lạc hậu</a></li>
+    <li><a href="#s8"><span>08</span>Xem chi tiết</a></li>
+    <li><a href="#s9"><span>09</span>Xóa kỳ</a></li>
+    <li><a href="#s10"><span>10</span>Tra cứu chặn</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Vòng đời một kỳ tính giá thành</h2>
+  <p class="lede">Kỳ có <strong>ba trạng thái</strong>, và người dùng không bao giờ tự chọn trạng thái. Cả ba đều là <em>giá trị dẫn xuất</em>: hệ thống đọc xem kỳ đã có dữ liệu ở bước chi tiết nào chưa, và chứng từ kết chuyển đã ghi sổ chưa, rồi tự kết luận.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    S(( )) -- "Thêm mới kỳ" --> A
+    A["<b>CHƯA THỰC HIỆN</b><br/>Kỳ rỗng · chưa có dữ liệu<br/>Sửa mở · Xóa mở"]
+    B["<b>ĐANG THỰC HIỆN</b><br/>Đã có dữ liệu ở ≥ 1 bước<br/>Khóa Sửa · Xóa vẫn mở"]
+    C["<b>ĐÃ HOÀN THÀNH</b><br/>Kết chuyển đã ghi sổ<br/>Khóa Sửa · khóa Xóa"]
+    D["<b>ĐÃ XÓA</b><br/>Kỳ và toàn bộ dữ liệu con<br/>xóa trong một giao dịch"]
+    A -- "Nhập dữ liệu ở bước bất kỳ" --> B
+    B -- "Xóa hết dữ liệu các bước" --> A
+    B -- "Ghi sổ chứng từ kết chuyển" --> C
+    C -- "Bỏ ghi sổ chứng từ kết chuyển" --> B
+    A -- "Xóa" --> D
+    B -- "Xóa" --> D
+    C -. "không có đường xóa" .-> D
+
+    classDef st fill:#ffffff,stroke:#2f6f8f,color:#16202b;
+    classDef gone fill:#faf8f3,stroke:#cdc7b9,color:#6f6a61;
+    class A,B,C st;
+    class D gone;
+</pre>
+    </div>
+    <figcaption><b>Trạng thái là kết quả, không phải nút bấm.</b> Không có thao tác nào tên là "mở kỳ" hay "chốt kỳ" — kỳ tự chuyển sang <em>Đang thực hiện</em> ngay khi bước chi tiết đầu tiên ghi dữ liệu, và tự chốt khi chứng từ kết chuyển được ghi sổ. Đường ngược lại cũng tự động: bỏ ghi sổ thì kỳ mở lại, xóa sạch dữ liệu thì kỳ về rỗng.</figcaption>
+  </figure>
+
+  <h3>Ai làm đổi trạng thái</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    F1["Dở dang đầu kỳ"] --> H{{"Kỳ có dữ liệu ở<br/>ít nhất 1 bước?"}}
+    F2["Dở dang cuối kỳ"] --> H
+    F3["Phân bổ chi phí"] --> H
+    F4["Tính giá thành"] --> H
+    F5["Kết chuyển chi phí"] --> H
+    H -- "Không" --> S1["Chưa thực hiện"]
+    H -- "Có" --> S2["Đang thực hiện"]
+    S2 --> G{"Chứng từ kết chuyển<br/>đã ghi sổ?"}
+    G -- "Chưa" --> S2
+    G -- "Rồi" --> S3["Đã hoàn thành"]
+    CT["Riêng Công trình vụ việc:<br/>Bước 6 Nghiệm thu công trình<br/>PMKT-E-16739"] --> S3
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class CT warn;
+</pre>
+    </div>
+    <figcaption><b>Năm bước chi tiết chia nhau một cái công tắc.</b> Chỉ cần <em>một</em> trong năm bước có dữ liệu là kỳ rời khỏi <em>Chưa thực hiện</em> — và mất luôn nút Chỉnh sửa. Riêng phương pháp Công trình vụ việc, việc chốt kỳ do bước Nghiệm thu công trình bên epic PMKT-E-16739 làm, không phải bước Kết chuyển chi phí.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trạng thái</th><th class="mono">Giá trị</th><th>Điều kiện xác định — BR7</th><th>Thao tác còn mở</th></tr></thead>
+    <tbody>
+      <tr><td><b>Chưa thực hiện</b></td><td class="mono">ChuaThucHien</td><td>Chưa có dữ liệu ở bất kỳ chức năng chi tiết nào: Dở dang đầu kỳ, Dở dang cuối kỳ, Phân bổ chi phí, Tính giá thành, Kết chuyển chi phí</td><td>Chỉnh sửa · Xóa</td></tr>
+      <tr><td><b>Đang thực hiện</b></td><td class="mono">DangThucHien</td><td>Đã có dữ liệu ở ít nhất 1 trong các chức năng chi tiết trên</td><td>Xóa</td></tr>
+      <tr><td><b>Đã hoàn thành</b></td><td class="mono">DaHoanThanh</td><td>Đã có chứng từ kết chuyển chi phí giá thành ở trạng thái đã ghi sổ</td><td>— không còn Sửa, không còn Xóa</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Bốn phép chuyển trạng thái — BR8</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Chuyển</th><th>Kích hoạt</th></tr></thead>
+    <tbody>
+      <tr><td>Chưa thực hiện → Đang thực hiện</td><td>Tự động khi nhập dữ liệu vào bất kỳ chức năng chi tiết nào</td></tr>
+      <tr><td>Đang thực hiện → Đã hoàn thành</td><td>Tự động khi ghi sổ chứng từ kết chuyển chi phí giá thành</td></tr>
+      <tr><td>Đã hoàn thành → Đang thực hiện</td><td>Tự động khi bỏ ghi sổ chứng từ kết chuyển chi phí giá thành</td></tr>
+      <tr><td>Đang thực hiện → Chưa thực hiện</td><td>Tự động khi xóa hết toàn bộ dữ liệu của các chức năng chi tiết</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Màu hiển thị badge trạng thái theo <span class="chip c-br">BR33</span> của bộ quy chuẩn chung. Ba giá trị này còn là <em>trục cột</em> của ma trận ẩn/hiện nút ở màn Xem chi tiết — xem <a href="#s8">mục 08</a>.</p>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — UC PMKT-U-07044</span>
+  <h2>Xem danh sách: bảng điều phối mọi thao tác</h2>
+  <p class="lede">Màn <span class="f">SCR_KyTinhGiaThanh_DanhSach</span> dùng chung cho cả ba phương pháp tính — phân biệt bằng menu người dùng đi vào, không bằng bộ lọc trên màn. Mọi nút mức dòng đều gác bởi <strong>trạng thái kỳ</strong>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Vào menu Kỳ tính giá thành"]) --> B{"Có quyền GTTT.AllPermission?"}
+    B -- "Không" --> B1["MSG_002 · không vào được"]:::err
+    B -- "Có" --> C["Lọc theo PhuongPhapTinh của menu<br/>và chi nhánh được phân quyền"]
+    C --> D["20 bản ghi mỗi trang<br/>Sắp xếp Đến ngày giảm dần"]
+    D --> E{"Lưới có dòng nào?"}
+    E -- "Không" --> E1["MSG_001 · không render section"]:::warn
+    E -- "Có" --> F["Tiêu điểm dòng đầu tiên<br/>nạp section chi tiết bên dưới"]
+    F --> G1{{"Gác theo trạng thái kỳ"}}
+    F --> G2{{"Không gác trạng thái"}}
+    G1 -- "Chưa thực hiện" --> A1["Chỉnh sửa · Xóa"]
+    G1 -- "Đang thực hiện" --> A2["Xóa"]
+    G1 -- "Đã hoàn thành" --> A3["Không còn nút sửa hay xóa"]
+    G2 --> A4["Thêm mới · Xem chi tiết"]
+    G2 --> A5["Tính giá thành hoặc Tập hợp chi phí"]
+    G2 --> A6["Thu gọn · Mở rộng section"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hai nhóm nút, một điều kiện gác.</b> Chỉnh sửa và Xóa treo vào trạng thái kỳ; Thêm mới, Xem chi tiết và nút điều hướng sang bước tính thì luôn hiện và luôn enable. Ẩn nút — <em>không</em> disable — theo <span class="chip c-br">BR25.2</span>.</figcaption>
+  </figure>
+
+  <h3>Cột lưới và nguồn dữ liệu — BR10, BR11</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Cột</th><th class="mono">Nguồn</th><th>Tìm kiếm</th><th>Sắp xếp</th></tr></thead>
+    <tbody>
+      <tr><td>Tên kỳ tính giá thành</td><td class="mono">KyTinhGiaThanh.Ten</td><td>Có — chứa chuỗi, bỏ hoa thường, bỏ dấu</td><td>Có</td></tr>
+      <tr><td>Từ ngày</td><td class="mono">KyTinhGiaThanh.Tu</td><td>Có</td><td>Có</td></tr>
+      <tr><td>Đến ngày</td><td class="mono">KyTinhGiaThanh.Den</td><td>Có</td><td>Có — <b>mặc định giảm dần</b></td></tr>
+      <tr><td>Dở dang đầu kỳ</td><td>— tính khi hiển thị</td><td>Không</td><td>Không</td></tr>
+      <tr><td>Phát sinh trong kỳ</td><td>— tính khi hiển thị</td><td>Không</td><td>Không</td></tr>
+      <tr><td>Dở dang cuối kỳ</td><td>— tính khi hiển thị</td><td>Không</td><td>Không</td></tr>
+      <tr><td>Tổng giá thành</td><td>— tính khi hiển thị</td><td>Không</td><td>Không</td></tr>
+      <tr><td>Trạng thái</td><td class="mono">KyTinhGiaThanh.TrangThai</td><td>Có</td><td>Có</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Phạm vi dữ liệu: chỉ kỳ thuộc chi nhánh người dùng được phân quyền, theo <span class="chip c-br">BR46.4</span>. Bốn cột tiền không tìm kiếm và không sắp xếp được vì chúng không tồn tại trong cơ sở dữ liệu — xem <a href="#s2">mục 02</a>.</p>
+
+  <div class="note">
+    <span class="lbl">Vênh giữa hai tài liệu</span>
+    <p>UC <span class="f">PMKT-U-07044</span> bước 5 ghi <em>"mặc định 10 bản ghi/trang"</em>, còn <span class="chip c-br">BR10</span> của màn danh sách ghi <em>"mặc định 20 bản ghi/trang, theo BR1"</em>. Bộ quy chuẩn chung <span class="chip c-br">BR1</span> cũng nói 20. Lấy theo <strong>20</strong> — con số 10 trong UC là bản cũ chưa cập nhật.</p>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — BR1 đến BR4</span>
+  <h2>Bốn cột tiền: tính tại chỗ, không lưu xuống bảng</h2>
+  <p class="lede">Bốn cột số tiền trên lưới <strong>không</strong> là trường của <span class="f">KyTinhGiaThanh</span>. Mỗi lần mở màn, hệ thống cộng lại từ đầu — nên chúng luôn phản ánh dữ liệu mới nhất, và cũng vì thế không thể tìm kiếm hay sắp xếp theo chúng.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    K["Một dòng kỳ trên lưới"] --> C1["Dở dang đầu kỳ — BR1"]
+    K --> C2["Phát sinh trong kỳ — BR2"]
+    K --> C3["Dở dang cuối kỳ — BR3"]
+    K --> C4["Tổng giá thành — BR4"]
+    C1 --> S1["SUM DoDangDauKy.TongChiPhi<br/>group by KyTinhGiaThanhId"]
+    C3 --> S3["SUM DoDangCuoiKy.TongChiPhi<br/>group by KyTinhGiaThanhId"]
+    C4 --> S4["SUM GiaThanhSanPham.TongChiPhi<br/>group by KyTinhGiaThanhId"]
+    C2 --> S2["Đọc thẳng từ Sổ cái:<br/>SUM PSNoQuyDoi trừ PSCoQuyDoi"]
+    S2 --> L1["ChiNhanhID bằng chi nhánh của kỳ"]
+    S2 --> L2["NgayHachToan nằm trong Tu và Den"]
+    S2 --> L3["TKID thuộc TaiKhoanTapHopChiPhiId<br/>khai trong Cấu hình giá thành"]
+    S2 --> L4["Loại chứng từ khác PKG<br/>loại trừ bút toán kết chuyển"]
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class L4 warn;
+</pre>
+    </div>
+    <figcaption><b>Ba cột đi từ bảng giá thành, một cột đi từ Sổ cái.</b> Cột Phát sinh trong kỳ là ngoại lệ: nó không đọc bảng nào của phân hệ giá thành mà cộng thẳng phát sinh Nợ trừ phát sinh Có trên Sổ cái. Bốn điều kiện lọc là bắt buộc — bỏ điều kiện loại trừ <span class="f">PKG</span> thì chi phí bị đếm hai lần ngay khi kỳ đã kết chuyển.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Không cần lọc trạng thái ghi sổ</span>
+    <p>Theo quy ước Sổ cái, <strong>chỉ chứng từ đã ghi sổ mới sinh dữ liệu vào bảng <span class="f">SoCai</span></strong>. Thêm điều kiện lọc trạng thái ghi sổ vào truy vấn BR2 là thừa. Định dạng hiển thị <span class="f">#,###</span> VNĐ, làm tròn theo <span class="chip c-br">BR7</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — UC PMKT-U-07025</span>
+  <h2>Thêm mới: ba trường nhập, hai phép kiểm trùng</h2>
+  <p class="lede">Popup thêm mới chỉ có <strong>ba trường</strong>: Từ ngày, Đến ngày, Tên kỳ. Phương pháp tính — thứ quyết định toàn bộ hành vi của kỳ về sau — không nằm trên form và người dùng không chọn được.</p>
+
+  <h3>Chuỗi nhập liệu</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Thêm mới trên màn danh sách"]) --> B{"Có quyền GTTT.AllPermission?"}
+    B -- "Không" --> B1["Nút vốn đã bị ẩn · MSG_002"]:::err
+    B -- "Có" --> C["Mở popup ThemMoi · form trống"]
+    C --> D["Chọn Từ ngày và Đến ngày"]
+    D --> E["Tự sinh Tên kỳ theo BR1<br/>vẫn cho người dùng sửa lại"]
+    E --> F["Phương pháp tính không có trên form<br/>hệ thống gán ngầm theo menu · BR4"]
+    F --> G(["Bấm Lưu"])
+    C --> H(["Bấm Đóng · ESC · click ngoài"])
+    H --> H1["Hủy thao tác · không lưu gì"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+</pre>
+    </div>
+    <figcaption><b>Tên kỳ tự sinh nhưng vẫn là trường sửa được.</b> Quy tắc sinh là <span class="f">Kỳ tính giá thành {Từ ngày} - {Đến ngày}</span> với ngày định dạng <span class="f">dd/mm/yyyy</span>. Vì người dùng sửa lại được nên phép kiểm trùng tên vẫn phải chạy khi Lưu, không được bỏ qua với lý do "tên do hệ thống sinh".</figcaption>
+  </figure>
+
+  <h3>Chuỗi validate và ghi dữ liệu</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S(["Bấm Lưu"]) --> V1{"Tên kỳ để trống?"}
+    V1 -- "Có" --> X1["MSG_105"]:::err
+    V1 -- "Không" --> V2{"Từ ngày để trống?"}
+    V2 -- "Có" --> X2["MSG_106"]:::err
+    V2 -- "Không" --> V3{"Đến ngày để trống?"}
+    V3 -- "Có" --> X3["MSG_107"]:::err
+    V3 -- "Không" --> V4{"Đến ngày nhỏ hơn Từ ngày?"}
+    V4 -- "Có" --> X4["MSG_108"]:::err
+    V4 -- "Không" --> V5{"Tên kỳ trùng sau chuẩn hóa?"}
+    V5 -- "Có" --> X5["MSG_117"]:::err
+    V5 -- "Không" --> V6{"Khoảng ngày giao với kỳ khác?"}
+    V6 -- "Có" --> X6["MSG_109"]:::err
+    V6 -- "Không" --> W["Ghi ENT_cost_ky_tinh_gia_thanh<br/>gán PhuongPhapTinh theo menu"]
+    W --> Z{"Lưu thành công?"}
+    Z -- "Có" --> Z1["MSG_101 · đóng popup<br/>làm mới danh sách"]:::ok
+    Z -- "Không" --> Z2["MSG_003"]:::err
+    X1 --> R["Giữ nguyên popup<br/>không ghi bản ghi nào"]:::warn
+    X2 --> R
+    X3 --> R
+    X4 --> R
+    X5 --> R
+    X6 --> R
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Kỳ mới luôn sinh ra ở trạng thái Chưa thực hiện.</b> Không có trường trạng thái trên form và cũng không có bước gán trạng thái khi lưu — kỳ vừa tạo tất nhiên chưa có dữ liệu ở bước chi tiết nào, nên công thức <span class="chip c-br">BR7</span> tự cho ra <span class="f">ChuaThucHien</span>.</figcaption>
+  </figure>
+
+  <h3>Hai phép kiểm trùng có luật riêng</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Phép kiểm</th><th>Cách so khớp</th><th class="mono">Chặn bằng</th></tr></thead>
+    <tbody>
+      <tr><td><b>Trùng tên kỳ</b><br><span class="chip c-br">BR2 ThemMoi</span></td><td>Chuẩn hóa chuỗi theo đúng thứ tự: bỏ phân biệt hoa thường → bỏ dấu tiếng Việt → bỏ khoảng trắng → bỏ ký tự đặc biệt. Trùng sau chuẩn hóa là chặn.</td><td class="mono">MSG_117</td></tr>
+      <tr><td><b>Trùng khoảng thời gian</b><br><span class="chip c-br">BR3 ThemMoi</span></td><td>Trùng khi có <em>ít nhất một ngày</em> nằm trong cả khoảng đang tạo và khoảng <span class="f">[Tu, Den]</span> của một kỳ đã tồn tại — tức là giao nhau, không cần trùng khít.</td><td class="mono">MSG_109</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p><span class="chip c-br">BR19.2</span> của bộ quy chuẩn chung yêu cầu mã danh mục duy nhất trong cùng loại đối tượng; ở đây epic đặc tả kỹ hơn bằng quy tắc chuẩn hóa chuỗi bốn bước ở trên, và đó là luật thắng.</p>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — BR4 ThemMoi · BR10 · BR12</span>
+  <h2>Phương pháp tính: gán ngầm theo menu, không đổi được</h2>
+  <p class="lede">Một trường không có trên bất kỳ form nào lại là trường quyết định nhất của epic. <span class="f">PhuongPhapTinh</span> được gán lúc Lưu theo menu người dùng đi vào, và từ đó chi phối cả bộ lọc danh sách, nhãn nút điều hướng, lẫn cấu trúc cột của section chi tiết.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    M1["Menu Phương pháp Trực tiếp"] --> P1["PhuongPhapTinh = TrucTiep"]
+    M2["Menu Phương pháp Hệ số tỷ lệ"] --> P2["PhuongPhapTinh = HeSoTyLe"]
+    M3["Menu Phương pháp Công trình"] --> P3["PhuongPhapTinh = CongTrinhVuViec"]
+    P1 --> B1["Nhãn nút: Tính giá thành trực tiếp"]
+    P2 --> B2["Nhãn nút:<br/>Tính giá thành hệ số, tỷ lệ"]
+    P3 --> B3["Nhãn nút: Tập hợp chi phí"]
+    B1 --> D1["SCR_TinhGiaThanh_DanhSach<br/>PMKT-E-05938"]
+    B2 --> D2["SCR_TinhGiaThanh_DanhSach<br/>PMKT-E-08671"]
+    B3 --> D3["SCR_TapHopChiPhi_DanhSach<br/>PMKT-E-16725 · Bước 4"]
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class B3,D3 warn;
+</pre>
+    </div>
+    <figcaption><b>Nhãn nút đổi để không gợi ý sai chức năng.</b> Phương pháp Công trình vụ việc <em>không có</em> bước Tính giá thành riêng — giá thành hình thành qua Bước 4 Tập hợp chi phí — nên nhãn phải là "Tập hợp chi phí", không được để nhãn chung là "Tính giá thành".</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Ba hệ quả phải nhớ</span>
+    <p><strong>Lưới danh sách đã lọc sẵn:</strong> mỗi menu chỉ thấy kỳ thuộc phương pháp của mình — không có bộ lọc phương pháp trên màn, và cũng không cần.<br>
+    <strong>Popup không hiển thị trường này:</strong> cả Thêm mới lẫn Xem chi tiết đều không có dòng Phương pháp tính, vì mọi kỳ trong danh sách đều cùng một giá trị.<br>
+    <strong>Chỉnh sửa không đụng vào:</strong> <span class="chip c-br">BR1 ChinhSua</span> nói rõ <em>không</em> áp dụng BR4 khi sửa — giá trị gán một lần lúc thêm mới và giữ nguyên suốt vòng đời kỳ.</p>
+  </div>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — UC PMKT-U-07026</span>
+  <h2>Chỉnh sửa: cửa sổ hẹp nhất của vòng đời</h2>
+  <p class="lede">Chỉnh sửa chỉ mở ở trạng thái <strong>Chưa thực hiện</strong> — hẹp hơn Xóa một bậc. Lý do: sửa Từ ngày / Đến ngày của một kỳ đã có kết quả tính sẽ làm mọi số liệu đã lưu trở thành vô nghĩa.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Chỉnh sửa"]) --> B{"Trạng thái kỳ trên dòng?"}
+    B -- "Đang thực hiện · Đã hoàn thành" --> B1["Nút vốn đã bị ẩn — BR5"]:::err
+    B -- "Chưa thực hiện" --> C["Mở popup · nạp sẵn<br/>Ten · Tu · Den của kỳ"]
+    C --> D{"Server kiểm lại trạng thái"}
+    D -- "Đã sang trạng thái khác" --> D1["Từ chối cập nhật"]:::err
+    D -- "Vẫn Chưa thực hiện" --> E["Chạy đủ bộ validate của Thêm mới<br/>loại trừ chính bản ghi đang sửa"]
+    E --> F{"Dữ liệu hợp lệ?"}
+    F -- "Không" --> F1["MSG_105 đến MSG_109 · MSG_117"]:::err
+    F -- "Có" --> G["Cập nhật bản ghi<br/>PhuongPhapTinh giữ nguyên"]
+    G --> H{"Cập nhật thành công?"}
+    H -- "Có" --> H1["MSG_102"]:::ok
+    H -- "Không" --> H2["MSG_110"]:::err
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Kiểm trạng thái hai lần, ở hai tầng khác nhau.</b> Giao diện ẩn nút theo <span class="chip c-br">BR5</span>; server kiểm lại ở bước nạp dữ liệu theo luồng phụ 4 của UC. Kỳ có thể vừa đổi trạng thái do người khác nhập dữ liệu giữa hai thao tác, nên tầng giao diện không đủ.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Khác biệt duy nhất so với Thêm mới</span>
+    <p>Khi kiểm trùng tên kỳ và trùng khoảng thời gian, phải <strong>loại trừ chính bản ghi đang chỉnh sửa</strong> khỏi tập so sánh — nếu không, mọi lần Lưu mà không đổi gì đều bị chính nó chặn. Ngoài điểm này, bộ trường, tính bắt buộc và bảng validate lấy nguyên từ màn Thêm mới.</p>
+  </div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — BR13 · BR14</span>
+  <h2>Section chi tiết: kết quả của kỳ đang chọn</h2>
+  <p class="lede">Ngay dưới lưới danh sách là một section chỉ đọc, hiển thị kết quả tính giá thành của <em>đúng dòng đang được chọn</em>. Không phải popup, không điều hướng đi đâu — nó là phần mở rộng của chính màn danh sách.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Mở màn danh sách"] --> B{"Lưới có dòng nào?"}
+    B -- "Không" --> B1["Không render section<br/>kể cả thanh tiêu đề và chevron"]:::warn
+    B -- "Có" --> C["Tiêu điểm vào dòng đầu tiên<br/>làm nổi bật dòng đang chọn"]
+    C --> D["Nạp ảnh chụp kết quả của kỳ đó"]
+    D --> E{"Kỳ đã có kết quả tính?"}
+    E -- "Chưa" --> E1["Giữ tiêu đề và bộ cột<br/>thân lưới trống · MSG_001"]:::warn
+    E -- "Rồi" --> F{"PhuongPhapTinh của kỳ?"}
+    F -- "TrucTiep" --> F1["9 cột từ GiaThanhSanPham"]
+    F -- "HeSoTyLe" --> F2["9 cột và thêm 2 cột nhóm<br/>gom theo đối tượng tập hợp"]
+    F -- "CongTrinhVuViec" --> F3["6 cột từ GiaThanhCongTrinh<br/>có dòng tổng cộng 4 cột số"]
+    C --> G["Nhấn dòng khác · tìm kiếm · lọc<br/>sắp xếp · chuyển trang"]
+    G --> H["Đặt lại tiêu điểm · nạp lại section"]
+    H --> D
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hai kiểu "trống" khác nhau, xử lý khác nhau.</b> Lưới không có dòng nào thì section biến mất hoàn toàn. Lưới có dòng nhưng kỳ đang chọn chưa tính thì section vẫn còn tiêu đề và bộ cột, chỉ thân lưới trống kèm <span class="chip c-msg">MSG_001</span>. Nhầm hai trường hợp này là lỗi hay gặp nhất khi code màn.</figcaption>
+  </figure>
+
+  <h3>Cấu trúc cột theo phương pháp</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Phương pháp</th><th>Mỗi dòng là</th><th>Bộ cột</th><th>Sắp xếp · dòng tổng</th></tr></thead>
+    <tbody>
+      <tr><td>Trực tiếp</td><td class="mono">GiaThanhSanPham</td><td>Mã SP · Tên SP · ĐVT · CP NVL · CP nhân công · CP SX chung · Tổng giá thành · SL nhập kho · Giá thành đơn vị</td><td>Theo BR2 chung · không có dòng tổng</td></tr>
+      <tr><td>Hệ số, tỷ lệ</td><td class="mono">GiaThanhSanPham</td><td>Như trên, thêm <span class="mono">Mã đối tượng</span> và <span class="mono">Tên đối tượng</span> ở đầu, hiển thị tại dòng nhóm</td><td>Theo BR2 chung · không có dòng tổng</td></tr>
+      <tr><td>Công trình vụ việc</td><td class="mono">GiaThanhCongTrinh</td><td>Mã CTVV · Tên CTVV · CP NVL · CP nhân công · CP SX chung · Tổng chi phí — chỉ công trình không có cấp con</td><td>Mã công trình tăng dần · <b>có</b> dòng tổng 4 cột số</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Bốn giới hạn của section</span>
+    <p><strong>Chỉ đọc:</strong> không nút thao tác, không sửa trực tiếp — mọi thao tác vẫn qua bảng Chức năng của màn danh sách.<br>
+    <strong>Không có STT, không checkbox, không cột Hành động</strong>, cũng không có ô tìm kiếm hay sắp xếp riêng.<br>
+    <strong>Chiều cao cố định, cuộn dọc, không phân trang.</strong><br>
+    <strong>Nút ở cột Hành động không đổi dòng đang chọn</strong> của section; còn nhấp đúp vào dòng vẫn mở màn Xem chi tiết theo <span class="chip c-br">BR13.1</span> — section không thay thế hành vi này.</p>
+  </div>
+  <p>Trạng thái thu gọn / mở rộng giữ trong suốt phiên làm việc trên màn; rời màn rồi quay lại thì về mặc định là <strong>mở rộng</strong>. Khi mở rộng lại, section hiển thị kết quả của đúng dòng đang được chọn tại thời điểm đó.</p>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — BR15</span>
+  <h2>Khi lưới chính và section không khớp nhau</h2>
+  <p class="lede">Lưới chính tính lại mỗi lần hiển thị; section thì đọc ảnh chụp của lần tính gần nhất. Hai con số lệch nhau <strong>là có chủ đích</strong> — và chính là dấu hiệu kỳ cần được tính lại.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Section hiển thị ảnh chụp<br/>của lần tính gần nhất"] --> B{"Dữ liệu tiền đề đã đổi<br/>sau lần tính gần nhất?"}
+    B -- "Không" --> B1["Số của section khớp lưới chính"]:::ok
+    B -- "Có" --> C["Hiện dải cảnh báo<br/>trên thanh tiêu đề section"]:::warn
+    C --> D["Dữ liệu đã thay đổi sau lần tính<br/>gần nhất. Số liệu dưới đây là<br/>kết quả của lần tính trước."]
+    C --> E["Kèm mốc ThoiDiemTinhGanNhat"]
+    C --> F["Liên kết mở màn kết quả tương ứng"]
+    F --> G["Section không có nút Tính lại<br/>và không bao giờ tự tính lại"]
+    F --> H["Người dùng bấm Tính lại ở màn đích"]
+    H --> I["Hai phần khớp lại · cảnh báo tự tắt"]:::ok
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+</pre>
+    </div>
+    <figcaption><b>Hệ thống không được im lặng.</b> Section không tự tính lại, nhưng bắt buộc phải báo cho người dùng biết số liệu đang xem đã lạc hậu. Điều kiện phát hiện lấy nguyên từ cảnh báo TB2 của màn kết quả tương ứng — section không tự định nghĩa lại điều kiện.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Phần hiển thị</th><th>Nguồn số liệu</th><th>Đổi khi</th></tr></thead>
+    <tbody>
+      <tr><td>Bốn cột tiền của lưới chính <span class="chip c-br">BR10</span></td><td><b>Tính tại thời điểm hiển thị</b> từ dữ liệu hiện hành</td><td>Mọi lần mở màn — luôn là số mới nhất</td></tr>
+      <tr><td>Section chi tiết <span class="chip c-br">BR14</span></td><td><b>Ảnh chụp</b> lưu tại lần tính gần nhất</td><td>Chỉ khi người dùng chủ động tính lại</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Section chỉ điều hướng, không tự phán xét</span>
+    <p>Khi kỳ đang chọn đã có chứng từ kết chuyển ghi sổ, <strong>màn đích</strong> mới là nơi chặn thao tác tính lại theo quy tắc riêng của nó. Section không tự đánh giá điều kiện chặn — nó chỉ mở liên kết sang màn kết quả tương ứng với <span class="f">PhuongPhapTinh</span> của kỳ.</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — UC PMKT-U-07045</span>
+  <h2>Xem chi tiết: bốn trường đọc, bộ nút biến thiên</h2>
+  <p class="lede">Popup xem chi tiết là màn duy nhất trong epic có <strong>ma trận động thật sự</strong> — không phải theo trường nhập liệu, mà theo trạng thái kỳ tác động lên bộ nút.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A(["Xem chi tiết hoặc nhấp đúp dòng"]) --> B{"Có quyền?"}
+    B -- "Không" --> B1["MSG_002"]:::err
+    B -- "Có" --> C["Đọc bản ghi KyTinhGiaThanh"]
+    C --> D{"Tìm thấy kỳ?"}
+    D -- "Không" --> D1["MSG_111"]:::err
+    D -- "Có" --> E["Hiện 4 trường chỉ đọc<br/>Ten · Tu · Den · TrangThai"]
+    E --> F{"Trạng thái kỳ?"}
+    F -- "Chưa thực hiện" --> F1["Sửa · Xóa · Đóng"]
+    F -- "Đang thực hiện" --> F2["Xóa · Đóng"]
+    F -- "Đã hoàn thành" --> F3["Chỉ còn Đóng"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+</pre>
+    </div>
+    <figcaption><b>Popup không hiển thị Phương pháp tính.</b> Bốn trường và chỉ bốn trường — vì mọi kỳ trong danh sách đều cùng phương pháp của menu đang truy cập, thêm dòng đó vào chỉ là nhiễu. Trường Trạng thái hiển thị dạng badge, màu theo <span class="chip c-br">BR33</span>.</figcaption>
+  </figure>
+
+  <h3>Ma trận ẩn / hiện theo trạng thái kỳ</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thành phần</th><th>Chưa thực hiện</th><th>Đang thực hiện</th><th>Đã hoàn thành</th></tr></thead>
+    <tbody>
+      <tr><td>Tên kỳ · Từ ngày · Đến ngày · Trạng thái</td><td>Disable</td><td>Disable</td><td>Disable</td></tr>
+      <tr><td>Nút <b>Sửa</b></td><td>Show</td><td>Hide</td><td>Hide</td></tr>
+      <tr><td>Nút <b>Xóa</b></td><td>Show</td><td>Show</td><td>Hide</td></tr>
+      <tr><td>Nút <b>Đóng</b></td><td>Show</td><td>Show</td><td>Show</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Ma trận này phải <strong>đồng bộ tuyệt đối</strong> với <span class="chip c-br">BR5</span> và <span class="chip c-br">BR6</span> ở màn danh sách — cùng một kỳ không được lúc thì hiện nút Sửa trên lưới, lúc lại ẩn trong popup. Hai màn Thêm mới và Chỉnh sửa <em>không</em> có ma trận động: mọi trường luôn Show, không input nào tác động ẩn/hiện của trường khác.</p>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — UC PMKT-U-07027</span>
+  <h2>Xóa kỳ: một nút, mười một bảng</h2>
+  <p class="lede">Xóa kỳ là thao tác nặng nhất của epic. Nó không chỉ xóa một dòng mà quét sạch toàn bộ dữ liệu mọi bước tính đã chạy trong kỳ — trong <strong>một giao dịch duy nhất</strong>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Xóa"]) --> B{"Trạng thái kỳ?"}
+    B -- "Đã hoàn thành" --> B1["Nút Xóa vốn đã bị ẩn — BR6"]:::err
+    B -- "Chưa thực hiện" --> C1["Popup gọn: Bạn có chắc chắn<br/>muốn xóa kỳ tính giá thành?"]
+    B -- "Đang thực hiện" --> C2["Popup MSG_004: cảnh báo xóa<br/>toàn bộ dữ liệu liên quan"]
+    C1 --> D{"Người dùng chọn gì?"}
+    C2 --> D
+    D -- "Hủy · ESC · click ngoài" --> D1["Đóng popup · không xóa gì"]
+    D -- "Xác nhận" --> E{"Server kiểm lại trạng thái"}
+    E -- "Đã sang Đã hoàn thành" --> E1["Từ chối · kể cả gọi ép qua API"]:::err
+    E -- "Còn hợp lệ" --> F["Một giao dịch atomic:<br/>kỳ và toàn bộ dữ liệu con"]
+    F --> G{"Xóa thành công?"}
+    G -- "Có" --> G1["MSG_116 · giữ nguyên trang<br/>đang xem theo BR29.4"]:::ok
+    G -- "Không" --> G2["Rollback toàn bộ · MSG_003"]:::err
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+</pre>
+    </div>
+    <figcaption><b>Nội dung popup đổi theo trạng thái, không phải một câu dùng chung.</b> Kỳ <em>Chưa thực hiện</em> chỉ hỏi xác nhận thường vì chẳng có gì để mất; kỳ <em>Đang thực hiện</em> phải cảnh báo rõ bằng <span class="chip c-msg">MSG_004</span> rằng mọi dữ liệu đã tính sẽ mất theo.</figcaption>
+  </figure>
+
+  <h3>Mười một bảng bị quét trong cùng giao dịch</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Entity</th><th>Là dữ liệu của bước</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">ENT_cost_ky_tinh_gia_thanh</td><td>Bản ghi kỳ — gốc</td></tr>
+      <tr><td class="mono">ENT_cost_do_dang_dau_ky</td><td>Dở dang đầu kỳ</td></tr>
+      <tr><td class="mono">ENT_cost_do_dang_cuoi_ky<br>ENT_cost_do_dang_cuoi_ky_chi_tiet</td><td>Dở dang cuối kỳ</td></tr>
+      <tr><td class="mono">ENT_cost_phan_bo_chi_phi<br>ENT_cost_phan_bo_chi_phi_chi_tiet<br>ENT_cost_he_so_phan_bo</td><td>Phân bổ chi phí</td></tr>
+      <tr><td class="mono">ENT_cost_gia_thanh_san_pham</td><td>Tính giá thành</td></tr>
+      <tr><td class="mono">ENT_cost_chung_tu_gia_thanh<br>ENT_cost_chung_tu_gia_thanh_chi_tiet</td><td>Kết chuyển chi phí giá thành</td></tr>
+      <tr><td class="mono">ENT_cost_thiet_lap_he_so_ty_le</td><td>Thiết lập hệ số, tỷ lệ</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Điểm tài liệu chưa chốt</span>
+    <p><span class="chip c-br">BR29.1</span> của bộ quy chuẩn chung quy định <strong>chỉ được xóa mềm</strong>, không xóa vật lý, với mọi dữ liệu được phép xóa; <span class="chip c-br">BR29.2</span> cho phép xóa lan nhưng mặc định cũng là xóa mềm. Tài liệu BA của epic chỉ nói "xóa trong cùng một giao dịch (atomic), thất bại thì rollback" mà <em>không</em> nói rõ mềm hay cứng. Mặc định phải hiểu là <strong>xóa mềm</strong> theo BR29 — cần BA xác nhận trước khi code.</p>
+  </div>
+  <p>Kiểm tra điều kiện xóa chạy ở <strong>tầng server</strong>, độc lập với việc ẩn/hiện nút trên giao diện — kể cả khi người dùng gọi ép qua API <span class="chip c-br">BR2 Xoa</span>. Sau khi xóa, nếu trang hiện tại không còn bản ghi nào và không phải trang 1 thì lùi về trang liền trước <span class="chip c-br">BR29.4</span>.</p>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — Tra cứu</span>
+  <h2>Điều kiện chặn và thông báo tương ứng</h2>
+  <p class="lede">Bảng gom mọi nhánh <em>chặn</em> trong các sơ đồ trên, theo thao tác. Mã đầy đủ có tiền tố <span class="f">MSG_PMKT-E-05908_</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thao tác</th><th>Điều kiện</th><th class="mono">Mã</th><th>Loại</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="3">Xem danh sách</td><td>Danh sách trống hoặc tìm kiếm không ra kết quả</td><td class="mono">001</td><td>Info</td></tr>
+      <tr><td>Không có quyền truy cập</td><td class="mono">002</td><td>Error</td></tr>
+      <tr><td>Lỗi hệ thống khi tải danh sách</td><td class="mono">003</td><td>Error</td></tr>
+      <tr><td rowspan="7">Thêm mới — Lưu</td><td>Tên kỳ để trống</td><td class="mono">105</td><td>Error</td></tr>
+      <tr><td>Từ ngày để trống</td><td class="mono">106</td><td>Error</td></tr>
+      <tr><td>Đến ngày để trống</td><td class="mono">107</td><td>Error</td></tr>
+      <tr><td>Đến ngày nhỏ hơn Từ ngày</td><td class="mono">108</td><td>Error</td></tr>
+      <tr><td>Khoảng thời gian giao với kỳ khác</td><td class="mono">109</td><td>Error</td></tr>
+      <tr><td>Tên kỳ đã tồn tại sau chuẩn hóa</td><td class="mono">117</td><td>Error</td></tr>
+      <tr><td>Lưu thành công</td><td class="mono">101</td><td>Success</td></tr>
+      <tr><td rowspan="2">Chỉnh sửa — Lưu</td><td>Toàn bộ validate như Thêm mới, loại trừ bản ghi đang sửa</td><td class="mono">105–109 · 117</td><td>Error</td></tr>
+      <tr><td>Cập nhật thất bại · Cập nhật thành công</td><td class="mono">110 · 102</td><td>Error · Success</td></tr>
+      <tr><td>Xem chi tiết</td><td>Không tìm thấy kỳ tính giá thành</td><td class="mono">111</td><td>Error</td></tr>
+      <tr><td rowspan="3">Xóa</td><td>Xác nhận xóa kỳ đang thực hiện — cảnh báo mất dữ liệu liên quan</td><td class="mono">004</td><td>Warning</td></tr>
+      <tr><td>Xóa thành công</td><td class="mono">116</td><td>Success</td></tr>
+      <tr><td>Xóa thất bại · rollback toàn bộ</td><td class="mono">003</td><td>Error</td></tr>
+      <tr><td>Nạp section chi tiết</td><td>Kỳ đang chọn chưa có kết quả tính</td><td class="mono">001</td><td>Info</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ma trận quyền</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Permission</th><th>Mở khóa</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">GTTT.AllPermission</td><td>Toàn bộ 5 use case của epic: Xem danh sách · Xem chi tiết · Thêm mới · Chỉnh sửa · Xóa</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Epic dùng <strong>một quyền duy nhất</strong> cho cả năm use case — không tách View / Create / Edit / Delete. Vì vậy toàn bộ khác biệt về nút hiển thị trên màn đến từ <em>trạng thái kỳ</em>, không đến từ quyền. Không có quyền thì ẩn hoàn toàn menu, truy cập thẳng URL thì về trang 403 <span class="chip c-br">BR25</span>.</p>
+
+  <h3>Chỗ tài liệu BA chưa quy định</h3>
+  <ul>
+    <li>Bốn phép chuyển trạng thái ở <span class="chip c-br">BR8</span> đều ghi "tự động" nhưng <strong>không nói trạng thái được tính lại tại thời điểm nào</strong> — tính trực tiếp mỗi lần đọc, hay ghi vào trường <span class="f">TrangThai</span> và cập nhật theo sự kiện. Bảng entity có trường <span class="f">KyTinhGiaThanh.TrangThai</span>, ngụ ý cách thứ hai, nhưng chưa có quy định tường minh.</li>
+    <li>Nội dung popup xác nhận xóa ở trạng thái <em>Chưa thực hiện</em> <strong>chưa được gán mã MSG</strong> — bảng BR1 màn Xóa để trống ô mã message.</li>
+    <li><span class="f">KyTinhGiaThanh.ThoiDiemTinhGanNhat</span> được <span class="chip c-br">BR15</span> dùng để hiển thị mốc thời gian ảnh chụp, nhưng <strong>không có bảng đặc tả trường</strong> nào trong epic khai trường này — ai ghi và ghi lúc nào thuộc epic tính giá thành.</li>
+    <li>Chính sách xóa mềm hay xóa vật lý khi xóa kỳ — xem callout ở <a href="#s9">mục 09</a>.</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-05908 · Kỳ tính giá thành</span>
+  <span>Dựng từ 5 UC · 5 Activity Diagram · 5 màn hình · 3 ma trận · BR1–BR15</span>
+  <span>Cập nhật 21/08/2026</span>
+</footer>
+
+</div>
