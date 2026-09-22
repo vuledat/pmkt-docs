@@ -1,0 +1,581 @@
+{
+  "info": {
+    "name": "PMKT — Thiết lập mẫu in chứng từ (PMKT-E-14549_21)",
+    "description": "API module `mau_in` — base path `/api/mau-in` (epic PMKT-E-14549_21).\n\nGIAI ĐOẠN HIỆN TẠI: đủ A1…A12 của kế hoạch `docs/doing/PMKT-E-14549-21-thiet-lap-mau-in-chung-tu-api/`.\nBốn nghiệp vụ đã có provider: MDV · BH · PT · PC — mỗi loại tạm một nghiệp vụ `MAC_DINH` (§12 Q2).\nLoại chưa có provider trả 404 `MAU_IN_NGHIEP_VU_CHUA_HO_TRO`.\n\nCÁCH DÙNG\n1. Sửa biến collection: baseUrl (gọi thẳng cell-app http://localhost:8081), identityUrl, username, password.\n2. Chạy \"0. Auth > Login\" — script tự lưu {{token}}.\n3. Chạy \"1. Mở màn & lưu mẫu > A1\" — script tự lưu {{phienBan}} và {{mauChuan}}.\n4. Chạy \"2. Chọn chứng từ xem thử > A4\" — script tự lưu {{chungTuId}} từ dòng đầu tiên.\n\nBỐN ĐIỂM DỄ HIỂU SAI NHẤT — đọc trước khi gõ payload\n- Ô \"theo thiết lập chung\" = KHOÁ VẮNG MẶT trong JSON (R-TLMI-037). KHÔNG gửi null, KHÔNG gửi giá\n  trị đang hiển thị trên màn. A1 trả mẫu THÔ (khoá kế thừa vẫn vắng) + `thietLapChung` riêng; A3/A9\n  trả mẫu ĐÃ HỢP NHẤT.\n- PUT A2 vừa GHI vừa có thể XOÁ: mẫu gửi lên sau khi chuẩn hoá mà BẰNG mẫu chuẩn hệ thống thì bản\n  ghi bị xoá thật và `nguon` trả về là MAU_CHUAN (R-TLMI-021 · INV-TLMI-002). KHÔNG có endpoint\n  DELETE mẫu.\n- Tổng độ rộng cột ≠ 100 KHÔNG phải lỗi — server tự chia lại theo TỶ LỆ khi Lưu (R-TLMI-111 · 114);\n  đọc `data.mauDaChuanHoa` để thay state của FE.\n- Khoá lạc quan bằng `phienBan`: null nghĩa là \"tôi tin chưa có bản ghi\". Lệch ⇒ 409 MSG_COMMON_001.\n\nQUYỀN (quyết định C13 — hai tầng)\n- A1 · A3   → HTMauIn.View  + <MaChucNang nghiệp vụ>.View.Detail\n- A2        → HTMauIn.Edit  + <MaChucNang nghiệp vụ>.View.Detail\n- A4        → HTMauIn.View  + <MaChucNang nghiệp vụ>.View\n- A5 · A7   → HTMauIn.Edit          · A6 → HTMauIn.View\n- A8 · A9   → <MaChucNang nghiệp vụ>.<hanhDongIn()>  — KHÔNG gate HTMauIn.* (R-TLMI-033)\n- A10 · A12 → HTThongTinCongTy.View.Detail / .Edit   (đề xuất tạm — §12 Q4)\nHTMauIn.View/Edit đã seed ở V1149. MDV và BH chưa có `.Print` nên provider gate bằng `View.Detail`.\n\nENVELOPE\n- API đơn: { data, message, messageId }\n- Lỗi: JSON PHẲNG { code, message, messageId, details }\n- A6 và A12 GET trả BYTES THÔ (không bọc ApiResponse) — FE dùng thẳng làm `src`.\n\nMIGRATION: V1158 (khoá nghiệp vụ, xoá dữ liệu schema v1) · V1159 (ảnh nền) · V1160 (logo đơn vị).\nFile này dựng TỪ HỢP ĐỒNG API trong kế hoạch, CHƯA đối chiếu với app đang chạy (máy dev cấm Docker\nnên không boot được cell-app kèm Postgres).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081", "type": "string" },
+    { "key": "identityUrl", "value": "http://localhost:9000", "type": "string" },
+    { "key": "username", "value": "admin@tenant.vn", "type": "string" },
+    { "key": "password", "value": "", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "maLoai", "value": "PT", "type": "string" },
+    { "key": "maNghiepVu", "value": "MAC_DINH", "type": "string" },
+    { "key": "chungTuId", "value": "", "type": "string" },
+    { "key": "phienBan", "value": "", "type": "string" },
+    { "key": "phienBanChung", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "0. Auth",
+      "item": [
+        {
+          "name": "Login (tự lưu token)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{identityUrl}}/auth/login",
+              "host": ["{{identityUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "description": "Lấy access token và lưu vào biến {{token}} của collection."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const token = body.access_token || body.accessToken || (body.data && body.data.accessToken);",
+                  "pm.test('có access token', () => pm.expect(token).to.be.a('string').and.not.empty);",
+                  "pm.collectionVariables.set('token', token);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1. Mở màn & lưu mẫu (UC01)",
+      "item": [
+        {
+          "name": "A1 — Mở màn Thiết lập mẫu in (tự lưu phienBan)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}"]
+            },
+            "description": "R-TLMI-011 · 012 · 028 — hai lối vào (menu In › Thiết lập mẫu in… và nút Sửa mẫu trên màn xem trước) gọi CÙNG endpoint này với CÙNG cặp khoá ⇒ cùng một mẫu.\n\nKỲ VỌNG:\n- `data.nguon` = MAU_CHUAN khi chưa có bản ghi (R-TLMI-007 · INV-TLMI-002) — không có cờ riêng nào khác;\n- `data.mau` là mẫu ĐÃ LƯU với khoá kế thừa VẪN VẮNG (R-TLMI-037). Hợp nhất ở đây thì FE lưu lại sẽ ghi giá trị đang hiển thị và luật vỡ;\n- `data.mauChuan` để nút *Đặt lại mẫu chuẩn* chạy hoàn toàn trên màn (R-TLMI-016 · 018) — bấm Lưu mới có hiệu lực;\n- `data.thietLapChung` đã điền đủ mặc định hệ thống để FE hiện \"giá trị đang dùng\" của ô kế thừa;\n- `data.canhBao[]` là phần tử còn trong mẫu nhưng KHÔNG CÒN trên form (quyết định C10)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "pm.test('nguon là MAU_CHUAN hoặc TUY_CHINH', () => pm.expect(d.nguon).to.be.oneOf(['MAU_CHUAN', 'TUY_CHINH']));",
+                  "pm.test('R-TLMI-037 — khoá kế thừa vẫn vắng trong data.mau', () => {",
+                  "  if (d.nguon === 'MAU_CHUAN') pm.expect(d.mau.trang).to.not.have.property('kho');",
+                  "});",
+                  "pm.collectionVariables.set('phienBan', d.phienBan === null ? '' : String(d.phienBan));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "A2 — Lưu mẫu (đổi tiêu đề + thêm khối tự do)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phienBan\": null,\n  \"mau\": {\n    \"schemaVersion\": 2,\n    \"maLoaiChungTu\": \"PT\",\n    \"maNghiepVu\": \"MAC_DINH\",\n    \"trang\": {\n      \"mauChu\": \"#000000\",\n      \"nen\": { \"kieu\": \"KHONG\" }\n    },\n    \"truong\": {\n      \"soChungTu\": { \"tenHienThi\": \"Số\", \"dam\": true }\n    },\n    \"khoi\": [\n      { \"id\": \"dau_trang\", \"loai\": \"DAU_TRANG\", \"ten\": \"Thông tin đầu trang\", \"hien\": true,\n        \"dong\": { \"soDienThoai\": true } },\n      { \"id\": \"tieu_de\", \"loai\": \"TIEU_DE\", \"ten\": \"Tiêu đề\", \"hien\": true,\n        \"noiDung\": \"PHIẾU THU\", \"coChu\": 18, \"can\": \"GIUA\",\n        \"inHoa\": true, \"inDam\": true, \"dongNgayThang\": true },\n      { \"id\": \"bang_hachToan\", \"loai\": \"BANG\", \"ten\": \"Bảng Hạch toán\", \"hien\": true,\n        \"maLuoi\": \"hachToan\", \"inStt\": true, \"dongCong\": true,\n        \"lapTieuDeMoiTrang\": true, \"keO\": \"DAY_DU\",\n        \"cot\": [\n          { \"maCot\": \"noiDung\", \"tenHienThi\": \"Diễn giải\", \"in\": true, \"rong\": 40, \"can\": \"TRAI\" },\n          { \"maCot\": \"tkNo\", \"tenHienThi\": \"TK Nợ\", \"in\": true, \"rong\": 40, \"can\": \"TRAI\" },\n          { \"maCot\": \"tkCo\", \"tenHienThi\": \"TK Có\", \"in\": true, \"rong\": 40, \"can\": \"TRAI\" },\n          { \"maCot\": \"soTien\", \"tenHienThi\": \"Số tiền\", \"in\": true, \"rong\": 40, \"can\": \"PHAI\", \"cong\": true }\n        ] },\n      { \"id\": \"tu_do_1\", \"loai\": \"TU_DO\", \"ten\": \"Thông tin chung\", \"hien\": true,\n        \"soDong\": 2, \"soCot\": 2,\n        \"o\": [\n          { \"dong\": 0, \"cot\": 0, \"gopCot\": 2, \"loai\": \"TRUONG\", \"maTruong\": \"soChungTu\", \"can\": \"TRAI\" },\n          { \"dong\": 1, \"cot\": 0, \"loai\": \"CHU\", \"noiDung\": \"Kèm theo:\", \"can\": \"TRAI\", \"dam\": true }\n        ] },\n      { \"id\": \"chu_ky\", \"loai\": \"CHU_KY\", \"ten\": \"Chữ ký\", \"hien\": true,\n        \"dongNgayThang\": true, \"choTrongKy\": \"VUA\",\n        \"o\": [\n          { \"vaiTro\": \"NGUOI_LAP\", \"in\": true, \"ghiChu\": \"(Ký, họ tên)\" },\n          { \"vaiTro\": \"KE_TOAN_TRUONG\", \"in\": true, \"ghiChu\": \"(Ký, họ tên)\" },\n          { \"vaiTro\": \"GIAM_DOC\", \"in\": true, \"ghiChu\": \"(Ký, họ tên, đóng dấu)\" },\n          { \"vaiTro\": \"THU_KHO\", \"in\": false, \"ghiChu\": \"(Ký, họ tên)\" },\n          { \"vaiTro\": \"THU_QUY\", \"in\": false, \"ghiChu\": \"(Ký, họ tên)\" }\n        ] }\n    ]\n  }\n}"
+            },
+            "description": "R-TLMI-021 · 037 · 111 · 239 · 243 · 246 · 247 · 258.\n\nBốn cột của bảng cố ý gửi 40/40/40/40 (tổng 160) để thấy R-TLMI-111 hoạt động: KHÔNG báo lỗi, server chia lại theo TỶ LỆ về tổng 100 ⇒ `data.mauDaChuanHoa` trả 25/25/25/25.\n\nChú ý `khoi[DAU_TRANG].dong` chỉ có MỘT khoá `soDienThoai`: sáu dòng còn lại theo thiết lập chung (R-TLMI-077 · quyết định C03 — Logo là ô tick thứ 7).\n\nKỲ VỌNG 200 + messageId `MSG_PMKT-E-14549_21_101` (\"Lưu mẫu in thành công!\")."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const b = pm.response.json();",
+                  "pm.test('R-TLMI-248 — messageId đúng nguyên văn 6.messages.md', () =>",
+                  "  pm.expect(b.messageId).to.eql('MSG_PMKT-E-14549_21_101'));",
+                  "pm.test('R-TLMI-111 — server tự chia lại độ rộng về tổng 100', () => {",
+                  "  const bang = b.data.mauDaChuanHoa.khoi.find(k => k.loai === 'BANG');",
+                  "  const tong = bang.cot.filter(c => c.in).reduce((s, c) => s + c.rong, 0);",
+                  "  pm.expect(tong).to.eql(100);",
+                  "});",
+                  "pm.collectionVariables.set('phienBan', b.data.phienBan === null ? '' : String(b.data.phienBan));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "A2 — Lưu NGUYÊN mẫu chuẩn ⇒ XOÁ bản ghi (R-TLMI-021)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phienBan\": {{phienBan}},\n  \"mau\": \"DÁN NGUYÊN data.mauChuan lấy từ A1 vào đây\"\n}"
+            },
+            "description": "INV-TLMI-002 — *mẫu bằng mẫu chuẩn ⇔ KHÔNG tồn tại bản ghi*.\n\nDán nguyên `data.mauChuan` của A1 vào trường `mau` rồi chạy: server chuẩn hoá hai bên, so hai chuỗi JSON, thấy bằng nhau ⇒ XOÁ THẬT bản ghi (hard delete, lệch BR29 có chủ ý — lý do ở 08-thiet-ke-db.md §6) và trả `nguon = MAU_CHUAN`, `phienBan = null`.\n\nDấu vết không mất: `prn_mau_in_lich_su` ghi một dòng `hanh_dong = XOA` mang JSON ngay trước khi xoá.\n\nĐây là lý do KHÔNG có endpoint DELETE mẫu (D12): *Đặt lại mẫu chuẩn* chỉ đổi trên màn, bấm Lưu mới có hiệu lực (R-TLMI-018)."
+          },
+          "response": []
+        },
+        {
+          "name": "A3 — Xem trước bằng dữ liệu chứng từ THẬT",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}/chung-tu/{{chungTuId}}/xem-truoc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}", "chung-tu", "{{chungTuId}}", "xem-truoc"]
+            },
+            "description": "R-TLMI-217 · 218 · 219 · 220 — KHÔNG có chế độ dữ liệu mẫu: trang xem trước LUÔN vẽ bằng dữ liệu thật của chứng từ đang mở. FE chỉ gọi lại endpoint này khi ĐỔI chứng từ nguồn; mọi thay đổi trên màn thì FE tự vẽ lại bằng state của mình.\n\nKhác A1 ở chỗ `data.mauHieuLuc` ĐÃ hợp nhất thiết lập chung tại thời điểm gọi (R-TLMI-038), và `data.huongGiayThucTe` đã giải `TU_DONG` thành DOC/NGANG.\n\n⚠ KHÔNG cộng gộp dòng ở đây — cộng gộp là quy tắc của BẢN IN (A9)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Chọn chứng từ xem thử",
+      "item": [
+        {
+          "name": "A4 — Chứng từ gần đây (tự lưu chungTuId)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}/chung-tu-gan-day?gioiHan=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}", "chung-tu-gan-day"],
+              "query": [
+                { "key": "q", "value": "", "disabled": true },
+                { "key": "gioiHan", "value": "20" }
+              ]
+            },
+            "description": "R-TLMI-217 — uỷ quyền hoàn toàn cho `provider.chungTuGanDay(q, gioiHan)`; `mau_in` KHÔNG biết bảng chứng từ nào. `gioiHan` mặc định 20, trần 50.\n\nQuyền: chỉ cần `<MaChucNang>.View` (danh sách), không cần `.View.Detail`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "if (Array.isArray(d) && d.length) pm.collectionVariables.set('chungTuId', d[0].id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Ảnh nền của mẫu",
+      "item": [
+        {
+          "name": "A5 — Tải ảnh nền (multipart)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}/anh-nen",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}", "anh-nen"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "tep", "type": "file", "src": [] }]
+            },
+            "description": "R-TLMI-069 · quyết định C08 — ảnh là dữ liệu NHỊ PHÂN, lưu ở cột `prn_mau_in_tuy_chinh.anh_nen bytea` (V1159), KHÔNG base64 trong JSON: ảnh 1 MB thành ~1,37 MB base64 và `cau_hinh` bị đọc MỖI LẦN nạp mẫu.\n\nServer KHÔNG tin phần mở rộng tên tệp: đọc MAGIC BYTES (FF D8 FF = JPEG, 89 50 4E 47 = PNG) rồi mới so với Content-Type (R-TLMI-246).\n\nTải ảnh KHÔNG tăng `phien_ban` của bản ghi — tăng là làm hỏng khoá lạc quan của màn đang mở.\n\nChọn một tệp jpg/png ≤ 1 MB ở tab Body › form-data › tep."
+          },
+          "response": []
+        },
+        {
+          "name": "A6 — Tải ảnh nền về (bytes thô)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}/anh-nen",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}", "anh-nen"]
+            },
+            "description": "KHÔNG bọc ApiResponse — tài nguyên nhị phân, FE dùng thẳng làm `src`. Chưa có ảnh ⇒ 404."
+          },
+          "response": []
+        },
+        {
+          "name": "A7 — Bỏ ảnh nền",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}/anh-nen",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}", "anh-nen"]
+            },
+            "description": "Cả ba cột `anh_nen`, `anh_nen_kieu_tep`, `anh_nen_ten_tep` về NULL.\n\nR-TLMI-067 · C10 — `trang.nen.kieu = ANH` mà cột ảnh rỗng thì bản in coi như KHÔNG có nền, KHÔNG báo lỗi: bản in không bao giờ được vỡ vì cấu hình cũ."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. In chứng từ bằng mẫu tùy chỉnh (UC02)",
+      "item": [
+        {
+          "name": "A8 — Menu In của một chứng từ",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}/chung-tu/{{chungTuId}}/menu-in",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}", "chung-tu", "{{chungTuId}}", "menu-in"]
+            },
+            "description": "R-TLMI-023 · 024 · 032 · 033 · 261.\n\nThứ tự CỐ ĐỊNH của `muc[]`: các mẫu cố định (CO_DINH, jrxml của module chủ) → DUONG_KE → TUY_CHINH (\"Mẫu tùy chỉnh\") → THIET_LAP (\"Thiết lập mẫu in…\"). Hai tên cuối là NGUYÊN VĂN, dùng chung mọi nghiệp vụ.\n\n`choPhepIn = false` ⇒ FE disable nút In và CẢ MENU không mở được, kể cả mục Mẫu tùy chỉnh; `lyDoCam` (CHUA_GHI_SO | DA_KHOA_SO) để FE chọn đúng tooltip — BA chưa cấp mã MSG_ cho hai tooltip này (quyết định C14).\n\nThiếu `HTMauIn.View` ⇒ mục THIET_LAP bị ẨN HẲN, không disable (R-TLMI-032); vẫn in được Mẫu tùy chỉnh (R-TLMI-033)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "const loai = d.muc.map(m => m.loai);",
+                  "pm.test('R-TLMI-023 — Mẫu tùy chỉnh đứng sau đường kẻ', () => {",
+                  "  const i = loai.indexOf('TUY_CHINH');",
+                  "  pm.expect(i).to.be.greaterThan(-1);",
+                  "  if (loai.includes('CO_DINH')) pm.expect(loai[i - 1]).to.eql('DUONG_KE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "A9 — Dựng bản in bằng mẫu tùy chỉnh",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}/chung-tu/{{chungTuId}}/ban-in",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}", "chung-tu", "{{chungTuId}}", "ban-in"]
+            },
+            "description": "R-TLMI-259…271. Endpoint CHỈ ĐỌC: không INSERT, không UPDATE, không ghi lịch sử (R-TLMI-271).\n\nBE quyết định NỘI DUNG, FE dựng trang (quyết định D3):\n- `mauHieuLuc` đã hợp nhất thiết lập chung TẠI LÚC IN (R-TLMI-038 · 264), chỉ còn khối `hien = true`, giữ nguyên thứ tự (R-TLMI-262);\n- `huongGiayThucTe` đã giải `TU_DONG` — xét khối Bảng ĐANG BẬT có nhiều cột in nhất, KHÔNG tính cột STT (R-TLMI-058);\n- `duLieu.donVi[]` là các dòng đầu trang SẼ IN, đúng thứ tự cố định; dòng tick mà hồ sơ trống thì BỎ QUA (R-TLMI-079);\n- `duLieu.nguoiKy[]` là các ô ký đang bật; `inTenNguoiKy = false` ⇒ FE không in dòng tên (R-TLMI-196);\n- `duLieu.bang` đã cộng gộp nếu thuộc diện (R-TLMI-119 — chỉ hoá đơn / phiếu xuất kho / phiếu nhập kho).\n\nChưa có mẫu tùy chỉnh KHÔNG phải lỗi: vẫn mở màn xem trước, kèm `canhBao[0].ma = MSG_PMKT-E-14549_21_103` (R-TLMI-260, một lần mỗi lần mở màn — quyết định C22)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Thiết lập chung tối thiểu + logo",
+      "item": [
+        {
+          "name": "A10 — Đọc thiết lập chung (tự lưu phienBanChung)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/thiet-lap-chung",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "thiet-lap-chung"]
+            },
+            "description": "Q-03 [USER] — tầng TỐI THIỂU của epic PMKT-E-14549_20 mà _21 bắt buộc phải có.\n\nLưu JSON ở `cfg_cau_hinh_he_thong` dòng `IN_CHUNG_CHUNG_TU` (D8): KHÔNG bảng mới, KHÔNG seed. Tenant chưa có dòng ⇒ trả ĐỦ BỘ mặc định hệ thống và `phienBan = null`.\n\nR-TLMI-038 — đổi thiết lập chung ⇒ MỌI mẫu có ô kế thừa đổi theo NGAY, không cần đụng `prn_mau_in_tuy_chinh`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json().data;",
+                  "pm.test('trả đủ ba nhánh đã điền mặc định', () => {",
+                  "  pm.expect(d.thietLap.giayVaChu.kho).to.be.a('string');",
+                  "  pm.expect(d.thietLap.dauTrang).to.have.property('logo');",
+                  "  pm.expect(d.thietLap.quyTacIn).to.have.property('congGopMatHang');",
+                  "});",
+                  "pm.collectionVariables.set('phienBanChung', d.phienBan === null ? '' : String(d.phienBan));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "A11 — Ghi thiết lập chung",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/thiet-lap-chung",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "thiet-lap-chung"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phienBan\": null,\n  \"thietLap\": {\n    \"schemaVersion\": 1,\n    \"giayVaChu\": {\n      \"kho\": \"A4\",\n      \"huong\": \"TU_DONG\",\n      \"soCotTuDongNgang\": 7,\n      \"leTren\": 2.0, \"leDuoi\": 2.0, \"leTrai\": 2.0, \"lePhai\": 2.0,\n      \"font\": \"Times New Roman\",\n      \"coChu\": 12\n    },\n    \"dauTrang\": {\n      \"tenDonVi\": true, \"diaChi\": true, \"mst\": true,\n      \"soDienThoai\": false, \"email\": false, \"taiKhoanNganHang\": false,\n      \"logo\": true, \"lapLaiTrangSau\": true\n    },\n    \"quyTacIn\": {\n      \"choInChuaGhiSo\": true,\n      \"choInDaKhoaSo\": false,\n      \"congGopMatHang\": false\n    }\n  }\n}"
+            },
+            "description": "Ba quy tắc in (R-TLMI-047 · 266): mẫu in KHÔNG có ô chỉnh chúng và KHÔNG lưu riêng — payload mẫu mang khoá `quyTacIn` sẽ bị mapper CHẶT từ chối.\n\n⚠ `choInDaKhoaSo` CHỈ tác động nút In của chứng từ — KHÔNG tác động báo cáo và KHÔNG tác động Xuất Excel.\n\n`lapLaiTrangSau` LUÔN theo chung, mẫu không sửa riêng được (R-TLMI-049 · 084).\n\nKhoá lạc quan bằng `phien_ban` của dòng cấu hình; `null` khi chưa có dòng."
+          },
+          "response": []
+        },
+        {
+          "name": "A12 — Tải logo đơn vị (multipart)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/thiet-lap-chung/logo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "thiet-lap-chung", "logo"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "tep", "type": "file", "src": [] }]
+            },
+            "description": "R-TLMI-082 · quyết định C03 — Logo là ô tick THỨ 7 của khối Thông tin đầu trang, mẫu sửa riêng được.\n\nR-TLMI-078 Ghi chú — MỘT logo cho cả pháp nhân; chi nhánh KHÔNG có logo riêng: bản in của chi nhánh B mang logo pháp nhân trong khi tên/địa chỉ/MST là của chi nhánh B. Đúng tài liệu, không phải bug.\n\nR-TLMI-065 — `trang.mauChu` áp cho toàn bộ chữ và đường kẻ, TRỪ logo.\n\nLưu ở `iam_tenant.logo bytea` (V1160)."
+          },
+          "response": []
+        },
+        {
+          "name": "A12 — Tải logo về (bytes thô)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/thiet-lap-chung/logo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "thiet-lap-chung", "logo"]
+            },
+            "description": "Chưa tải logo ⇒ 404. `dong.logo = true` mà chưa có logo thì bản in BỎ QUA, không chừa chỗ trống (R-TLMI-079)."
+          },
+          "response": []
+        },
+        {
+          "name": "A12 — Bỏ logo",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/thiet-lap-chung/logo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "thiet-lap-chung", "logo"]
+            },
+            "description": "Cả ba cột `logo`, `logo_kieu_tep`, `logo_ten_tep` của `iam_tenant` về NULL."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Ca kiểm thử kỳ vọng lỗi",
+      "item": [
+        {
+          "name": "404 — nghiệp vụ chưa có provider (MAU_IN_NGHIEP_VU_CHUA_HO_TRO)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/XX/MAC_DINH",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "XX", "MAC_DINH"]
+            },
+            "description": "R-TLMI-014 — nghiệp vụ nào có chức năng mẫu in tùy chỉnh là do EPIC NGHIỆP VỤ khai báo. Loại chưa có bean `MauInProvider` ⇒ 404 `MAU_IN_NGHIEP_VU_CHUA_HO_TRO`; menu In của loại đó không có mục *Mẫu tùy chỉnh*.\n\nĐợt đầu mới có 4 provider: MDV · BH · PT · PC."
+          },
+          "response": []
+        },
+        {
+          "name": "400 — schemaVersion khác 2 (D11)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phienBan\": null,\n  \"mau\": { \"schemaVersion\": 1, \"maLoaiChungTu\": \"PT\", \"maNghiepVu\": \"MAC_DINH\",\n           \"trang\": {}, \"truong\": {}, \"khoi\": [] }\n}"
+            },
+            "description": "D11 — schema v2 khác v1 về cấu trúc khối và lưới ô khối tự do; KHÔNG có bộ nâng cấp tự động (V1158 đã xoá sạch dữ liệu v1 vì chưa endpoint nào ghi vào). Kỳ vọng 400 `MAU_IN_KHONG_HOP_LE`."
+          },
+          "response": []
+        },
+        {
+          "name": "400 — thuộc tính lạ trong JSON (R-TLMI-246)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phienBan\": null,\n  \"mau\": { \"schemaVersion\": 2, \"maLoaiChungTu\": \"PT\", \"maNghiepVu\": \"MAC_DINH\",\n           \"trang\": {}, \"truong\": {}, \"khoi\": [], \"quyTacIn\": { \"choInChuaGhiSo\": true } }\n}"
+            },
+            "description": "R-TLMI-047 — ba quy tắc in LUÔN theo thiết lập chung, mẫu KHÔNG có chỗ lưu. Mapper CHẶT (`FAIL_ON_UNKNOWN_PROPERTIES = true`) từ chối cả mẫu.\n\nR-TLMI-246 nguyên văn: *\"Không được tin FE đã kiểm\"* — im lặng bỏ qua một khoá gõ sai là để lỗi chỉ lộ ra trên tờ giấy in."
+          },
+          "response": []
+        },
+        {
+          "name": "422 MSG_201 — tiêu đề bản in để trống",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phienBan\": null,\n  \"mau\": \"DÁN data.mauChuan của A1 rồi xoá nội dung khoi[1].noiDung\"\n}"
+            },
+            "description": "V01 · R-TLMI-085 — `MSG_PMKT-E-14549_21_201`: \"Tiêu đề bản in không được để trống, tối đa 255 ký tự\".\n\n⚠ Khối Tiêu đề đang ẨN (`hien = false`) thì BỎ QUA dòng kiểm này (quyết định C18): khối ẩn ⇒ không in ⇒ nội dung rỗng không gây hậu quả.\n\nR-TLMI-243 — server chỉ trả LỖI ĐẦU TIÊN, kèm `duongDan` (JSON pointer) để FE mở đúng khối và đặt con trỏ vào ô lỗi."
+          },
+          "response": []
+        },
+        {
+          "name": "422 MSG_215 — cỡ chữ ngoài 8…20 (CHỈ server chặn)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phienBan\": null,\n  \"mau\": \"DÁN data.mauChuan của A1 rồi đặt trang.coChu = 30\"\n}"
+            },
+            "description": "V16 · R-TLMI-063 · R-TLMI-246 — `MSG_PMKT-E-14549_21_215`: \"Cỡ chữ phải là số nguyên từ 8 đến 20\".\n\nDòng kiểm này CHỈ chạy ở server (màn đã chặn bằng ô chọn), nên đây là ca chứng minh server không tin FE."
+          },
+          "response": []
+        },
+        {
+          "name": "422 MSG_203 — bỏ tick cột cuối cùng của bảng đang bật",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phienBan\": null,\n  \"mau\": \"DÁN data.mauChuan của A1 rồi đặt in = false cho MỌI cột của khối BANG\"\n}"
+            },
+            "description": "V03 · R-TLMI-104 · INV-TLMI-004 — `MSG_PMKT-E-14549_21_203`: 'Bảng \"{TenBang}\" phải giữ lại ít nhất 1 cột hiển thị'.\n\nBảng đang TẮT con mắt thì KHÔNG cần cột nào tick — dòng kiểm này chỉ áp cho bảng đang bật."
+          },
+          "response": []
+        },
+        {
+          "name": "422 MSG_209 — ảnh nền sai định dạng hoặc quá 1MB",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}/anh-nen",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}", "anh-nen"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "tep", "type": "file", "src": [] }]
+            },
+            "description": "V10 · R-TLMI-069 — `MSG_PMKT-E-14549_21_209`: \"Ảnh nền phải là tệp jpg hoặc png, dung lượng tối đa 1MB\".\n\nBa cách làm ca này đỏ: chọn .gif · chọn .png > 1 MB · đổi tên một tệp .zip thành .png (magic bytes không khớp ⇒ vẫn từ chối)."
+          },
+          "response": []
+        },
+        {
+          "name": "409 MSG_COMMON_001 — lệch phiên bản khi Lưu",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phienBan\": 999,\n  \"mau\": \"DÁN data.mauChuan của A1 rồi sửa một ô bất kỳ\"\n}"
+            },
+            "description": "R-TLMI-258 · D6 — khoá lạc quan bằng `phienBan`; lệch ⇒ KHÔNG ghi, trả 409 `MAU_IN_PHIEN_BAN_CU` + `MSG_COMMON_001`, màn hỏi nạp lại.\n\n`phienBan` chính là khoá idempotency: gửi lại cùng giá trị lần hai ⇒ 409, không ghi đè.\n\n⚠ BA CHƯA cấp mã MSG_ riêng cho tình huống này (quyết định L-4) — dùng tạm `MSG_COMMON_001`."
+          },
+          "response": []
+        },
+        {
+          "name": "409 — bị cấm in (chưa ghi sổ / đã khoá sổ)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}/chung-tu/{{chungTuId}}/ban-in",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}", "chung-tu", "{{chungTuId}}", "ban-in"]
+            },
+            "description": "R-TLMI-261 · 266(a)(b). Dựng ca này bằng cách chạy A11 với `quyTacIn.choInChuaGhiSo = false` rồi gọi A9 trên một chứng từ CHƯA ghi sổ.\n\nBA chưa cấp mã MSG_ cho hai tooltip (quyết định C14) — FE chọn key i18n theo `lyDoCam` của A8:\n- CHUA_GHI_SO → \"Đơn vị không cho phép in chứng từ chưa ghi sổ\"\n- DA_KHOA_SO  → \"Đơn vị không cho phép in chứng từ đã khóa sổ\""
+          },
+          "response": []
+        },
+        {
+          "name": "403 MSG_…_002 — gọi thẳng API mà thiếu quyền Thiết lập mẫu in",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/mau-in/{{maLoai}}/{{maNghiepVu}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "mau-in", "{{maLoai}}", "{{maNghiepVu}}"]
+            },
+            "description": "R-TLMI-034 — đăng nhập bằng tài khoản KHÔNG có `HTMauIn.View` rồi gọi lại A1: server chặn 403 `MSG_PMKT-E-14549_21_002` (\"Bạn không có quyền thực hiện tác vụ này\"), không chỉ ẩn nút ở FE.\n\nThiếu quyền IN của nghiệp vụ thì A8/A9 trả 403 với `MSG_COMMON_003` theo BR25.2 (quyết định C15) — KHÔNG dùng MSG_…_002 vì mã đó dành riêng cho quyền Thiết lập mẫu in."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

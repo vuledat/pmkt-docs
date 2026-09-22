@@ -1,0 +1,842 @@
+<title>Tích hợp SME HUB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#1b2026; --ink-soft:#4e5866; --ink-faint:#818c9b;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde1e7; --rule-soft:#eaedf1;
+  --slate:#4f5d75; --slate-soft:#e9ecf1;
+  --bronze:#8c5a2b;
+  --seal:#b23a3a; --seal-soft:#fbecec;
+  --ok:#3f7a4a; --ok-soft:#e9f3ea;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf9f5; --plate-rule:#e2e0d8;
+  --shadow:0 1px 2px rgba(27,32,38,.06), 0 8px 24px rgba(27,32,38,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#e0e5ec; --ink-soft:#a5aebc; --ink-faint:#7f8998;
+    --bg:#111418; --surface:#181c22; --rule:#2b3037; --rule-soft:#21252b;
+    --slate:#9fb0c9; --slate-soft:#1b2029;
+    --bronze:#d09a5e;
+    --seal:#e07070; --seal-soft:#2e1a1a;
+    --ok:#79b487; --ok-soft:#16261a;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e8e6de; --plate-rule:#cfccc1;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#e0e5ec; --ink-soft:#a5aebc; --ink-faint:#7f8998;
+  --bg:#111418; --surface:#181c22; --rule:#2b3037; --rule-soft:#21252b;
+  --slate:#9fb0c9; --slate-soft:#1b2029;
+  --bronze:#d09a5e;
+  --seal:#e07070; --seal-soft:#2e1a1a;
+  --ok:#79b487; --ok-soft:#16261a;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e8e6de; --plate-rule:#cfccc1;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:250px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0} }
+
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--bronze); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover,nav.rail a:hover span{color:var(--slate)}
+nav.rail a:focus-visible{outline:2px solid var(--slate); outline-offset:2px}
+
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--bronze); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--slate)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+/* Mermaid dựng và ĐO nhãn trong container tạm gắn ở <body>, không phải trong .plate —
+   quy tắc font phải khai ở phạm vi toàn trang, nếu không lúc đo một font lúc vẽ một font, chữ bị lẹm */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+foreignObject{overflow:visible !important}
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--slate); border-color:var(--slate); background:var(--slate-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+
+.note{border-left:3px solid var(--slate); background:var(--slate-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note.ask{border-color:var(--warn); background:var(--warn-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--slate)}
+.note.stop .lbl{color:var(--seal)}
+.note.ask .lbl{color:var(--warn)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+
+/* ── Xem sơ đồ toàn màn hình ─────────────────────────────────────────────
+   Nút gắn vào figure chứ không vào .plate: .plate cuộn ngang, nút nằm trong
+   nó sẽ trôi khỏi tầm mắt ngay khi người đọc kéo sơ đồ sang phải. */
+figure{position:relative}
+.zoombtn{position:absolute; top:10px; right:10px; z-index:2;
+  font-family:"IBM Plex Mono",monospace; font-size:11.5px; letter-spacing:.04em;
+  color:var(--ink-soft); background:var(--surface); border:1px solid var(--rule);
+  border-radius:4px; padding:5px 9px; cursor:pointer; opacity:.55;
+  transition:opacity .15s, color .15s, border-color .15s}
+figure:hover .zoombtn{opacity:1}
+.zoombtn:hover,.zoombtn:focus-visible{opacity:1; color:var(--slate); border-color:var(--slate)}
+
+.fsx[hidden]{display:none}
+.fsx{position:fixed; inset:0; z-index:99; display:flex; flex-direction:column;
+  background:var(--plate)}
+.fsx-bar{display:flex; align-items:center; gap:10px; padding:8px 14px; flex:0 0 auto;
+  background:var(--surface); border-bottom:1px solid var(--rule); color:var(--ink);
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px}
+.fsx-title{flex:1 1 120px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:var(--ink-soft)}
+.fsx-bar button{font:inherit; color:var(--ink-soft); background:transparent; white-space:nowrap;
+  border:1px solid var(--rule); border-radius:4px; padding:4px 10px; cursor:pointer}
+.fsx-bar button:hover{color:var(--slate); border-color:var(--slate)}
+.fsx-z{min-width:52px; text-align:center; color:var(--ink-faint)}
+.fsx-hint{color:var(--ink-faint)}
+@media (max-width:1000px){ .fsx-hint{display:none} }
+/* Nền khung xem luôn sáng như .plate — màu mermaid cố định cho nền sáng */
+.fsx-body{flex:1 1 auto; overflow:auto; cursor:grab; background:var(--plate)}
+.fsx-body.drag{cursor:grabbing}
+.fsx-stage{padding:24px; min-width:min-content}
+.fsx-stage svg{display:block; max-width:none !important; height:auto}
+@media print{ .zoombtn,.fsx{display:none !important} }
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-13930 · PMKT-U-13931 · Biên tích hợp SME HUB</p>
+  <h1>Luồng xử lý các API tích hợp với SME HUB</h1>
+  <p>SME HUB gọi vào Tendoo qua <strong>ba endpoint đang chạy</strong>, tất cả xác thực bằng HMAC-SHA256 chứ không bằng JWT. Trang này vẽ <strong>trình tự thật trong code</strong>: biên ngoài ở <span class="f">integration-platform</span> chỉ kiểm chữ ký, ghi sổ và chuyển tiếp; mọi luật nghiệp vụ và idempotency thật nằm ở <span class="f">control-plane</span>.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 4 đặc tả API · code integration-platform + tenant-provisioning</span>
+    <span><b>Sổ biên ngoài:</b> ip_hub_webhook_log</span>
+    <span><b>Sổ biên trong:</b> cp_webhook_idempotency</span>
+    <span><b>Mẹo:</b> mỗi sơ đồ có nút ⛶ mở toàn màn hình, zoom và kéo được</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Bản đồ biên tích hợp</a></li>
+    <li><a href="#s1"><span>01</span>Biên ngoài: chữ ký &amp; sổ inbox</a></li>
+    <li><a href="#s2"><span>02</span>Nhận đăng ký — pha đồng bộ</a></li>
+    <li><a href="#s3"><span>03</span>Sau 202 — pha ngầm</a></li>
+    <li><a href="#s4"><span>04</span>Polling trạng thái</a></li>
+    <li><a href="#s5"><span>05</span>Check mã giới thiệu</a></li>
+    <li><a href="#s6"><span>06</span>Hai vòng hội tụ nền</a></li>
+    <li><a href="#s7"><span>07</span>Tra cứu lỗi &amp; trạng thái</a></li>
+    <li><a href="#s8"><span>08</span>Chỗ code lệch tài liệu</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Ba endpoint đang chạy, hai cuốn sổ, một ranh giới trách nhiệm</h2>
+  <p class="lede">Ranh giới quyết định toàn bộ phần còn lại: <strong>integration-platform sở hữu biên ngoài</strong> — chữ ký, hạn mức, sổ inbox để gửi lại; <strong>control-plane sở hữu dữ liệu</strong> — catalog gói, trạng thái tenant, idempotency theo <span class="f">maHopDongHub</span>. Không có bản sao thứ hai của luật nghiệp vụ ở biên.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#1b2026","primaryBorderColor":"#4f5d75","lineColor":"#6b7480","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    H(["<b>SME HUB</b>"]) --> E1["POST /api/v1/referral/check<br/>1000 lượt mỗi phút"]
+    H --> E2["POST /api/v1/webhook/sme-hub/subscription<br/>100 lượt mỗi phút"]
+    H --> E3["GET /api/v1/webhook/sme-hub/status<br/>300 lượt mỗi phút"]
+    H -.-> E4["POST resend-verification-email<br/>có đặc tả, CHƯA có endpoint"]:::warn
+
+    E1 --> IP["<b>integration-platform</b><br/>HMAC-SHA256 · hạn mức theo IP<br/>sổ inbox + bộ re-drive"]
+    E2 --> IP
+    E3 --> IP
+
+    IP -- "X-Internal-Token" --> CP["<b>control-plane</b><br/>tenant-provisioning<br/>validate · guard nghiệp vụ · idempotency"]
+    CP --> ID["identity + Keycloak<br/>tài khoản owner · email kích hoạt"]
+    CP --> CE["cell-app<br/>tenant · ENT_TaiKhoan · membership"]
+    CP --> OB["outbox rồi Kafka<br/>ONBOARDING_COMPLETED"]:::ok
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    classDef ok fill:#e9f3ea,stroke:#3f7a4a,color:#26492e;
+</pre>
+    </div>
+    <figcaption><b>Biên ngoài không biết gì về nghiệp vụ.</b> Nó không tra catalog gói, không biết tenant nào tồn tại — nên nó không được phép từ chối payload vì lý do nghiệp vụ. Mọi câu "không" có nội dung đều do control-plane phát ra, biên chỉ chuyển nguyên văn.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Endpoint</th><th class="mono">Hạn mức</th><th>Chuỗi được ký</th><th>Nơi quyết định</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">POST /api/v1/webhook/sme-hub/subscription</td><td class="mono">100/phút</td><td><span class="f">X-Timestamp</span> + dấu chấm + raw body</td><td>control-plane</td></tr>
+      <tr><td class="mono">GET /api/v1/webhook/sme-hub/status/&lt;ma&gt;</td><td class="mono">300/phút</td><td><span class="f">X-Timestamp</span> + dấu chấm + <span class="f">maHopDongHub</span></td><td>control-plane</td></tr>
+      <tr><td class="mono">POST /api/v1/referral/check</td><td class="mono">1000/phút</td><td><span class="f">X-Timestamp</span> + dấu chấm + raw body</td><td>control-plane, chỉ trả có hoặc không</td></tr>
+      <tr><td class="mono">POST .../resend-verification-email</td><td class="mono">—</td><td>—</td><td><b>chưa hiện thực</b> — xem mục 08</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — SmeHubWebhookController · HubSignatureVerifier</span>
+  <h2>Biên ngoài: ghi sổ trước, chuyển tiếp sau</h2>
+  <p class="lede">Thứ tự <strong>ghi sổ inbox trước khi gọi control-plane</strong> là thứ khiến webhook sống sót khi control-plane chết: dòng đã ghi là căn cứ duy nhất để bộ re-drive gửi lại, HUB không phải canh đúng lúc control-plane sống lại.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"sequence":{"useMaxWidth":false,"wrap":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#1b2026","primaryBorderColor":"#4f5d75","lineColor":"#6b7480","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+sequenceDiagram
+    autonumber
+    participant H as SME HUB
+    participant F as Bộ lọc biên
+    participant C as SmeHubWebhookController
+    participant V as HubSignatureVerifier
+    participant I as Sổ inbox ip_hub_webhook_log
+    participant P as ControlPlaneClient
+
+    H->>F: POST subscription<br/>kèm chữ ký và timestamp
+    Note over F: allowlist path<br/>hạn mức 100 lượt mỗi phút theo IP
+    alt Vượt hạn mức
+        F-->>H: 429 RATE_LIMIT_EXCEEDED
+    else Trong hạn mức
+        F->>C: raw body nguyên văn
+        C->>V: kiemTra chữ ký<br/>timestamp + dấu chấm + raw body
+        alt Lệch giờ quá 5 phút
+            V-->>C: INVALID_TIMESTAMP
+            C-->>H: 400 INVALID_TIMESTAMP
+        else Chữ ký không khớp
+            V-->>C: INVALID_SIGNATURE
+            C-->>H: 400 INVALID_SIGNATURE
+        else Hợp lệ
+            C->>C: đọc maHopDongHub khỏi body
+            opt Có maHopDongHub
+                C->>I: ghiNhanLuotNhan<br/>chèn mới hoặc đưa về RECEIVED
+            end
+            C->>P: POST onboarding<br/>kèm X-Internal-Token
+            alt Control-plane trả 2xx
+                P-->>C: 202 kèm thân JSON
+                C->>I: markForwarded
+                C-->>H: chuyển NGUYÊN VĂN 202
+            else Control-plane trả 4xx
+                P-->>C: 400 kèm mảng errors
+                C->>I: markRejected<br/>thôi re-drive
+                C-->>H: chuyển NGUYÊN VĂN 400
+            else 5xx hoặc không tới được
+                P-->>C: ném lỗi sau Retry<br/>và CircuitBreaker
+                C->>I: markFailedAttempt
+                C-->>H: 500 SYSTEM_ERROR
+            end
+        end
+    end
+</pre>
+    </div>
+    <figcaption><b>Sổ inbox KHÔNG chặn trùng.</b> Chèn trùng chỉ đưa dòng về RECEIVED chứ không trả lỗi — chặn ở đây sẽ khoá luôn một luồng hợp lệ mà contract cho phép: HUB sửa payload rồi gửi lại cùng một <span class="f">maHopDongHub</span>.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Vì sao 4xx không được coi là sự cố</span>
+    <p><span class="f">ControlPlaneClient</span> cố ý <strong>không ném</strong> khi control-plane trả 4xx. Coi 4xx là sự cố sẽ nuốt mất mảng <span class="f">errors</span> chi tiết, và biến một lỗi HUB tự sửa được thành lỗi hệ thống mà HUB cứ retry mãi. Chỉ 5xx và timeout mới ném.</p>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — SubscriptionWebhookService · pha đồng bộ</span>
+  <h2>Claim trước, validate sau, rồi mới 202</h2>
+  <p class="lede">Claim idempotency đứng <strong>trước</strong> validate là có chủ đích: nó vừa chống trùng vừa là chỗ ghi lại lần từ chối, nên một payload sai vẫn để lại dấu vết — và lần gửi lại sau khi HUB sửa phải re-claim được vì bản ghi đang ở FAILED.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"sequence":{"useMaxWidth":false,"wrap":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#1b2026","primaryBorderColor":"#4f5d75","lineColor":"#6b7480","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+sequenceDiagram
+    autonumber
+    participant IP as integration-platform
+    participant S as SubscriptionWebhookService
+    participant K as cp_webhook_idempotency
+    participant G as PayloadValidator
+    participant V as DangKyDichVuApi
+    participant A as Processor nền
+
+    IP->>S: nhan raw body
+    alt Body không phải object JSON
+        S-->>IP: 400 VALIDATION_ERROR INVALID_STRUCTURE
+    else Thiếu maHopDongHub
+        S-->>IP: 400 REQUIRED_FIELD<br/>lỗi DUY NHẤT không để lại vết
+    else Có khoá
+        S->>K: registerPendingAttempt<br/>ngưỡng 5 phút, tối đa 5 lượt
+        alt Không giành được quyền xử lý
+            K-->>S: 0 dòng — SUCCEEDED, PENDING,<br/>hoặc kịch hạn mức
+            S->>K: đọc lại hiệu lực ĐÃ chốt
+            S-->>IP: 202 kèm hiệu lực cũ,<br/>không tính lại
+        else Giành được, bản ghi về PENDING
+            opt eventType khác SUBSCRIPTION_CREATED
+                S->>K: markFailedWithCode UNSUPPORTED_EVENT_TYPE
+                S-->>IP: 400 UNSUPPORTED_EVENT_TYPE
+            end
+            S->>G: giai đoạn 1 — trường bắt buộc,<br/>kiểu, định dạng
+            alt Sai hình thức
+                G-->>S: danh sách LoiChiTiet
+                S->>K: markFailedWithCode VALIDATION_ERROR
+                S-->>IP: 400 VALIDATION_ERROR kèm mảng errors
+            else Sạch
+                Note over S: chốt MỘT mốc tiepNhanLuc<br/>dùng chung mọi bước sau
+                S->>S: findByMa theo MST — tenantId hiện có hoặc rỗng
+                S->>V: kiemTra đăng ký<br/>với tenantId và tiepNhanLuc
+                Note over V: BR-DKWEB-23 addon không sống một mình<br/>25 chặn đổi gói · 28 trần tài nguyên<br/>30 điều kiện dùng thử · 31 trả phí cắt dùng thử
+                alt Vi phạm nghiệp vụ
+                    V-->>S: BUSINESS_RULE_VIOLATION
+                    S->>K: markFailedWithCode
+                    S-->>IP: 400 BUSINESS_RULE_VIOLATION
+                else Hợp lệ
+                    V-->>S: HieuLuc ngày bắt đầu<br/>và ngày kết thúc
+                    S->>K: chotHieuLuc rồi ĐỌC LẠI
+                    S->>A: xuLyNgam chạy nền
+                    S-->>IP: 202 ACCEPTED kèm hieuLuc và cảnh báo
+                end
+            end
+        end
+    end
+</pre>
+    </div>
+    <figcaption><b>Hiệu lực trả về là thứ ĐANG được lưu, không phải thứ vừa tính.</b> Chênh lệch chỉ lộ ra lúc HUB gửi lại: bản ghi đã có <span class="f">hieu_luc_json</span> nên câu UPDATE không đụng vào gì, và nếu trả giá trị vừa tính theo mốc "bây giờ" mới thì HUB nhận hai <span class="f">hieuLuc</span> khác nhau cho cùng một hợp đồng.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Ba câu trả lời 400 khác nhau</span>
+    <p><span class="chip c-msg">VALIDATION_ERROR</span> sai hình thức, HUB sửa payload. <span class="chip c-msg">BUSINESS_RULE_VIOLATION</span> đúng hình thức nhưng trái luật đăng ký, HUB phải đổi nội dung hợp đồng. <span class="chip c-msg">UNSUPPORTED_EVENT_TYPE</span> giai đoạn 1 chỉ nhận <span class="f">SUBSCRIPTION_CREATED</span>. Cả ba đều đẩy bản ghi về FAILED nên gửi lại sau khi sửa vẫn re-claim được.</p>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — SubscriptionWebhookProcessor · OnboardingService</span>
+  <h2>Sau 202: tenant, hợp đồng, owner, email — đúng thứ tự đó</h2>
+  <p class="lede">Hợp đồng dịch vụ được ghi qua hook <span class="f">sauKhiCoTenant</span>, tức <strong>trước</strong> khi bản ghi idempotency được đánh dấu thành công. Để sau thì một hợp đồng ghi hỏng không còn đường báo lỗi: SUCCEEDED là trạng thái cuối, và HUB sẽ nhận SUCCESS cho một tenant không có gói nào.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"sequence":{"useMaxWidth":false,"wrap":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#1b2026","primaryBorderColor":"#4f5d75","lineColor":"#6b7480","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+sequenceDiagram
+    autonumber
+    participant A as Processor nền
+    participant O as OnboardingService
+    participant PR as ProvisioningApi
+    participant TX as WebhookTxOps
+    participant ID as identity + Keycloak
+    participant K as cp_webhook_idempotency
+
+    A->>O: provisionOwnerDaClaim<br/>kèm hook sauKhiCoTenant
+    O->>PR: ensureProvisioned theo MST
+    Note over PR: đẩy tenant dở dang tới ACTIVE,<br/>không dùng lại nguyên trạng
+    PR-->>O: dòng định tuyến tenant
+    O->>TX: hook sauKhiCoTenant<br/>MỘT transaction
+    TX->>TX: capDangKy — hợp đồng và gói
+    TX->>TX: capNhatThongTinDoanhNghiep
+    TX->>TX: referral ghiNhan<br/>hỏng thì chỉ cảnh báo
+    TX-->>O: dangKyId
+    O->>ID: provisionOwner<br/>email, tên, sđt, tenantId
+    ID-->>O: OwnerResult created, verified, emailSent
+    O->>K: state = OWNER_IDENTITY_READY
+    opt Tenant mới VÀ MST không phải chi nhánh
+        O->>PR: linkOwner — ENT_TaiKhoan<br/>+ membership la_chu_so_huu
+    end
+    opt Owner dùng lại và đã verify
+        O->>ID: notifyPackageActivation<br/>mail KHÔNG kèm link
+    end
+    alt Email đã gửi, hoặc owner dùng lại đã kích hoạt sẵn
+        O->>K: markSucceeded + publish<br/>cùng transaction
+        Note over K: ONBOARDING_COMPLETED vào outbox<br/>cùng transaction, Kafka đọc sau
+        O-->>A: OwnerOnboardingResult
+        A->>K: ghiKetQuaMem
+    else Email hỏng mà tài khoản chưa kích hoạt được
+        O->>K: markFailed<br/>để reconciler re-drive
+    end
+    Note over A,K: Ném lỗi ở bất kỳ bước nào<br/>thì markFailedWithCode CREATE_TENANT_FAILED<br/>HUB đọc nguyên nhân qua API Polling
+</pre>
+    </div>
+    <figcaption><b>Chi nhánh không được cấp quyền chủ sở hữu.</b> MST 13 số gắn làm chi nhánh, <span class="f">ensureProvisioned</span> trả về dòng định tuyến của công ty chủ quản, nên <span class="f">tenant.ma</span> khác MST đã hỏi. Không đọc dấu hiệu đó thì người đăng ký một chi nhánh được gắn <span class="f">la_chu_so_huu</span> lên tenant công ty mẹ.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tình huống</th><th>Tenant</th><th>Owner</th><th>Email gửi đi</th></tr></thead>
+    <tbody>
+      <tr><td>MST mới, email mới</td><td>tạo mới</td><td>tạo ở Keycloak + dựng trong cell-app</td><td>link kích hoạt</td></tr>
+      <tr><td>MST cũ, mua thêm gói</td><td>dùng lại</td><td>không dựng membership mới</td><td>thông báo gói mới, mẫu 001a</td></tr>
+      <tr><td>MST mới, email đã có và đã verify</td><td>tạo mới</td><td>dùng lại tài khoản sẵn có</td><td>thông báo doanh nghiệp mới, mẫu 001b</td></tr>
+      <tr><td>MST 13 số, tức chi nhánh</td><td>dùng tenant công ty mẹ</td><td><b>không</b> dựng owner</td><td>không, phải đi luồng mời</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — Phần D · API Polling</span>
+  <h2>HUB tự hỏi tiến độ thay vì chờ callback</h2>
+  <p class="lede">202 chỉ nói "đã nhận", không nói "đã dựng xong". Endpoint này là đường duy nhất để HUB biết pha ngầm kết thúc thế nào — và nó là lý do mọi nhánh hỏng ở mục 03 đều phải ghi một <span class="f">errorCode</span> vào bản ghi idempotency.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"sequence":{"useMaxWidth":false,"wrap":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#1b2026","primaryBorderColor":"#4f5d75","lineColor":"#6b7480","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+sequenceDiagram
+    autonumber
+    participant H as SME HUB
+    participant C as Biên integration-platform
+    participant S as Control-plane onboarding
+    participant K as cp_webhook_idempotency
+
+    H->>C: GET status kèm maHopDongHub
+    Note over C: hạn mức 300 lượt mỗi phút<br/>chữ ký ký trên chính maHopDongHub<br/>KHÔNG có body
+    C->>C: HubSignatureVerifier kiểm chữ ký<br/>và timestamp
+    alt Chữ ký hoặc timestamp sai
+        C-->>H: 400 INVALID_SIGNATURE<br/>hoặc INVALID_TIMESTAMP
+    else Hợp lệ
+        C->>S: GET onboarding status
+        S->>K: findById
+        alt Không có bản ghi
+            K-->>S: rỗng
+            S-->>C: 404
+            C-->>H: 404 NOT_FOUND
+        else SUCCEEDED
+            K-->>S: bản ghi đã xong
+            S-->>H: 200 SUCCESS<br/>kèm hieuLuc và cảnh báo
+        else FAILED hoặc ABANDONED
+            K-->>S: bản ghi kèm maLoi
+            S-->>H: 200 FAILED<br/>kèm errorCode đã lưu
+        else PENDING
+            K-->>S: bản ghi đang chạy
+            S-->>H: 200 PROCESSING
+        end
+    end
+</pre>
+    </div>
+    <figcaption><b>404 và FAILED là hai câu khác nhau.</b> 404 nghĩa là Tendoo chưa từng nhận hợp đồng này nên HUB phải gửi lại webhook; FAILED nghĩa là đã nhận và đã hỏng, gửi lại y nguyên sẽ hỏng y như cũ.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — ReferralCheckController · BR-DKWEB-19</span>
+  <h2>Check mã giới thiệu: chỉ được trả đúng một bit</h2>
+  <p class="lede">Mã giới thiệu chính là MST của doanh nghiệp đã mua Tendoo. Response chỉ có <span class="f">valid</span> và <strong>tuyệt đối không kèm gì khác</strong> — thêm tên hay địa chỉ doanh nghiệp là biến endpoint này thành máy tra cứu MST ra hồ sơ cho bất kỳ ai cầm secret của HUB.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"sequence":{"useMaxWidth":false,"wrap":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#1b2026","primaryBorderColor":"#4f5d75","lineColor":"#6b7480","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+sequenceDiagram
+    autonumber
+    participant H as SME HUB
+    participant R as ReferralCheckController
+    participant V as HubSignatureVerifier
+    participant P as ControlPlaneClient
+    participant T as SoDangKyMstController
+
+    H->>R: POST referral check kèm referralCode
+    R->>V: kiemTra chữ ký<br/>timestamp + dấu chấm + raw body
+    alt Chữ ký hoặc timestamp sai
+        R-->>H: 400 INVALID_SIGNATURE hoặc INVALID_TIMESTAMP
+    else Hợp lệ
+        R->>R: đọc referralCode
+        alt Thiếu referralCode
+            R-->>H: 400 VALIDATION_ERROR REQUIRED_FIELD
+        else Sai định dạng MST 10 hoặc 13 chữ số
+            R-->>H: 400 VALIDATION_ERROR INVALID_FORMAT
+        else Đúng định dạng
+            R->>P: mstTonTai
+            P->>T: GET to-chuc mst ton-tai
+            alt Control-plane trả lời được
+                T-->>P: tonTai true hoặc false
+                P-->>R: boolean
+                R-->>H: 200 kèm valid true hoặc false
+            else Control-plane sập, timeout, hoặc circuit mở
+                P-->>R: ném lỗi
+                R-->>H: 500 SYSTEM_ERROR để HUB retry có backoff
+            end
+        end
+    end
+</pre>
+    </div>
+    <figcaption><b>"Không tìm thấy" khác "không hỏi được".</b> Nếu lỗi hạ tầng rơi xuống <span class="f">valid false</span> thì HUB được bảo rằng một mã giới thiệu CÓ THẬT là vô hiệu, và nó không có lý do gì để thử lại. Vì vậy sai định dạng trả 400, không tồn tại trả 200 false, còn không hỏi được thì phải trả 500.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Mã giới thiệu ở luồng đăng ký thì mềm</span>
+    <p>Trong webhook đăng ký, <span class="f">referral.ghiNhan</span> hỏng <strong>không chặn</strong> tiếp nhận: nó chỉ thêm một cảnh báo vào mảng <span class="f">warnings</span> trả về cho HUB <span class="chip c-br">BR-DKWEB-21</span>. Endpoint check ở đây tồn tại để HUB phát hiện sai sót <em>trước</em> khi gửi hợp đồng, chứ không phải để chặn sau.</p>
+  </div>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — HubWebhookRedriver · OnboardingReconciler</span>
+  <h2>Hai vòng hội tụ nền, mỗi vòng gác một cuốn sổ</h2>
+  <p class="lede">Hai bộ lập lịch chạy độc lập, mỗi 5 phút, và chúng gác hai loại hỏng khác nhau: <strong>re-drive</strong> lo webhook chưa giao được sang control-plane, <strong>reconcile</strong> lo onboarding đã nhận nhưng dựng dở dang.</p>
+
+  <h3>Vòng 1 — re-drive ở biên ngoài</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"sequence":{"useMaxWidth":false,"wrap":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#1b2026","primaryBorderColor":"#4f5d75","lineColor":"#6b7480","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+sequenceDiagram
+    autonumber
+    participant T as Lịch chạy mỗi 5 phút
+    participant R as HubWebhookRedriver
+    participant I as ip_hub_webhook_log
+    participant P as ControlPlaneClient
+
+    T->>R: redrive
+    R->>I: claimForRedriveByNguon, chỉ nguồn sme-hub
+    Note over I: FOR UPDATE SKIP LOCKED, an toàn nhiều replica<br/>chỉ bốc RECEIVED hoặc FAILED cũ hơn 5 phút và chưa quá 5 lượt<br/>REJECTED nằm NGOÀI vòng lặp
+    I-->>R: tối đa 100 dòng đã claim
+    loop mỗi dòng, forward NGOÀI transaction
+        R->>P: guiDangKy với payload đã lưu
+        alt 2xx
+            R->>I: markForwarded
+        else 4xx
+            R->>I: markRejected, đóng dòng lại thay vì quay vòng tới hết hạn mức
+        else lỗi hạ tầng
+            R->>I: markFailedAttempt, tăng bộ đếm
+        end
+    end
+</pre>
+    </div>
+    <figcaption><b>Không bọc cả vòng lặp trong một transaction.</b> Câu claim giữ row-lock và một connection CHỈ trong đúng câu lệnh đó; phần gọi HTTP nằm ngoài. Bọc cả vòng lại sẽ giữ một connection HikariCP suốt lô khi control-plane chậm, và cạn pool.</figcaption>
+  </figure>
+
+  <h3>Vòng 2 — reconcile ở control-plane</h3>
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"sequence":{"useMaxWidth":false,"wrap":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#1b2026","primaryBorderColor":"#4f5d75","lineColor":"#6b7480","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+sequenceDiagram
+    autonumber
+    participant T as Lịch chạy mỗi 5 phút
+    participant R as OnboardingReconciler
+    participant K as cp_webhook_idempotency
+    participant O as OnboardingService
+
+    T->>R: reconcile
+    R->>K: findOverCap, các bản ghi vượt 5 lượt
+    loop mỗi bản ghi độc
+        R->>K: markAbandoned và log cảnh báo cần can thiệp tay
+    end
+    R->>K: findStuck, PENDING hoặc FAILED cũ hơn 5 phút và còn hạn mức
+    loop mỗi bản ghi kẹt
+        R->>O: provisionOwner với payload đã lưu
+        Note over O: tenant find-or-create và owner tạo-nếu-thiếu đều idempotent<br/>nên chạy lại an toàn, KHÔNG có bù trừ phá huỷ
+    end
+</pre>
+    </div>
+    <figcaption><b>ABANDONED là trạng thái cuối.</b> Webhook gửi lại KHÔNG hồi sinh bản ghi đã abandon, vì <span class="f">registerPendingAttempt</span> loại trừ trạng thái này. Mở lại phải có người can thiệp — đúng ý đồ với một bản ghi đã làm hỏng 5 lượt liên tiếp.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — Tra cứu</span>
+  <h2>Mã lỗi phát ra ở đâu, trạng thái nằm ở sổ nào</h2>
+  <p class="lede">Bảng dưới là bản đồ để đọc log: thấy một mã lỗi thì biết ngay nó do tầng nào quyết định, và tra đúng cuốn sổ.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">errorCode</th><th class="mono">HTTP</th><th>Sinh ở</th><th>HUB nên làm gì</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">INVALID_TIMESTAMP</td><td class="mono">400</td><td>HubSignatureVerifier</td><td>đồng bộ NTP rồi gửi lại</td></tr>
+      <tr><td class="mono">INVALID_SIGNATURE</td><td class="mono">400</td><td>HubSignatureVerifier</td><td>sai secret, gửi lại bao nhiêu lần cũng vô ích</td></tr>
+      <tr><td class="mono">RATE_LIMIT_EXCEEDED</td><td class="mono">429</td><td>HubRateLimitFilter</td><td>chờ theo <span class="f">Retry-After</span></td></tr>
+      <tr><td class="mono">VALIDATION_ERROR</td><td class="mono">400</td><td>SubscriptionPayloadValidator</td><td>sửa payload theo mảng <span class="f">errors</span></td></tr>
+      <tr><td class="mono">BUSINESS_RULE_VIOLATION</td><td class="mono">400</td><td>DangKyDichVuValidator</td><td>đổi nội dung hợp đồng</td></tr>
+      <tr><td class="mono">UNSUPPORTED_EVENT_TYPE</td><td class="mono">400</td><td>SubscriptionWebhookService</td><td>giai đoạn 1 chỉ nhận SUBSCRIPTION_CREATED</td></tr>
+      <tr><td class="mono">CREATE_TENANT_FAILED</td><td class="mono">200</td><td>Processor, đọc qua Polling</td><td>báo Ops, không tự gửi lại</td></tr>
+      <tr><td class="mono">SYSTEM_ERROR</td><td class="mono">500</td><td>biên ngoài hoặc referral check</td><td>retry có backoff</td></tr>
+      <tr><td class="mono">NOT_FOUND</td><td class="mono">404</td><td>Polling</td><td>Tendoo chưa từng nhận, gửi lại webhook</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Sổ</th><th>Trạng thái</th><th>Nghĩa</th><th>Ai đọc</th></tr></thead>
+    <tbody>
+      <tr><td class="mono" rowspan="4">ip_hub_webhook_log<br/>biên ngoài</td><td class="mono">RECEIVED</td><td>đã ghi, chưa giao được</td><td>bộ re-drive bốc lên</td></tr>
+      <tr><td class="mono">FORWARDED</td><td>control-plane đã tiếp nhận</td><td>khép lại</td></tr>
+      <tr><td class="mono">REJECTED</td><td>control-plane trả lời dứt khoát là không</td><td>nằm ngoài re-drive</td></tr>
+      <tr><td class="mono">FAILED</td><td>lỗi hạ tầng, đã tăng bộ đếm</td><td>bộ re-drive bốc lên</td></tr>
+      <tr><td class="mono" rowspan="4">cp_webhook_idempotency<br/>biên trong</td><td class="mono">PENDING</td><td>đã claim, đang xử lý</td><td>Polling trả PROCESSING</td></tr>
+      <tr><td class="mono">SUCCEEDED</td><td>trạng thái cuối, không lật ngược</td><td>Polling trả SUCCESS</td></tr>
+      <tr><td class="mono">FAILED</td><td>từ chối hoặc hỏng, còn re-claim được</td><td>reconciler re-drive</td></tr>
+      <tr><td class="mono">ABANDONED</td><td>vượt 5 lượt, trạng thái cuối</td><td>cần can thiệp tay</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — Đối chiếu code với đặc tả</span>
+  <h2>Chỗ code chưa phủ hết tài liệu</h2>
+  <p class="lede">Bốn điểm dưới đây đo được bằng cách đọc code, không suy diễn. Chúng nằm ngoài các sơ đồ trên vì chúng là <strong>khoảng hở</strong>, không phải luồng đang chạy.</p>
+
+  <div class="note stop">
+    <span class="lbl">1 · Endpoint gửi lại email xác thực chưa tồn tại</span>
+    <p><span class="f">API_resend-verification-email.md</span> đặc tả <span class="f">POST /api/v1/webhook/sme-hub/resend-verification-email</span>, nhưng <span class="f">SmeHubWebhookController</span> chỉ có <span class="f">subscription</span> và <span class="f">status</span>. Trong <span class="f">identity</span> có <span class="f">/auth/resend-verification</span> và <span class="f">/auth/verify-email/resend</span> — đó là đường cho người dùng cuối trên FE, không phải đường HMAC cho HUB.</p>
+  </div>
+
+  <div class="note ask">
+    <span class="lbl">2 · Chưa thấy đường định tuyến từ ingress vào integration-platform</span>
+    <p>Chart Helm chỉ có một ingress trỏ toàn bộ <span class="f">/</span> vào <span class="f">front-door</span>, mà front-door định tuyến <span class="f">/api/**</span> sang <span class="f">cell-gateway</span> và <span class="f">/auth/**</span> sang <span class="f">identity</span>. Không có route nào đưa <span class="f">/api/v1/webhook/sme-hub/**</span> hay <span class="f">/api/v1/referral/**</span> tới integration-platform. Cần chốt với hạ tầng: HUB gọi vào host hay ingress nào.</p>
+  </div>
+
+  <div class="note ask">
+    <span class="lbl">3 · Chưa ghi cảnh báo payload-hash mismatch</span>
+    <p>Đặc tả yêu cầu: replay cùng <span class="f">maHopDongHub</span> nhưng nội dung payload KHÁC bản đã xử lý thì vẫn trả 202 và Tendoo <strong>ghi log cảnh báo nội bộ để Ops đối soát</strong>. Code trả đúng 202, nhưng chỉ log một dòng chung "không giành được quyền xử lý" — không so payload cũ với payload mới, nên Ops không có tín hiệu nào để đối soát.</p>
+  </div>
+
+  <div class="note">
+    <span class="lbl">4 · Hạn mức là lớp chắn quá tải, không phải hạn mức thương mại</span>
+    <p>Bộ đếm nằm trong bộ nhớ <strong>của từng instance</strong> và dùng cửa sổ cố định theo phút. Chạy N replica thì HUB thực tế gọi được tới N lần hạn mức, và quanh ranh giới phút có thể dồn gấp đôi. Muốn con số đúng như contract công bố thì phải chuyển sang bộ đếm tập trung — và đó là quyết định hạ tầng, không phải tinh chỉnh trong code.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-13930 · PMKT-U-13931 · Tích hợp SME HUB</span>
+  <span>Dựng từ 4 đặc tả API + code integration-platform và tenant-provisioning</span>
+  <span>Cập nhật 17/09/2026</span>
+</footer>
+
+</div>
+
+<div class="fsx" hidden role="dialog" aria-modal="true" aria-label="Sơ đồ toàn màn hình">
+  <div class="fsx-bar">
+    <span class="fsx-title"></span>
+    <span class="fsx-hint">kéo để di chuyển · Ctrl + lăn chuột để zoom · phím + − 0 · Esc để đóng</span>
+    <button type="button" data-act="out" aria-label="Thu nhỏ">−</button>
+    <span class="fsx-z">100%</span>
+    <button type="button" data-act="in" aria-label="Phóng to">+</button>
+    <button type="button" data-act="fit">Vừa khung</button>
+    <button type="button" data-act="close">Đóng ✕</button>
+  </div>
+  <div class="fsx-body"><div class="fsx-stage"></div></div>
+</div>
+
+<script>
+/* Xem sơ đồ toàn màn hình. SVG được CLONE sang khung xem chứ không di chuyển:
+   mermaid đã đo và chốt bề rộng nhãn lúc render, bê nguyên node đi rồi trả về
+   sẽ để lại một figure trống nếu người đọc đóng tab giữa chừng. */
+(function () {
+  var fsx = document.querySelector('.fsx');
+  if (!fsx) return;
+  var stage = fsx.querySelector('.fsx-stage');
+  var pane = fsx.querySelector('.fsx-body');
+  var zlab = fsx.querySelector('.fsx-z');
+  var title = fsx.querySelector('.fsx-title');
+  var MIN = 0.3, MAX = 4;
+  var base = 0, z = 1, svg = null, moTu = null;
+
+  document.querySelectorAll('figure > .plate').forEach(function (plate) {
+    var fig = plate.parentNode;
+    var nut = document.createElement('button');
+    nut.type = 'button';
+    nut.className = 'zoombtn';
+    nut.textContent = '⛶ Toàn màn hình';
+    nut.addEventListener('click', function () { mo(plate, fig); });
+    fig.appendChild(nut);
+  });
+
+  function tenSoDo(fig) {
+    var c = fig.querySelector('figcaption b');
+    return c ? c.textContent.replace(/\.$/, '') : 'Sơ đồ';
+  }
+
+  function mo(plate, fig) {
+    var goc = plate.querySelector('svg');
+    if (!goc) return;                       // mermaid chưa render xong
+    base = goc.getBoundingClientRect().width;
+    if (!base && goc.viewBox && goc.viewBox.baseVal) base = goc.viewBox.baseVal.width;
+    if (!base) base = 900;
+    svg = goc.cloneNode(true);
+    svg.removeAttribute('height');
+    stage.innerHTML = '';
+    stage.appendChild(svg);
+    title.textContent = tenSoDo(fig);
+    moTu = fig.querySelector('.zoombtn');
+    fsx.hidden = false;
+    document.documentElement.style.overflow = 'hidden';
+    mucMoMacDinh();
+    // Fullscreen thật khi trình duyệt cho phép; trong iframe không cho thì lớp phủ
+    // đã chiếm trọn khung nhìn rồi nên vẫn đọc được, không cần báo lỗi.
+    if (fsx.requestFullscreen) { fsx.requestFullscreen().catch(function () {}); }
+  }
+
+  function dong() {
+    fsx.hidden = true;
+    stage.innerHTML = '';
+    svg = null;
+    document.documentElement.style.overflow = '';
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(function () {});
+    }
+    if (moTu) { moTu.focus(); moTu = null; }
+  }
+
+  function apDung() {
+    if (!svg) return;
+    svg.style.width = Math.round(base * z) + 'px';
+    svg.style.height = 'auto';
+    zlab.textContent = Math.round(z * 100) + '%';
+  }
+
+  function vuaKhung() {
+    var rong = pane.clientWidth - 48;        // trừ padding hai bên của .fsx-stage
+    z = Math.min(Math.max(rong / base, MIN), MAX);
+    apDung();
+  }
+
+  /* Mở ở mức đọc được, KHÔNG phải mức vừa khung. Sơ đồ 1800px ép vào khung 740px
+     là 41% — chữ còn 6px, đúng thứ mà chế độ toàn màn hình sinh ra để tránh.
+     Thà để người đọc kéo ngang còn hơn đưa ra một bức ảnh không đọc nổi. */
+  function mucMoMacDinh() {
+    var vua = (pane.clientWidth - 48) / base;
+    z = Math.min(Math.max(vua, 0.6), 1);
+    apDung();
+  }
+
+  function phong(he, neo) {
+    var cu = z;
+    z = Math.min(Math.max(z * he, MIN), MAX);
+    apDung();
+    if (!neo || cu === z) return;
+    // Giữ nguyên điểm dưới con trỏ: không có phần này thì mỗi lần zoom nội dung
+    // nhảy về góc trái và người đọc mất chỗ đang xem.
+    var ti = z / cu;
+    pane.scrollLeft = (pane.scrollLeft + neo.x) * ti - neo.x;
+    pane.scrollTop = (pane.scrollTop + neo.y) * ti - neo.y;
+  }
+
+  fsx.addEventListener('click', function (e) {
+    var nut = e.target.closest ? e.target.closest('[data-act]') : null;
+    if (!nut) return;
+    var act = nut.getAttribute('data-act');
+    if (act === 'in') phong(1.25);
+    else if (act === 'out') phong(0.8);
+    else if (act === 'fit') vuaKhung();
+    else dong();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (fsx.hidden) return;
+    if (e.key === 'Escape') dong();
+    else if (e.key === '+' || e.key === '=') phong(1.25);
+    else if (e.key === '-' || e.key === '_') phong(0.8);
+    else if (e.key === '0') vuaKhung();
+    else return;
+    e.preventDefault();
+  });
+
+  // Ctrl/⌘ + lăn chuột = zoom theo con trỏ; lăn trơn vẫn cuộn như bình thường.
+  pane.addEventListener('wheel', function (e) {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    var r = pane.getBoundingClientRect();
+    phong(e.deltaY < 0 ? 1.12 : 1 / 1.12, { x: e.clientX - r.left, y: e.clientY - r.top });
+  }, { passive: false });
+
+  pane.addEventListener('dblclick', function (e) {
+    var r = pane.getBoundingClientRect();
+    phong(1.25, { x: e.clientX - r.left, y: e.clientY - r.top });
+  });
+
+  var keo = false, x0 = 0, y0 = 0, sl = 0, st = 0;
+  pane.addEventListener('pointerdown', function (e) {
+    keo = true; x0 = e.clientX; y0 = e.clientY; sl = pane.scrollLeft; st = pane.scrollTop;
+    pane.classList.add('drag');
+    if (pane.setPointerCapture) pane.setPointerCapture(e.pointerId);
+  });
+  pane.addEventListener('pointermove', function (e) {
+    if (!keo) return;
+    pane.scrollLeft = sl - (e.clientX - x0);
+    pane.scrollTop = st - (e.clientY - y0);
+  });
+  ['pointerup', 'pointercancel'].forEach(function (ev) {
+    pane.addEventListener(ev, function () { keo = false; pane.classList.remove('drag'); });
+  });
+})();
+</script>

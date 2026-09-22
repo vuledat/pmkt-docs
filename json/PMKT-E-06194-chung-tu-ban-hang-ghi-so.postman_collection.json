@@ -1,0 +1,55 @@
+{
+  "info": {
+    "name": "PMKT-E-06194 Chứng từ bán hàng - Ghi sổ",
+    "_postman_id": "pmkt-e-06194-ghi-so",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Các endpoint kế thừa dùng để kiểm tra ghi sổ chứng từ bán hàng và nhóm chứng từ lập kèm."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "chungTuId", "value": "00000000-0000-0000-0000-000000000000" }
+  ],
+  "item": [
+    {
+      "name": "Ghi sổ một chứng từ",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/ban-hang/chung-tu-ban-hang/{{chungTuId}}/ghi-so"
+      }
+    },
+    {
+      "name": "Bỏ ghi sổ một chứng từ",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/ban-hang/chung-tu-ban-hang/{{chungTuId}}/bo-ghi-so"
+      }
+    },
+    {
+      "name": "Xem thông tin hạch toán",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/ban-hang/chung-tu-ban-hang/{{chungTuId}}/thong-tin-hach-toan"
+      }
+    },
+    {
+      "name": "Ghi sổ hàng loạt",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/ban-hang/chung-tu-ban-hang/ghi-so-hang-loat",
+        "body": { "mode": "raw", "raw": "{\n  \"ids\": [\"{{chungTuId}}\"]\n}" }
+      }
+    },
+    {
+      "name": "Tìm kiếm chứng từ",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/ban-hang/chung-tu-ban-hang/tim-kiem",
+        "body": { "mode": "raw", "raw": "{\n  \"page\": 0,\n  \"size\": 20,\n  \"sort\": []\n}" }
+      }
+    }
+  ]
+}

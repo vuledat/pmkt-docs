@@ -1,0 +1,393 @@
+# Lớp con override method của base — chỉ tính method có @Override
+
+## Tổng hợp
+base.method                                      loại    #override  #không super
+AbstractChungTuCrudService.boGhiSo()             hook           20            20
+AbstractChungTuCrudService.ghiSo()               hook           20            20
+AbstractChungTuCrudService.kiemTraTonTai()       KHUNG           2             2
+AbstractChungTuCrudService.layDongChiTiet()      hook           20            20
+AbstractChungTuCrudService.nhanBan()             hook           20            20
+AbstractChungTuCrudService.traSoChungTu()        hook           20            20
+AbstractCrudService.afterSave()                  hook            5             5
+AbstractCrudService.beforeSave()                 hook            8             8
+AbstractCrudService.create()                     KHUNG          30            25
+AbstractCrudService.defaultSortAlias()           hook           27            27
+AbstractCrudService.defaultSortDirection()       hook           22            22
+AbstractCrudService.delete()                     KHUNG          31            27
+AbstractCrudService.duLieuExport()               KHUNG           7             5
+AbstractCrudService.get()                        KHUNG          26            22
+AbstractCrudService.giaTriCot()                  KHUNG           1             1
+AbstractCrudService.load()                       KHUNG           2             2
+AbstractCrudService.moTaCot()                    KHUNG           2             0
+AbstractCrudService.notFound()                   hook           29            29
+AbstractCrudService.search()                     KHUNG          32            20
+AbstractCrudService.summary()                    hook           19            19
+AbstractCrudService.update()                     KHUNG          30            27
+AbstractCrudService.validateCreate()             hook            5             5
+AbstractCrudService.validateDelete()             hook            2             2
+AbstractCrudService.validateUpdate()             hook            5             5
+BaseChungTuController.boGhiSo()                  KHUNG           5             5
+BaseChungTuController.boGhiSoHangLoat()          KHUNG           3             3
+BaseChungTuController.dongChiTiet()              KHUNG           2             2
+BaseChungTuController.ghiSo()                    KHUNG           5             5
+BaseChungTuController.ghiSoHangLoat()            KHUNG           3             3
+BaseChungTuController.hangLoat()                 hook           23            23
+BaseChungTuController.messageId()                hook            9             2
+BaseChungTuController.nhanBan()                  KHUNG          10            10
+BaseChungTuController.tenChungTu()               hook           23            23
+BaseChungTuController.thongTinHachToan()         KHUNG           3             3
+BaseChungTuController.xoaHangLoat()              KHUNG           2             2
+BaseCrudController.cot()                         KHUNG           1             1
+BaseCrudController.cotMacDinh()                  hook            7             7
+BaseCrudController.create()                      KHUNG          12            12
+BaseCrudController.delete()                      KHUNG           9             9
+BaseCrudController.export()                      KHUNG           5             5
+BaseCrudController.get()                         KHUNG           3             3
+BaseCrudController.importExcel()                 KHUNG           5             5
+BaseCrudController.maChucNang()                  hook           34            34
+BaseCrudController.maManHinh()                   hook           35            35
+BaseCrudController.nhapDuLieu()                  hook            1             1
+BaseCrudController.search()                      KHUNG           2             2
+BaseCrudController.service()                     hook           35            35
+BaseCrudController.tenFileExport()               hook           17            17
+BaseCrudController.thongBaoSua()                 hook            4             4
+BaseCrudController.thongBaoTao()                 hook            4             4
+BaseCrudController.thongBaoXoa()                 hook            3             3
+BaseCrudController.update()                      KHUNG          12            12
+ChungTuTemplate.bangGoc()                        hook           25            25
+ChungTuTemplate.chuanBiChungTu()                 hook           57            57
+ChungTuTemplate.chungTuDangLuu()                 hook           16            16
+ChungTuTemplate.coAnhHuongTonKho()               hook            8             8
+ChungTuTemplate.coGhiSoNgay()                    hook           15            15
+ChungTuTemplate.dienGiaiChung()                  hook           26            26
+ChungTuTemplate.hanhDong()                       hook           40            40
+ChungTuTemplate.kiemTraNghiepVu()                hook           54            50
+ChungTuTemplate.kiemTraQuyen()                   KHUNG          19             2
+ChungTuTemplate.luuEntity()                      hook           49            49
+ChungTuTemplate.maChucNang()                     hook           25            25
+ChungTuTemplate.maLoaiChungTu()                  hook           28            28
+ChungTuTemplate.moTaAudit()                      hook           53            53
+ChungTuTemplate.sauKhiLuu()                      hook           28            28
+ChungTuTemplate.soChungTuNguoiDungGo()           hook            6             6
+ChungTuTemplate.taoKetQua()                      hook           49            49
+ChungTuTemplate.truocKhiLuu()                    hook           30            30
+
+## Chi tiết các method KHUNG bị override
+
+### AbstractChungTuCrudService.kiemTraTonTai()  — 2 nơi
+  no-super          3 dòng  cong_cu_dung_cu/dieu_chinh/internal/service/DieuChinhCcdcCrudService.java:621
+  no-super          3 dòng  cong_cu_dung_cu/ghi_giam/internal/service/GhiGiamCcdcCrudService.java:224
+
+### AbstractCrudService.create()  — 30 nơi
+  no-super          3 dòng  ban_hang/chung_tu_ban_hang/internal/service/ChungTuBanHangCrudService.java:126
+  no-super          3 dòng  ban_hang/dieu_chinh_gia_hang_ban/internal/service/DieuChinhGiaHangBanCrudService.java:113
+  no-super          3 dòng  ban_hang/tra_lai_hang_ban/internal/service/TraLaiHangBanCrudService.java:111
+  no-super          3 dòng  chi_phi_tra_truoc/phan_bo/internal/service/PhanBoCpttCrudService.java:295
+  no-super         33 dòng  chung_tu_mua_hang/internal/service/ChungTuMuaHangCrudService.java:388
+  no-super         14 dòng  cong_cu_dung_cu/dieu_chinh/internal/service/DieuChinhCcdcCrudService.java:427
+  no-super         55 dòng  cong_cu_dung_cu/dieu_chuyen/internal/service/DieuChuyenCcdcCrudService.java:329
+  no-super          3 dòng  cong_cu_dung_cu/ghi_giam/internal/service/GhiGiamCcdcCrudService.java:175
+  no-super          3 dòng  cong_cu_dung_cu/ghi_tang/internal/service/GhiTangCcdcCrudService.java:234
+  no-super          3 dòng  cong_cu_dung_cu/phan_bo/internal/service/PhanBoCcdcCrudService.java:125
+  no-super          3 dòng  fixed_asset/dieu_chinh/internal/service/DieuChinhTaiSanCoDinhCrudService.java:164
+  no-super          3 dòng  fixed_asset/dieu_chuyen/internal/service/DieuChuyenTaiSanCrudService.java:193
+  no-super          3 dòng  fixed_asset/ghi_giam/internal/service/ChungTuGhiGiamTscdCrudService.java:174
+  super            8 dòng  fixed_asset/ghi_tang/internal/service/TaiSanCoDinhCrudService.java:593
+  super            5 dòng  fixed_asset/ngung_khau_hao/internal/service/ChungTuNgungKhauHaoCrudService.java:440
+  no-super          3 dòng  hoa_don_mua/internal/service/HoaDonMuaCrudService.java:109
+  super            3 dòng  ke_toan_tong_hop/internal/service/ButToanKetChuyenCrudService.java:96
+  no-super          3 dòng  ke_toan_tong_hop/internal/service/PhieuKeToanTongHopCrudService.java:283
+  no-super          3 dòng  kho/dieu_chuyen_dieu_chinh/internal/service/PhieuDieuChuyenDieuChinhCrudService.java:186
+  no-super          3 dòng  kho/nhap_dieu_chuyen/internal/service/PhieuNhapDieuChuyenCrudService.java:213
+  no-super          3 dòng  kho/nhap_kho/internal/service/PhieuNhapKhoCrudService.java:191
+  no-super          3 dòng  kho/xuat_dieu_chuyen/internal/service/PhieuXuatDieuChuyenCrudService.java:224
+  no-super          3 dòng  kho/xuat_kho/internal/service/PhieuXuatKhoCrudService.java:185
+  no-super          8 dòng  so_du_ban_dau/cong_no_kh/internal/service/SoDuBanDauKhachHangCrudService.java:302
+  no-super         19 dòng  so_du_ban_dau/cong_no_ncc/internal/service/SoDuBanDauNccCrudService.java:302
+  super            3 dòng  so_du_ban_dau/cong_no_nv/internal/service/SoDuBanDauNhanVienCrudService.java:281
+  no-super          7 dòng  so_du_ban_dau/so_du_tai_khoan/internal/service/SoDuBanDauTaiKhoanCrudService.java:173
+  super            3 dòng  so_du_ban_dau/so_du_tk_ngan_hang/internal/service/SoDuTkNganHangCrudService.java:256
+  no-super          3 dòng  tien_mat_tien_gui/internal/service/ChungTuThuChiCrudService.java:278
+  no-super         17 dòng  tra_lai_hang_mua/internal/service/TraLaiHangMuaCrudService.java:158
+
+### AbstractCrudService.delete()  — 31 nơi
+  no-super          9 dòng  accounting_core/khoa_so/internal/service/ThietLapKhoaSoCrudService.java:460
+  no-super          3 dòng  ban_hang/chung_tu_ban_hang/internal/service/ChungTuBanHangCrudService.java:136
+  no-super          3 dòng  ban_hang/dieu_chinh_gia_hang_ban/internal/service/DieuChinhGiaHangBanCrudService.java:123
+  no-super         10 dòng  ban_hang/hoa_don_ban_hang/internal/service/HoaDonBanHangCrudService.java:211
+  no-super          3 dòng  ban_hang/tra_lai_hang_ban/internal/service/TraLaiHangBanCrudService.java:121
+  no-super          3 dòng  chi_phi_tra_truoc/phan_bo/internal/service/PhanBoCpttCrudService.java:305
+  no-super         15 dòng  chung_tu_mua_hang/internal/service/ChungTuMuaHangCrudService.java:538
+  no-super         26 dòng  cong_cu_dung_cu/dieu_chinh/internal/service/DieuChinhCcdcCrudService.java:519
+  no-super         24 dòng  cong_cu_dung_cu/dieu_chuyen/internal/service/DieuChuyenCcdcCrudService.java:482
+  no-super          3 dòng  cong_cu_dung_cu/ghi_giam/internal/service/GhiGiamCcdcCrudService.java:187
+  no-super          8 dòng  cong_cu_dung_cu/ghi_tang/internal/service/GhiTangCcdcCrudService.java:252
+  no-super          3 dòng  cong_cu_dung_cu/phan_bo/internal/service/PhanBoCcdcCrudService.java:144
+  no-super          3 dòng  fixed_asset/dieu_chinh/internal/service/DieuChinhTaiSanCoDinhCrudService.java:174
+  no-super          3 dòng  fixed_asset/dieu_chuyen/internal/service/DieuChuyenTaiSanCrudService.java:203
+  no-super          3 dòng  fixed_asset/ghi_giam/internal/service/ChungTuGhiGiamTscdCrudService.java:184
+  no-super         18 dòng  fixed_asset/ngung_khau_hao/internal/service/ChungTuNgungKhauHaoCrudService.java:453
+  no-super          5 dòng  hoa_don_mua/internal/service/HoaDonMuaCrudService.java:127
+  no-super          3 dòng  ke_toan_tong_hop/internal/service/PhieuKeToanTongHopCrudService.java:295
+  no-super          3 dòng  kho/dieu_chuyen_dieu_chinh/internal/service/PhieuDieuChuyenDieuChinhCrudService.java:205
+  no-super          3 dòng  kho/nhap_dieu_chuyen/internal/service/PhieuNhapDieuChuyenCrudService.java:294
+  no-super          3 dòng  kho/nhap_kho/internal/service/PhieuNhapKhoCrudService.java:206
+  no-super          3 dòng  kho/xuat_dieu_chuyen/internal/service/PhieuXuatDieuChuyenCrudService.java:242
+  no-super          3 dòng  kho/xuat_kho/internal/service/PhieuXuatKhoCrudService.java:204
+  no-super         10 dòng  so_du_ban_dau/cong_no_kh/internal/service/SoDuBanDauKhachHangCrudService.java:346
+  super            9 dòng  so_du_ban_dau/cong_no_ncc/internal/service/SoDuBanDauNccCrudService.java:354
+  super            4 dòng  so_du_ban_dau/cong_no_nv/internal/service/SoDuBanDauNhanVienCrudService.java:330
+  no-super         10 dòng  so_du_ban_dau/so_du_tai_khoan/internal/service/SoDuBanDauTaiKhoanCrudService.java:220
+  super            4 dòng  so_du_ban_dau/so_du_tk_ngan_hang/internal/service/SoDuTkNganHangCrudService.java:322
+  super            4 dòng  so_du_ban_dau/ton_kho_vat_tu/internal/service/SoDuBanDauVatTuCrudService.java:215
+  no-super          3 dòng  tien_mat_tien_gui/internal/service/ChungTuThuChiCrudService.java:288
+  no-super          9 dòng  tra_lai_hang_mua/internal/service/TraLaiHangMuaCrudService.java:201
+
+### AbstractCrudService.duLieuExport()  — 7 nơi
+  super            4 dòng  ban_hang/tra_lai_hang_ban/internal/service/TraLaiHangBanCrudService.java:201
+  no-super          3 dòng  cong_cu_dung_cu/dieu_chinh/internal/service/DieuChinhCcdcCrudService.java:640
+  no-super          3 dòng  cong_cu_dung_cu/dieu_chuyen/internal/service/DieuChuyenCcdcCrudService.java:800
+  no-super          3 dòng  cong_cu_dung_cu/ghi_giam/internal/service/GhiGiamCcdcCrudService.java:214
+  no-super          6 dòng  hoa_don_mua/internal/service/HoaDonMuaCrudService.java:63
+  super            3 dòng  ke_toan_tong_hop/internal/service/PhieuKeToanTongHopCrudService.java:171
+  no-super          4 dòng  tien_mat_tien_gui/internal/service/ChungTuThuChiCrudService.java:162
+
+### AbstractCrudService.get()  — 26 nơi
+  no-super          6 dòng  accounting_core/khoa_so/internal/service/ThietLapKhoaSoCrudService.java:140
+  no-super          3 dòng  ban_hang/chung_tu_ban_hang/internal/service/ChungTuBanHangCrudService.java:120
+  no-super          3 dòng  ban_hang/dieu_chinh_gia_hang_ban/internal/service/DieuChinhGiaHangBanCrudService.java:107
+  no-super          6 dòng  ban_hang/hoa_don_ban_hang/internal/service/HoaDonBanHangCrudService.java:290
+  no-super          5 dòng  ban_hang/tra_lai_hang_ban/internal/service/TraLaiHangBanCrudService.java:103
+  no-super          4 dòng  chi_phi_tra_truoc/phan_bo/internal/service/PhanBoCpttCrudService.java:151
+  no-super          3 dòng  chung_tu_mua_hang/internal/service/ChungTuMuaHangCrudService.java:271
+  no-super         11 dòng  cong_cu_dung_cu/dieu_chinh/internal/service/DieuChinhCcdcCrudService.java:311
+  no-super          5 dòng  cong_cu_dung_cu/dieu_chuyen/internal/service/DieuChuyenCcdcCrudService.java:243
+  no-super          9 dòng  cong_cu_dung_cu/ghi_giam/internal/service/GhiGiamCcdcCrudService.java:130
+  super           12 dòng  cong_cu_dung_cu/ghi_tang/internal/service/GhiTangCcdcCrudService.java:152
+  no-super          3 dòng  cong_cu_dung_cu/phan_bo/internal/service/PhanBoCcdcCrudService.java:106
+  no-super          8 dòng  fixed_asset/ngung_khau_hao/internal/service/ChungTuNgungKhauHaoCrudService.java:289
+  no-super          3 dòng  hoa_don_mua/internal/service/HoaDonMuaCrudService.java:115
+  super            3 dòng  ke_toan_tong_hop/internal/service/ButToanKetChuyenCrudService.java:90
+  no-super          5 dòng  ke_toan_tong_hop/internal/service/PhieuKeToanTongHopCrudService.java:219
+  no-super          4 dòng  kho/dieu_chuyen_dieu_chinh/internal/service/PhieuDieuChuyenDieuChinhCrudService.java:174
+  no-super          4 dòng  kho/nhap_dieu_chuyen/internal/service/PhieuNhapDieuChuyenCrudService.java:195
+  no-super          4 dòng  kho/nhap_kho/internal/service/PhieuNhapKhoCrudService.java:172
+  no-super          4 dòng  kho/xuat_dieu_chuyen/internal/service/PhieuXuatDieuChuyenCrudService.java:211
+  no-super          4 dòng  kho/xuat_kho/internal/service/PhieuXuatKhoCrudService.java:175
+  no-super          3 dòng  so_du_ban_dau/cong_no_kh/internal/service/SoDuBanDauKhachHangCrudService.java:274
+  super            3 dòng  so_du_ban_dau/cong_no_nv/internal/service/SoDuBanDauNhanVienCrudService.java:275
+  no-super          3 dòng  so_du_ban_dau/so_du_tai_khoan/internal/service/SoDuBanDauTaiKhoanCrudService.java:137
+  super            3 dòng  so_du_ban_dau/so_du_tk_ngan_hang/internal/service/SoDuTkNganHangCrudService.java:250
+  no-super          4 dòng  tra_lai_hang_mua/internal/service/TraLaiHangMuaCrudService.java:117
+
+### AbstractCrudService.giaTriCot()  — 1 nơi
+  no-super         22 dòng  cong_cu_dung_cu/dieu_chinh/internal/service/DieuChinhCcdcCrudService.java:272
+
+### AbstractCrudService.load()  — 2 nơi
+  no-super          5 dòng  ban_hang/hoa_don_ban_hang/internal/service/HoaDonBanHangCrudService.java:92
+  no-super          4 dòng  tien_mat_tien_gui/internal/service/ChungTuThuChiCrudService.java:126
+
+### AbstractCrudService.moTaCot()  — 2 nơi
+  super            5 dòng  cong_cu_dung_cu/dieu_chinh/internal/service/DieuChinhCcdcCrudService.java:182
+  super            7 dòng  so_du_ban_dau/so_du_tai_khoan/internal/service/SoDuBanDauTaiKhoanCrudService.java:155
+
+### AbstractCrudService.search()  — 32 nơi
+  super            4 dòng  accounting_core/khoa_so/internal/service/ThietLapKhoaSoCrudService.java:133
+  no-super          9 dòng  ban_hang/chung_tu_ban_hang/internal/service/ChungTuBanHangCrudService.java:215
+  super            5 dòng  ban_hang/hoa_don_ban_hang/internal/service/HoaDonBanHangCrudService.java:282
+  super            4 dòng  ban_hang/tra_lai_hang_ban/internal/service/TraLaiHangBanCrudService.java:194
+  no-super          9 dòng  chi_phi_tra_truoc/phan_bo/internal/service/PhanBoCpttCrudService.java:130
+  no-super          9 dòng  chung_tu_mua_hang/internal/service/ChungTuMuaHangCrudService.java:175
+  no-super         19 dòng  cong_cu_dung_cu/dieu_chinh/internal/service/DieuChinhCcdcCrudService.java:210
+  no-super         17 dòng  cong_cu_dung_cu/dieu_chuyen/internal/service/DieuChuyenCcdcCrudService.java:197
+  no-super         13 dòng  cong_cu_dung_cu/ghi_giam/internal/service/GhiGiamCcdcCrudService.java:105
+  no-super         17 dòng  cong_cu_dung_cu/ghi_tang/internal/service/GhiTangCcdcCrudService.java:128
+  super            4 dòng  dieu_chinh_gia_hang_mua/internal/service/DieuChinhGiaMuaCrudService.java:77
+  no-super          9 dòng  fixed_asset/dieu_chinh/internal/service/DieuChinhTaiSanCoDinhCrudService.java:120
+  no-super          9 dòng  fixed_asset/dieu_chuyen/internal/service/DieuChuyenTaiSanCrudService.java:94
+  no-super         11 dòng  fixed_asset/ghi_giam/internal/service/ChungTuGhiGiamTscdCrudService.java:130
+  no-super          9 dòng  fixed_asset/ghi_tang/internal/service/TaiSanCoDinhCrudService.java:348
+  no-super          9 dòng  fixed_asset/ngung_khau_hao/internal/service/ChungTuNgungKhauHaoCrudService.java:137
+  no-super         11 dòng  hoa_don_mua/internal/service/HoaDonMuaCrudService.java:49
+  super            4 dòng  ke_toan_tong_hop/internal/service/ButToanKetChuyenCrudService.java:83
+  super           11 dòng  ke_toan_tong_hop/internal/service/PhieuKeToanTongHopCrudService.java:150
+  no-super         12 dòng  kho/dieu_chuyen_dieu_chinh/internal/service/PhieuDieuChuyenDieuChinhCrudService.java:151
+  no-super         12 dòng  kho/nhap_dieu_chuyen/internal/service/PhieuNhapDieuChuyenCrudService.java:172
+  no-super         12 dòng  kho/nhap_kho/internal/service/PhieuNhapKhoCrudService.java:148
+  no-super         12 dòng  kho/xuat_dieu_chuyen/internal/service/PhieuXuatDieuChuyenCrudService.java:154
+  no-super         12 dòng  kho/xuat_kho/internal/service/PhieuXuatKhoCrudService.java:152
+  super            6 dòng  so_du_ban_dau/cong_no_kh/internal/service/SoDuBanDauKhachHangCrudService.java:160
+  super            4 dòng  so_du_ban_dau/cong_no_ncc/internal/service/SoDuBanDauNccCrudService.java:143
+  super            8 dòng  so_du_ban_dau/cong_no_nv/internal/service/SoDuBanDauNhanVienCrudService.java:141
+  no-super          5 dòng  so_du_ban_dau/so_du_tai_khoan/internal/service/SoDuBanDauTaiKhoanCrudService.java:124
+  super            6 dòng  so_du_ban_dau/so_du_tk_ngan_hang/internal/service/SoDuTkNganHangCrudService.java:147
+  super            3 dòng  so_du_ban_dau/ton_kho_vat_tu/internal/service/SoDuBanDauVatTuCrudService.java:102
+  no-super          4 dòng  tien_mat_tien_gui/internal/service/ChungTuThuChiCrudService.java:139
+  super            4 dòng  tra_lai_hang_mua/internal/service/TraLaiHangMuaCrudService.java:110
+
+### AbstractCrudService.update()  — 30 nơi
+  no-super          3 dòng  ban_hang/chung_tu_ban_hang/internal/service/ChungTuBanHangCrudService.java:131
+  no-super          3 dòng  ban_hang/dieu_chinh_gia_hang_ban/internal/service/DieuChinhGiaHangBanCrudService.java:118
+  no-super         26 dòng  ban_hang/hoa_don_ban_hang/internal/service/HoaDonBanHangCrudService.java:145
+  no-super          3 dòng  ban_hang/tra_lai_hang_ban/internal/service/TraLaiHangBanCrudService.java:116
+  no-super          3 dòng  chi_phi_tra_truoc/phan_bo/internal/service/PhanBoCpttCrudService.java:300
+  no-super         63 dòng  chung_tu_mua_hang/internal/service/ChungTuMuaHangCrudService.java:465
+  no-super         28 dòng  cong_cu_dung_cu/dieu_chinh/internal/service/DieuChinhCcdcCrudService.java:458
+  no-super         53 dòng  cong_cu_dung_cu/dieu_chuyen/internal/service/DieuChuyenCcdcCrudService.java:405
+  no-super          3 dòng  cong_cu_dung_cu/ghi_giam/internal/service/GhiGiamCcdcCrudService.java:181
+  no-super          4 dòng  cong_cu_dung_cu/ghi_tang/internal/service/GhiTangCcdcCrudService.java:241
+  no-super          4 dòng  cong_cu_dung_cu/phan_bo/internal/service/PhanBoCcdcCrudService.java:131
+  no-super          3 dòng  fixed_asset/dieu_chinh/internal/service/DieuChinhTaiSanCoDinhCrudService.java:169
+  no-super          3 dòng  fixed_asset/dieu_chuyen/internal/service/DieuChuyenTaiSanCrudService.java:198
+  no-super          3 dòng  fixed_asset/ghi_giam/internal/service/ChungTuGhiGiamTscdCrudService.java:179
+  no-super         33 dòng  fixed_asset/ngung_khau_hao/internal/service/ChungTuNgungKhauHaoCrudService.java:384
+  no-super          3 dòng  hoa_don_mua/internal/service/HoaDonMuaCrudService.java:121
+  super            3 dòng  ke_toan_tong_hop/internal/service/ButToanKetChuyenCrudService.java:102
+  no-super          3 dòng  ke_toan_tong_hop/internal/service/PhieuKeToanTongHopCrudService.java:289
+  no-super          3 dòng  kho/dieu_chuyen_dieu_chinh/internal/service/PhieuDieuChuyenDieuChinhCrudService.java:191
+  no-super          3 dòng  kho/nhap_dieu_chuyen/internal/service/PhieuNhapDieuChuyenCrudService.java:281
+  no-super          3 dòng  kho/nhap_kho/internal/service/PhieuNhapKhoCrudService.java:197
+  no-super          3 dòng  kho/xuat_dieu_chuyen/internal/service/PhieuXuatDieuChuyenCrudService.java:229
+  no-super          3 dòng  kho/xuat_kho/internal/service/PhieuXuatKhoCrudService.java:191
+  no-super         13 dòng  so_du_ban_dau/cong_no_kh/internal/service/SoDuBanDauKhachHangCrudService.java:320
+  no-super         18 dòng  so_du_ban_dau/cong_no_ncc/internal/service/SoDuBanDauNccCrudService.java:324
+  super            3 dòng  so_du_ban_dau/cong_no_nv/internal/service/SoDuBanDauNhanVienCrudService.java:287
+  no-super         14 dòng  so_du_ban_dau/so_du_tai_khoan/internal/service/SoDuBanDauTaiKhoanCrudService.java:189
+  super            3 dòng  so_du_ban_dau/so_du_tk_ngan_hang/internal/service/SoDuTkNganHangCrudService.java:262
+  no-super          3 dòng  tien_mat_tien_gui/internal/service/ChungTuThuChiCrudService.java:283
+  no-super         20 dòng  tra_lai_hang_mua/internal/service/TraLaiHangMuaCrudService.java:178
+
+### BaseChungTuController.boGhiSo()  — 5 nơi
+  no-super quyen    4 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaDichVuController.java:201
+  no-super quyen    4 dòng  cong_cu_dung_cu/dieu_chinh/internal/controller/DieuChinhCcdcController.java:317
+  no-super quyen    4 dòng  fixed_asset/ghi_tang/internal/controller/TaiSanCoDinhController.java:114
+  no-super quyen    4 dòng  fixed_asset/ngung_khau_hao/internal/controller/ChungTuNgungKhauHaoController.java:103
+  no-super quyen    5 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:346
+
+### BaseChungTuController.boGhiSoHangLoat()  — 3 nơi
+  no-super quyen    4 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaDichVuController.java:216
+  no-super quyen    4 dòng  cong_cu_dung_cu/dieu_chinh/internal/controller/DieuChinhCcdcController.java:332
+  no-super quyen    5 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:372
+
+### BaseChungTuController.dongChiTiet()  — 2 nơi
+  no-super quyen    5 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaDichVuController.java:129
+  no-super quyen    5 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:262
+
+### BaseChungTuController.ghiSo()  — 5 nơi
+  no-super quyen    4 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaDichVuController.java:194
+  no-super quyen    4 dòng  cong_cu_dung_cu/dieu_chinh/internal/controller/DieuChinhCcdcController.java:310
+  no-super quyen    4 dòng  fixed_asset/ghi_tang/internal/controller/TaiSanCoDinhController.java:106
+  no-super quyen    4 dòng  fixed_asset/ngung_khau_hao/internal/controller/ChungTuNgungKhauHaoController.java:95
+  no-super quyen    5 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:338
+
+### BaseChungTuController.ghiSoHangLoat()  — 3 nơi
+  no-super quyen    4 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaDichVuController.java:208
+  no-super quyen    4 dòng  cong_cu_dung_cu/dieu_chinh/internal/controller/DieuChinhCcdcController.java:324
+  no-super quyen    6 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:362
+
+### BaseChungTuController.nhanBan()  — 10 nơi
+  no-super quyen    7 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaDichVuController.java:184
+  no-super quyen    6 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaHangController.java:175
+  no-super quyen    4 dòng  cong_cu_dung_cu/dieu_chinh/internal/controller/DieuChinhCcdcController.java:278
+  no-super quyen    4 dòng  cong_cu_dung_cu/ghi_giam/internal/controller/GhiGiamCcdcController.java:137
+  no-super quyen    4 dòng  fixed_asset/dieu_chinh/internal/controller/DieuChinhTaiSanCoDinhController.java:97
+  no-super quyen    4 dòng  fixed_asset/ghi_giam/internal/controller/ChungTuGhiGiamTscdController.java:100
+  no-super quyen    4 dòng  fixed_asset/ghi_tang/internal/controller/TaiSanCoDinhController.java:122
+  no-super quyen    4 dòng  fixed_asset/ngung_khau_hao/internal/controller/ChungTuNgungKhauHaoController.java:111
+  no-super quyen    5 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:354
+  no-super quyen    6 dòng  tra_lai_hang_mua/internal/controller/TraLaiHangMuaController.java:108
+
+### BaseChungTuController.thongTinHachToan()  — 3 nơi
+  no-super quyen    6 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaDichVuController.java:232
+  no-super quyen    9 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaHangController.java:320
+  no-super quyen    5 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:295
+
+### BaseChungTuController.xoaHangLoat()  — 2 nơi
+  no-super quyen    4 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaDichVuController.java:224
+  no-super quyen    5 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:381
+
+### BaseCrudController.cot()  — 1 nơi
+  no-super          6 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:170
+
+### BaseCrudController.create()  — 12 nơi
+  no-super quyen   11 dòng  accounting_core/khoa_so/internal/controller/KhoaSoController.java:78
+  no-super quyen    7 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaDichVuController.java:140
+  no-super quyen    7 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaHangController.java:152
+  no-super quyen    7 dòng  cong_cu_dung_cu/dieu_chinh/internal/controller/DieuChinhCcdcController.java:221
+  no-super quyen    9 dòng  cong_cu_dung_cu/dieu_chuyen/internal/controller/DieuChuyenCcdcController.java:272
+  no-super quyen    4 dòng  cong_cu_dung_cu/ghi_giam/internal/controller/GhiGiamCcdcController.java:120
+  no-super quyen    5 dòng  cong_cu_dung_cu/ghi_tang/internal/controller/GhiTangCcdcController.java:82
+  no-super quyen    9 dòng  cong_cu_dung_cu/phan_bo/internal/controller/PhanBoCcdcController.java:325
+  no-super quyen    9 dòng  ke_toan_tong_hop/internal/controller/PhieuKeToanTongHopController.java:160
+  no-super quyen    5 dòng  so_du_ban_dau/cong_no_kh/internal/controller/SoDuBanDauKhachHangController.java:82
+  no-super quyen    6 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:311
+  no-super quyen    7 dòng  tra_lai_hang_mua/internal/controller/TraLaiHangMuaController.java:86
+
+### BaseCrudController.delete()  — 9 nơi
+  no-super quyen    6 dòng  accounting_core/khoa_so/internal/controller/KhoaSoController.java:111
+  no-super quyen    5 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaDichVuController.java:162
+  no-super quyen    6 dòng  cong_cu_dung_cu/dieu_chinh/internal/controller/DieuChinhCcdcController.java:243
+  no-super quyen    8 dòng  cong_cu_dung_cu/dieu_chuyen/internal/controller/DieuChuyenCcdcController.java:319
+  no-super quyen    5 dòng  cong_cu_dung_cu/ghi_tang/internal/controller/GhiTangCcdcController.java:102
+  no-super quyen    8 dòng  cong_cu_dung_cu/phan_bo/internal/controller/PhanBoCcdcController.java:381
+  no-super quyen    5 dòng  ke_toan_tong_hop/internal/controller/PhieuKeToanTongHopController.java:185
+  no-super quyen    6 dòng  so_du_ban_dau/cong_no_kh/internal/controller/SoDuBanDauKhachHangController.java:105
+  no-super quyen    5 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:329
+
+### BaseCrudController.export()  — 5 nơi
+  no-super quyen    5 dòng  accounting_core/khoa_so/internal/controller/KhoaSoController.java:128
+  no-super quyen    4 dòng  cong_cu_dung_cu/dieu_chinh/internal/controller/DieuChinhCcdcController.java:286
+  no-super quyen    4 dòng  cong_cu_dung_cu/dieu_chuyen/internal/controller/DieuChuyenCcdcController.java:334
+  no-super quyen    4 dòng  cong_cu_dung_cu/ghi_giam/internal/controller/GhiGiamCcdcController.java:145
+  no-super quyen   26 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:179
+
+### BaseCrudController.get()  — 3 nơi
+  no-super quyen    4 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaDichVuController.java:116
+  no-super quyen    4 dòng  fixed_asset/ghi_tang/internal/controller/TaiSanCoDinhController.java:143
+  no-super quyen   11 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:248
+
+### BaseCrudController.importExcel()  — 5 nơi
+  no-super quyen    5 dòng  accounting_core/khoa_so/internal/controller/KhoaSoController.java:138
+  no-super quyen    4 dòng  cong_cu_dung_cu/dieu_chinh/internal/controller/DieuChinhCcdcController.java:296
+  no-super quyen    4 dòng  cong_cu_dung_cu/dieu_chuyen/internal/controller/DieuChuyenCcdcController.java:344
+  no-super quyen    4 dòng  cong_cu_dung_cu/ghi_giam/internal/controller/GhiGiamCcdcController.java:155
+  no-super quyen    5 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:390
+
+### BaseCrudController.search()  — 2 nơi
+  no-super quyen    4 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaDichVuController.java:108
+  no-super         10 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:156
+
+### BaseCrudController.update()  — 12 nơi
+  no-super quyen    9 dòng  accounting_core/khoa_so/internal/controller/KhoaSoController.java:94
+  no-super quyen    7 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaDichVuController.java:151
+  no-super quyen    7 dòng  chung_tu_mua_hang/internal/controller/ChungTuMuaHangController.java:163
+  no-super quyen    7 dòng  cong_cu_dung_cu/dieu_chinh/internal/controller/DieuChinhCcdcController.java:232
+  no-super quyen    8 dòng  cong_cu_dung_cu/dieu_chuyen/internal/controller/DieuChuyenCcdcController.java:293
+  no-super quyen    4 dòng  cong_cu_dung_cu/ghi_giam/internal/controller/GhiGiamCcdcController.java:128
+  no-super quyen    5 dòng  cong_cu_dung_cu/ghi_tang/internal/controller/GhiTangCcdcController.java:92
+  no-super quyen    9 dòng  cong_cu_dung_cu/phan_bo/internal/controller/PhanBoCcdcController.java:352
+  no-super quyen    8 dòng  ke_toan_tong_hop/internal/controller/PhieuKeToanTongHopController.java:173
+  no-super quyen    5 dòng  so_du_ban_dau/cong_no_kh/internal/controller/SoDuBanDauKhachHangController.java:92
+  no-super quyen    5 dòng  tien_mat_tien_gui/internal/controller/ChungTuThuChiController.java:320
+  no-super quyen    7 dòng  tra_lai_hang_mua/internal/controller/TraLaiHangMuaController.java:97
+
+### ChungTuTemplate.kiemTraQuyen()  — 19 nơi
+  super   quyen    6 dòng  ban_hang/chung_tu_ban_hang/internal/service/business/LuuChungTuBanHangTemplate.java:86
+  super   quyen    6 dòng  ban_hang/dieu_chinh_gia_hang_ban/internal/service/business/LuuDieuChinhGiaTemplate.java:68
+  super   quyen    6 dòng  ban_hang/tra_lai_hang_ban/internal/service/business/LuuTraLaiHangBanTemplate.java:77
+  super   quyen    6 dòng  chi_phi_tra_truoc/phan_bo/internal/service/business/LuuChungTuPhanBoTemplate.java:74
+  super   quyen    4 dòng  dieu_chinh_gia_hang_mua/internal/service/business/LuuDieuChinhGiaMuaTemplate.java:33
+  super   quyen    6 dòng  ke_toan_tong_hop/internal/service/business/LuuPhieuKtthTemplate.java:108
+  super   quyen    6 dòng  kho/dieu_chuyen_dieu_chinh/internal/service/business/LuuPhieuDieuChuyenDieuChinhTemplate.java:83
+  super   quyen    6 dòng  kho/nhap_dieu_chuyen/internal/service/business/SuaPhieuNhapDieuChuyen.java:79
+  super   quyen    6 dòng  kho/nhap_dieu_chuyen/internal/service/business/TaoPhieuNhapDieuChuyen.java:90
+  super            5 dòng  kho/nhap_kho/internal/service/business/BoGhiSoPhieuNhapKho.java:59
+  super            5 dòng  kho/nhap_kho/internal/service/business/GhiSoPhieuNhapKho.java:65
+  super   quyen    6 dòng  kho/nhap_kho/internal/service/business/LuuPhieuNhapKhoTemplate.java:71
+  no-super          3 dòng  kho/nhap_kho/internal/service/business/LuuPhieuNhapKhoTuTraLai.java:102
+  super            5 dòng  kho/nhap_kho/internal/service/business/XoaPhieuNhapKho.java:55
+  super   quyen    6 dòng  kho/xuat_dieu_chuyen/internal/service/business/LuuPhieuXuatDieuChuyenTemplate.java:70
+  super            5 dòng  kho/xuat_kho/internal/service/business/BoGhiSoPhieuXuatKho.java:60
+  super            5 dòng  kho/xuat_kho/internal/service/business/GhiSoPhieuXuatKho.java:77
+  super   quyen    6 dòng  kho/xuat_kho/internal/service/business/LuuPhieuXuatKhoTemplate.java:72
+  no-super          3 dòng  kho/xuat_kho/internal/service/business/LuuPhieuXuatKhoTuChungTuBan.java:92

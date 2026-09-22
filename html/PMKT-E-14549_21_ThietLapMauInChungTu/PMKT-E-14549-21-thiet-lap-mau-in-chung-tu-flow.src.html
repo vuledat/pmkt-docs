@@ -1,0 +1,854 @@
+<title>Luồng Thiết lập mẫu in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ink:#16202b; --ink-soft:#4a5765; --ink-faint:#7c8896;
+  --bg:#f4f6f8; --surface:#ffffff; --rule:#dde3e9; --rule-soft:#eaeef2;
+  --blue:#2f6f8f; --blue-soft:#e8f0f4;
+  --seal:#b23a2e; --seal-soft:#fbeceb;
+  --ok:#2e7d5b; --ok-soft:#e8f4ee;
+  --warn:#a9761f; --warn-soft:#fbf2e2;
+  --plate:#faf8f3; --plate-rule:#e3ded2;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 8px 24px rgba(22,32,43,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#dee5ec; --ink-soft:#a3aeb9; --ink-faint:#7f8b97;
+    --bg:#0f151b; --surface:#171f27; --rule:#2a343e; --rule-soft:#202932;
+    --blue:#7fb6d2; --blue-soft:#17262f;
+    --seal:#e08072; --seal-soft:#2c1815;
+    --ok:#74bf9b; --ok-soft:#132621;
+    --warn:#d5a45a; --warn-soft:#2a2113;
+    --plate:#e7e3da; --plate-rule:#cfccc1;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#dee5ec; --ink-soft:#a3aeb9; --ink-faint:#7f8b97;
+  --bg:#0f151b; --surface:#171f27; --rule:#2a343e; --rule-soft:#202932;
+  --blue:#7fb6d2; --blue-soft:#17262f;
+  --seal:#e08072; --seal-soft:#2c1815;
+  --ok:#74bf9b; --ok-soft:#132621;
+  --warn:#d5a45a; --warn-soft:#2a2113;
+  --plate:#e7e3da; --plate-rule:#cfccc1;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+  display:grid; grid-template-columns:246px minmax(0,1fr); gap:56px; align-items:start}
+@media (max-width:980px){ .wrap{grid-template-columns:1fr; gap:0; padding:0 16px 72px} }
+
+.mast{grid-column:1/-1; padding:56px 0 28px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--blue); margin:0 0 14px}
+.mast h1{font-family:Bitter,Georgia,serif; font-weight:700; font-size:clamp(30px,4.4vw,46px);
+  line-height:1.12; margin:0 0 14px; text-wrap:balance; letter-spacing:-.015em}
+.mast p{margin:0; max-width:64ch; color:var(--ink-soft); font-size:17px}
+.mast .meta{display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-faint)}
+.mast .meta b{color:var(--ink-soft); font-weight:600}
+
+nav.rail{position:sticky; top:24px; padding-top:36px}
+@media (max-width:980px){ nav.rail{position:static; padding:28px 0 0; border-bottom:1px solid var(--rule)} }
+nav.rail h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px; font-weight:600}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+nav.rail a{display:grid; grid-template-columns:26px 1fr; gap:6px; text-decoration:none;
+  color:var(--ink-soft); font-size:14px; padding:5px 8px 5px 0; border-radius:4px; line-height:1.35}
+nav.rail a span{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-faint)}
+nav.rail a:hover,nav.rail a:hover span{color:var(--blue)}
+nav.rail a:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+main{padding-top:36px; min-width:0}
+section{padding:34px 0 6px; border-top:1px solid var(--rule)}
+section:first-child{border-top:none; padding-top:8px}
+.snum{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em;
+  color:var(--seal); font-weight:600; display:block; margin-bottom:8px}
+h2{font-family:Bitter,Georgia,serif; font-weight:700; font-size:27px; line-height:1.22;
+  margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em}
+h3{font-family:Bitter,Georgia,serif; font-weight:500; font-size:18px; margin:32px 0 8px}
+p{margin:0 0 14px; max-width:72ch}
+.lede{color:var(--ink-soft); font-size:16.5px; max-width:70ch}
+a{color:var(--blue)}
+code,.f{font-family:"IBM Plex Mono",monospace; font-size:.87em; background:var(--rule-soft);
+  padding:1px 5px; border-radius:3px; color:var(--ink)}
+strong{font-weight:600}
+ul{margin:0 0 16px; padding-left:20px; max-width:72ch}
+li{margin-bottom:6px}
+li::marker{color:var(--ink-faint)}
+
+figure{margin:22px 0 8px}
+.plate{background:var(--plate); border:1px solid var(--plate-rule); border-radius:6px;
+  padding:20px 16px; overflow-x:auto; box-shadow:var(--shadow)}
+.plate .mermaid{min-width:min-content; margin:0;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}
+.plate .mermaid svg{max-width:none !important; height:auto; display:block}
+/* Mermaid dựng và ĐO nhãn trong container tạm gắn ở body, không phải trong .plate —
+   quy tắc font phải khai ở phạm vi toàn trang, nếu không lúc đo một font lúc vẽ một font, chữ bị lẹm */
+.mermaid,.nodeLabel,.edgeLabel,.cluster-label,.label,
+foreignObject div,foreignObject span,foreignObject p{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif !important}
+.nodeLabel,.edgeLabel,.cluster-label,.label,foreignObject div{
+  font-size:14px !important; line-height:1.4 !important}
+foreignObject{overflow:visible !important}
+figcaption{margin-top:10px; font-size:13.5px; color:var(--ink-faint); max-width:70ch;
+  border-left:2px solid var(--rule); padding-left:12px}
+figcaption b{color:var(--ink-soft); font-weight:600}
+
+.tw{overflow-x:auto; margin:18px 0 22px; border:1px solid var(--rule); border-radius:6px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:520px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top}
+thead th{background:var(--rule-soft); font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--rule); white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12.5px; white-space:nowrap}
+
+.chip{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+  padding:2px 7px; border-radius:3px; border:1px solid; white-space:nowrap; line-height:1.5}
+.c-msg{color:var(--seal); border-color:var(--seal); background:var(--seal-soft)}
+.c-br{color:var(--blue); border-color:var(--blue); background:var(--blue-soft)}
+.c-ok{color:var(--ok); border-color:var(--ok); background:var(--ok-soft)}
+.c-warn{color:var(--warn); border-color:var(--warn); background:var(--warn-soft)}
+
+.note{border-left:3px solid var(--blue); background:var(--blue-soft); padding:14px 18px;
+  border-radius:0 5px 5px 0; margin:20px 0; font-size:14.5px}
+.note.stop{border-color:var(--seal); background:var(--seal-soft)}
+.note.ask{border-color:var(--warn); background:var(--warn-soft)}
+.note p:last-child{margin-bottom:0}
+.note .lbl{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:6px; color:var(--blue)}
+.note.stop .lbl{color:var(--seal)}
+.note.ask .lbl{color:var(--warn)}
+
+footer{grid-column:1/-1; margin-top:56px; padding-top:22px; border-top:2px solid var(--ink);
+  font-size:13px; color:var(--ink-faint); display:flex; flex-wrap:wrap; gap:8px 28px;
+  font-family:"IBM Plex Mono",monospace}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">PMKT-E-14549_21 · Phân hệ Tổng hợp — cấu hình in</p>
+  <h1>Luồng xử lý Thiết lập mẫu in chứng từ</h1>
+  <p>Trình thiết kế mẫu in riêng cho từng cặp <em>(loại chứng từ, nghiệp vụ)</em> của một đơn vị kế toán. Đặc thù của epic: không có vòng đời chứng từ — cái được quản lý là <strong>sự tồn tại của bản ghi mẫu</strong>; và quá nửa số ô trên màn <strong>không lưu giá trị</strong> mà kế thừa động từ thiết lập chung.</p>
+  <div class="meta">
+    <span><b>Nguồn:</b> 2 UC · 2 AD · 1 màn hình · 1 ma trận · 26 message</span>
+    <span><b>Đặc tả:</b> 271 luật R-TLMI · 12 INV · 78 kịch bản</span>
+    <span><b>Quyền:</b> HTMauIn.View / HTMauIn.Edit</span>
+    <span><b>Mẹo:</b> sơ đồ rộng cuộn ngang được trong khung</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#s0"><span>00</span>Bản đồ trạng thái mẫu</a></li>
+    <li><a href="#s1"><span>01</span>Hai lối vào &amp; quyền</a></li>
+    <li><a href="#s2"><span>02</span>Kế thừa thiết lập chung</a></li>
+    <li><a href="#s3"><span>03</span>Bố cục mẫu &amp; con mắt</a></li>
+    <li><a href="#s4"><span>04</span>Khối Bảng · chia đều 100%</a></li>
+    <li><a href="#s5"><span>05</span>Khối tự do — lưới ô</a></li>
+    <li><a href="#s6"><span>06</span>Đầu trang &amp; Chữ ký</a></li>
+    <li><a href="#s7"><span>07</span>Kiểm tra &amp; ba nhãn</a></li>
+    <li><a href="#s8"><span>08</span>Lưu — xóa hay ghi</a></li>
+    <li><a href="#s9"><span>09</span>Đặt lại · Đóng khi chưa lưu</a></li>
+    <li><a href="#s10"><span>10</span>Hoàn tác &amp; xem trước</a></li>
+    <li><a href="#s11"><span>11</span>Dựng bản in</a></li>
+    <li><a href="#s12"><span>12</span>Tra cứu: message · quyền</a></li>
+    <li><a href="#s13"><span>13</span>Chỗ tài liệu còn hở</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 00 ============ -->
+<section id="s0">
+  <span class="snum">00 — Tổng quan</span>
+  <h2>Không có trạng thái, chỉ có sự tồn tại của bản ghi</h2>
+  <p class="lede">Mẫu in không mang cột trạng thái nào. <strong>Vắng bản ghi chính là trạng thái "đang dùng mẫu chuẩn hệ thống"</strong> <span class="chip c-br">R-TLMI-007</span>. Vì vậy thao tác Lưu có thể kết thúc bằng một lệnh <em>xóa</em>, và đó không phải lỗi.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A["<b>KHÔNG CÓ BẢN GHI</b><br/>Đang dùng mẫu chuẩn hệ thống<br/>Mẫu chuẩn sinh từ đặc tả form<br/>không có entity riêng"]
+    B["<b>CÓ BẢN GHI MẪU</b><br/>Mẫu tùy chỉnh của đơn vị<br/>Khóa duy nhất TenantId + MaChucNang + MaNghiepVu<br/>Dùng chung mọi người dùng, mọi chi nhánh"]
+    A -- "Lưu khi JSON chuẩn hóa KHÁC mẫu chuẩn" --> B
+    B -- "Lưu khi JSON chuẩn hóa BẰNG mẫu chuẩn — xóa bản ghi cùng nhánh con" --> A
+    A -- "Lưu mà không sửa gì — KHÔNG tạo bản ghi" --> A
+    B -- "Lưu thay đổi khác — ghi đè, tăng phienBan" --> B
+
+    classDef std fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef cus fill:#ffffff,stroke:#2f6f8f,color:#16202b;
+    class A std;
+    class B cus;
+</pre>
+    </div>
+    <figcaption><b>Bất biến hai chiều.</b> <span class="f">INV-TLMI-002</span> đòi <em>mẫu bằng chuẩn ⟺ không tồn tại bản ghi</em>. Chiều ngược lại là điều dễ code sót nhất: chỉnh tay rồi Hoàn tác hết về đúng mẫu chuẩn, bấm Lưu thì <strong>cũng phải xóa</strong> bản ghi — không chỉ khi người dùng bấm "Đặt lại mẫu chuẩn".</figcaption>
+  </figure>
+
+  <h3>Bốn loại khối chuẩn — luôn tồn tại, chỉ đổi thứ tự và con mắt</h3>
+  <p>Mẫu chuẩn hệ thống có đúng bốn loại khối theo thứ tự cố định <span class="chip c-br">R-TLMI-008</span>. Khối chuẩn <strong>không xóa được</strong>, chỉ ẩn được <span class="chip c-br">R-TLMI-210</span>; nút xóa ẩn hẳn chứ không disable.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Khối</th><th>Số lượng trong mẫu chuẩn</th><th>Nguồn nội dung</th><th>Xóa được?</th></tr></thead>
+    <tbody>
+      <tr><td><b>Thông tin đầu trang</b></td><td>1</td><td>Hồ sơ đơn vị của <b>chi nhánh ghi trên chứng từ</b></td><td>Không — chỉ ẩn</td></tr>
+      <tr><td><b>Tiêu đề</b></td><td>1</td><td>Tên loại chứng từ + dòng ngày tháng</td><td>Không — chỉ ẩn</td></tr>
+      <tr><td><b>Bảng</b></td><td><b>n</b> = số lưới trên form</td><td>Cột của đúng lưới tương ứng, mọi lưới bật</td><td>Không — chỉ ẩn</td></tr>
+      <tr><td><b>Chữ ký</b></td><td>1</td><td>5 chức danh của Thiết lập người ký + ô ký tự do</td><td>Không — chỉ ẩn</td></tr>
+      <tr><td><b>Khối tự do</b></td><td>0 trong mẫu chuẩn · tối đa <b>10</b></td><td>Lưới ô do người dùng dựng</td><td><b>Có</b> — hỏi xác nhận</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">Không có khối "Thông tin chung"</span>
+    <p>Thông tin chung và dòng tổng tiền <strong>không</strong> là khối chuẩn. Muốn in số chứng từ, ngày, khách hàng, tổng thanh toán thì phải tự dựng bằng <b>khối tự do</b> <span class="chip c-br">R-TLMI-010</span> <span class="chip c-br">R-TLMI-091</span>. Mẫu chuẩn mở ra lần đầu <em>không</em> có các dòng đó.</p>
+  </div>
+</section>
+
+<!-- ============ 01 ============ -->
+<section id="s1">
+  <span class="snum">01 — UC01 bước 1–2 · Nhóm B</span>
+  <h2>Hai lối vào, một màn, một mẫu</h2>
+  <p class="lede">Màn Thiết lập mẫu in <strong>không có lối vào từ menu hệ thống</strong>. Nó chỉ mở được từ bên trong một chứng từ cụ thể — vì mẫu được xác định bởi nghiệp vụ của chứng từ đang mở.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Form sửa hoặc form xem chi tiết chứng từ"]) --> B{"Hai quy tắc cấm in của thiết lập chung có chặn không?"}
+    B -- "Có — chưa ghi sổ hoặc đã khóa sổ" --> BX["Nút In Disable kèm tooltip<br/>cả menu In KHÔNG mở được"]
+    B -- "Không" --> C["Mở menu In"]
+    C --> D["Các mẫu cố định theo quy định<br/>01-TT · 02-VT… — không sửa được"]
+    C --> H["Mục: Mẫu tùy chỉnh"]
+    C --> F{"Có quyền Thiết lập mẫu in?"}
+    F -- "Không" --> FX["Mục Thiết lập mẫu in ẩn hẳn<br/>nút Sửa mẫu ẩn hẳn — KHÔNG phải Disable"]
+    F -- "Có" --> G["Mục: Thiết lập mẫu in…"]
+    H --> I(["Màn xem trước bản in"])
+    I --> J["Nút Sửa mẫu — hiện khi có quyền"]
+    G --> K(["MÀN THIẾT LẬP MẪU IN"])
+    J --> K
+    K -- "Đóng" --> L["Quay lại ĐÚNG nơi vừa mở ra<br/>form chứng từ, hoặc màn xem trước vẽ lại theo mẫu vừa lưu"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class BX,FX err;
+    class K ok;
+</pre>
+    </div>
+    <figcaption><b>Thiếu quyền là ẩn, không phải mờ.</b> <span class="chip c-br">R-TLMI-032</span> nói rõ mục menu và nút Sửa mẫu <strong>ẩn hẳn</strong>. Nhưng mất quyền Thiết lập mẫu in <em>không</em> chặn in: người chỉ có quyền In vẫn chọn được "Mẫu tùy chỉnh" và in bình thường <span class="chip c-br">R-TLMI-033</span>.</figcaption>
+  </figure>
+
+  <h3>Form thêm mới không có nút In</h3>
+  <p>Menu In chỉ có ở <strong>form sửa</strong> và <strong>form xem chi tiết</strong> <span class="chip c-br">R-TLMI-025</span>; nghiệp vụ nào cho In từ danh sách thì menu In cũng xuất hiện trên màn danh sách <span class="chip c-br">R-TLMI-026</span>. Hai mục menu dùng đúng tên <em>"Mẫu tùy chỉnh"</em> và <em>"Thiết lập mẫu in…"</em> cho mọi nghiệp vụ, không đổi chữ theo từng màn <span class="chip c-br">R-TLMI-024</span>.</p>
+
+  <div class="note">
+    <span class="lbl">Nghiệp vụ quyết định mẫu nào mở ra</span>
+    <p>"Nghiệp vụ" là giá trị ô <span class="f">Loại nghiệp vụ</span> trên form <span class="chip c-br">R-TLMI-002</span>. Đổi ô đó rồi mở lại màn thiết lập thì mở ra <strong>một mẫu khác</strong> <span class="chip c-br">R-TLMI-012</span>. Loại chứng từ không chia nghiệp vụ thì cả loại chứng từ là một mẫu <span class="chip c-br">R-TLMI-003</span>.</p>
+  </div>
+
+  <div class="note ask">
+    <span class="lbl">Quyền xét theo chi nhánh nhưng mẫu thì không</span>
+    <p>Quyền Thiết lập mẫu in xét theo nghiệp vụ <strong>tại chi nhánh đang làm việc</strong> <span class="chip c-br">R-TLMI-031</span> — nhưng mẫu lưu ra lại <strong>dùng chung mọi chi nhánh</strong> <span class="chip c-br">R-TLMI-005</span> <span class="chip c-br">R-TLMI-035</span>. Có quyền ở chi nhánh A là sửa được mẫu áp cho cả B và C. Tài liệu <strong>không cấp cảnh báo nào</strong> cho tình huống này (mục <span class="f">Z-28</span>) — đã chốt là không tự thêm hộp thoại ngoài đặc tả.</p>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="s2">
+  <span class="snum">02 — Nhóm C · INV-TLMI-003</span>
+  <h2>Kế thừa động: ô "theo chung" phải vắng khóa trong JSON</h2>
+  <p class="lede">Đây là chỗ dễ code sai nhất của epic. Ô ở trạng thái <em>theo chung</em> <strong>không lưu giá trị đang hiển thị</strong> — nó lưu sự vắng mặt. Đặt <span class="f">NOT NULL</span> kèm default là phá kế thừa vĩnh viễn, và mẫu sẽ không bao giờ quay về theo chung được nữa.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A["Ô trên màn — ví dụ Font chữ, Cỡ chữ, Căn lề"] --> B{"Người dùng đã gõ hoặc chọn giá trị cho riêng ô này chưa?"}
+    B -- "Chưa — trạng thái THEO CHUNG" --> C["Khi Lưu: khóa VẮNG MẶT trong JSON<br/>không copy giá trị đang hiển thị"]
+    B -- "Rồi — trạng thái RIÊNG" --> D["Khi Lưu: ghi đúng giá trị vào JSON"]
+    C --> E["Lúc in hoặc vẽ xem trước<br/>đọc lại thiết lập chung TẠI THỜI ĐIỂM ĐÓ"]
+    D --> F["Lúc in: dùng giá trị của mẫu<br/>thiết lập chung đổi KHÔNG ảnh hưởng"]
+    E --> G["Thiết lập chung đổi Times New Roman sang Arial<br/>thì bản in đổi theo ngay"]
+    F --> H["Thiết lập chung đổi<br/>bản in KHÔNG đổi"]
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class C,E,G ok;
+    class D,F,H warn;
+</pre>
+    </div>
+    <figcaption><b>Giá trị hiệu dụng khác giá trị lưu.</b> Cột <em>Bắt buộc = Y</em> trong bảng trường của BA phải đọc là <strong>"bắt buộc có giá trị hiệu dụng"</strong>, không phải <span class="f">NOT NULL</span> (mục <span class="f">Z-27</span>, chốt C28). Với mô hình JSON: <strong>khóa vắng mặt = theo chung</strong>.</figcaption>
+  </figure>
+
+  <h3>Cái gì theo chung, cái gì riêng của mẫu</h3>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nhóm ô</th><th>Chế độ</th><th>Đưa về theo chung bằng cách nào</th><th>Luật</th></tr></thead>
+    <tbody>
+      <tr><td>Giấy và chữ — 6 ô: Khổ giấy, Hướng giấy, Số cột tự động, Căn lề, Font, Cỡ chữ</td><td>Theo chung / riêng</td><td>Nút <b>Theo thiết lập chung</b> của <b>cả nhóm</b></td><td class="mono">036 · 040</td></tr>
+      <tr><td>Bảy ô tick Thông tin đầu trang (kể cả <b>Logo</b>)</td><td>Theo chung / riêng</td><td>Nút <b>Theo thiết lập chung</b> của <b>cả khối</b></td><td class="mono">043 · 077 · 082</td></tr>
+      <tr><td>Màu chữ, Kiểu hình nền, Độ đậm, Căn ảnh, Ảnh</td><td><b>Luôn riêng của mẫu</b> — không kế thừa</td><td>—</td><td class="mono">064 … 075</td></tr>
+      <tr><td>Người ký: tên, chức danh, cờ "In tên người ký"</td><td><b>Luôn theo thiết lập chung</b>, chỉ đọc</td><td>—</td><td class="mono">046 · 196</td></tr>
+      <tr><td>Người ký: <b>tiêu đề in ra</b></td><td>Mẫu <b>sửa riêng được</b></td><td>—</td><td class="mono">046 · 188</td></tr>
+      <tr><td>Ba quy tắc in chứng từ (chưa ghi sổ · đã khóa sổ · cộng gộp mặt hàng)</td><td><b>Luôn theo thiết lập chung</b> — màn này không có ô chỉnh</td><td>—</td><td class="mono">047 · 266</td></tr>
+      <tr><td>Định dạng khối đầu trang: kiểu chữ, in hoa, cỡ logo, căn lề, lặp trang sau</td><td><b>Luôn theo thiết lập chung</b></td><td>—</td><td class="mono">049 · 084</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note ask">
+    <span class="lbl">Hai rủi ro UX đã ghi nhận, BA soát lại</span>
+    <p><b>1.</b> Không có cách đưa <em>riêng một ô</em> về theo chung <span class="chip c-br">R-TLMI-042</span>, và trạng thái theo chung / riêng <strong>không có nhãn nào</strong> để phân biệt trên màn <span class="chip c-br">R-TLMI-045</span>. Đổi một ô rồi muốn hoàn lại chỉ ô đó thì buộc reset cả nhóm và gõ lại các ô khác (mục <span class="f">Z-25</span>).</p>
+    <p><b>2.</b> Đổi <b>Khổ giấy</b> / <b>Hướng giấy</b> ngay trên thanh Xem trước làm ô đó trở thành <strong>riêng vĩnh viễn</strong> <span class="chip c-br">R-TLMI-044</span> — trong khi thanh Xem trước luôn hiện ở mọi khối. Một thao tác tưởng chỉ "để xem" làm mẫu ngừng kế thừa (mục <span class="f">Z-26</span>). Cả hai đã chốt <strong>giữ đúng tài liệu và Figma</strong>, không tự thêm UI.</p>
+  </div>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="s3">
+  <span class="snum">03 — Nhóm L · UC01 bước 3</span>
+  <h2>Bố cục mẫu: thứ tự khối chính là thứ tự in</h2>
+  <p class="lede">Cột trái của màn là danh sách khối theo đúng thứ tự sẽ in ra. Kéo ở cột trái hay kéo ngay trên trang xem trước cho <strong>cùng một kết quả</strong> <span class="chip c-br">R-TLMI-205</span> — hai mặt của một dữ liệu.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A["<b>Cột trái — Bố cục mẫu</b>"] --> A1["Mục đầu: Thiết lập mẫu<br/>KHÔNG phải khối, không kéo được"]
+    A --> A2["Dòng khối: biểu tượng kéo · con mắt · tên khối<br/>khối tự do có thêm nút xóa"]
+    A2 -- "Kéo biểu tượng" --> B["Đổi thứ tự khối = đổi thứ tự in"]
+    A2 -- "Bấm dòng khối" --> C["Bảng chỉnh bên phải mở đúng khối đó<br/>khối được đánh dấu trên trang"]
+    A2 -- "Bấm con mắt" --> D{"Con mắt bật?"}
+    D -- "Có — mặc định" --> D1["Khối được in ra"]
+    D -- "Không" --> D2["Khối KHÔNG in<br/>các khối sau dồn lên<br/>thiết lập bên trong khối GIỮ NGUYÊN"]
+    E["<b>Trang xem trước — cột giữa</b>"] -- "Kéo khối" --> B
+    E -- "Bấm một khối" --> C
+    E -- "Rê chuột lên khối" --> F["Hiện nhãn tên khối"]
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class D1 ok;
+    class D2 warn;
+</pre>
+    </div>
+    <figcaption><b>Tắt con mắt không mất dữ liệu.</b> <span class="chip c-br">R-TLMI-209</span> — thiết lập bên trong khối được giữ nguyên, bật lại là có ngay. Hệ quả kiểm tra: khối đang ẩn thì <strong>bỏ qua validate</strong> của khối đó (chốt C18), bật lại thì validate lại ngay — nếu không, ẩn khối Tiêu đề rồi để trống Nội dung sẽ khiến người dùng bế tắc không Lưu được.</figcaption>
+  </figure>
+
+  <p>Mọi khối đều kéo được, kể cả Thông tin đầu trang và Chữ ký <span class="chip c-br">R-TLMI-206</span>. Chỉ <strong>bảng chỉnh bên phải</strong> đổi theo khối đang chọn; cột trái, cột giữa và thanh tiêu đề luôn hiện <span class="chip c-br">R-TLMI-216</span>.</p>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="s4">
+  <span class="snum">04 — Nhóm H · INV-TLMI-004 · INV-TLMI-005</span>
+  <h2>Khối Bảng: độ rộng cột luôn về đúng 100</h2>
+  <p class="lede">Mỗi khối Bảng ứng đúng một lưới trên form. Tổng độ rộng lệch 100 <strong>không phải lỗi</strong> — khi Lưu hệ thống tự chia lại <span class="chip c-br">R-TLMI-111</span>. Nhưng "chia đều" ở đây <strong>giữ nguyên tỷ lệ</strong>, không chia bằng nhau.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    T(["Ba dịp chạy: bấm nút Chia đều về 100% · khi Lưu · khi form có cột mới"]) --> S1
+    S1["<b>Bước 1</b> — chỉ xét các cột ĐANG TICK IN<br/>cột bỏ tick giữ nguyên số cũ, không tính vào tổng"]
+    S1 --> S2["<b>Bước 2</b> — rộng mới = rộng cũ chia tổng rộng cũ nhân 100<br/>LÀM TRÒN XUỐNG về số nguyên"]
+    S2 --> S3["<b>Bước 3</b> — còn thiếu để đủ 100<br/>cộng phần thiếu vào cột đang in CUỐI CÙNG"]
+    S3 --> S4{"Có cột nào nhỏ hơn 3 không?"}
+    S4 -- "Không" --> OK["Tổng = 100 · mọi cột trong khoảng 3 đến 90"]
+    S4 -- "Có" --> S5["<b>Bước 4</b> — nâng cột đó lên 3<br/>trừ phần nâng vào CỘT RỘNG NHẤT"]
+    S5 --> OK
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class OK ok;
+</pre>
+    </div>
+    <figcaption><b>Giữ tỷ lệ, không san bằng.</b> Dữ liệu 50 / 30 ra <strong>62 / 38</strong> chứ không phải 50 / 50. Ba bộ số nguyên văn của BA dùng thẳng làm test, cộng một ca chạm sàn 3 do đặc tả bổ sung.</figcaption>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Đầu vào</th><th>Kết quả</th><th>Bước nào quyết định</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">40 / 40 / 40</td><td class="mono">33 / 33 / <b>34</b></td><td>Bước 2 làm tròn xuống ra 33/33/33 = 99; bước 3 dồn 1 vào cột cuối</td></tr>
+      <tr><td class="mono">50 / 30</td><td class="mono"><b>62 / 38</b></td><td>Bước 2 giữ tỷ lệ 5:3 — <b>không</b> ra 50/50</td></tr>
+      <tr><td class="mono">10 / 10 / 10 / 10</td><td class="mono">25 / 25 / 25 / 25</td><td>Tỷ lệ vốn bằng nhau nên kết quả trùng với chia bằng</td></tr>
+      <tr><td class="mono">90 / 70 / 2</td><td class="mono">54 / 43 / <b>3</b></td><td>Bước 4 chạm sàn: nâng cột 3 lên 3, trừ vào cột rộng nhất</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Cột tick in — giữ lại ít nhất một cột</h3>
+  <p>Khối Bảng <strong>đang bật</strong> phải giữ ít nhất một cột hiển thị <span class="chip c-br">R-TLMI-104</span> <span class="f">INV-TLMI-004</span>; bỏ tick cột cuối thì chặn ngay tại chỗ với <span class="chip c-msg">MSG_…_203</span> kèm tham số <span class="f">{TenBang}</span>. Khối đã <em>tắt</em> con mắt thì ràng buộc này không áp.</p>
+  <p>Cột thêm vào lưới ở phiên bản sau của form <strong>tự xuất hiện cuối bảng và mặc định in</strong> <span class="chip c-br">R-TLMI-093</span>. Chiều ngược lại — cột bị <em>bỏ</em> khỏi form — tài liệu im lặng; đã chốt: <strong>bỏ qua im lặng khi in</strong> (không in, không lỗi), <strong>báo nhẹ khi mở màn</strong> (hiện mờ kèm nhãn "không còn trên form"), loại khỏi mẫu khi Lưu.</p>
+  <p>Ô <span class="f">Cộng</span> chỉ có ở cột số; cột chữ thì ô Cộng <strong>ẩn tĩnh</strong> <span class="chip c-br">R-TLMI-106</span>. Dòng Cộng = Không thì các cột đã tick Cộng <em>không có tác dụng</em> <span class="chip c-br">R-TLMI-098</span>. Ô <span class="f">Tìm cột</span> chỉ lọc hiển thị — đang lọc thì cấm kéo thả <span class="chip c-br">R-TLMI-117</span>, nhưng nút Chia đều vẫn áp cho <strong>mọi cột đang tick in</strong>, không phụ thuộc bộ lọc (chốt C31).</p>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="s5">
+  <span class="snum">05 — Nhóm I · INV-TLMI-006 · INV-TLMI-007 · INV-TLMI-009</span>
+  <h2>Khối tự do: lưới kiểu Excel với một quy tắc lạ</h2>
+  <p class="lede">Khối tự do là lưới tối đa <strong>20 dòng × 6 cột</strong>, mỗi mẫu tối đa <strong>10 khối</strong>. Điểm dễ code sai: <em>Tên hiển thị</em> và <em>In đậm</em> là thuộc tính <strong>của trường</strong> dùng chung cả mẫu, còn <em>Căn</em> lại đặt <strong>theo ô</strong>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Thêm khối tự do"]) --> B{"Mẫu đã có 10 khối tự do?"}
+    B -- "Rồi" --> BX["Chặn — MSG_…_207"]
+    B -- "Chưa" --> C["Hộp Đặt tên khối, tên gợi ý sẵn<br/>không trống, tối đa 60 ký tự"]
+    C --> D["Khối mới: lưới 1 dòng × 2 cột toàn ô trống<br/>đặt NGAY TRƯỚC khối Chữ ký"]
+    D --> E["Báo MSG_…_104 · mở bảng chỉnh · chọn sẵn ô đầu tiên"]
+    E --> F{"Đặt gì vào một ô?"}
+    F -- "Nháy đúp ô, hoặc kéo dòng trường thả vào ô" --> G["<b>Ô trường</b> — in dạng Tên hiển thị rồi tới Giá trị<br/>xóa trống Tên hiển thị thì chỉ in giá trị, bỏ cả dấu hai chấm"]
+    F -- "Chọn Chữ tự do rồi gõ ngay trong ô" --> H["<b>Ô Chữ tự do</b> — in đúng chữ đã gõ<br/>tối đa 255 ký tự"]
+    F -- "Không chọn gì" --> I["<b>Ô trống</b> — không in gì<br/>chỉ chiếm chỗ để các ô khác thẳng hàng"]
+    H -- "Rời ô khi chưa gõ chữ nào" --> I
+    G --> J["Một trường chỉ ở MỘT ô trong MỘT khối<br/>đặt lại vào ô khác thì ô cũ thành ô trống"]
+    G --> K["Tên hiển thị và In đậm là thuộc tính CỦA TRƯỜNG<br/>đổi ở khối A thì ô ở khối B đổi theo ngay"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class BX err;
+    class I ok;
+    class K warn;
+</pre>
+    </div>
+    <figcaption><b>Ô trống không bao giờ là lỗi.</b> <span class="chip c-br">R-TLMI-236</span> — kể cả khối tự do đang bật mà <em>mọi</em> ô đều trống thì vẫn lưu được <span class="chip c-br">R-TLMI-176</span>. Việc xét lỗi trong khối tự do chỉ xét ô <strong>có nội dung</strong>.</figcaption>
+  </figure>
+
+  <h3>Gộp ô · tách ô · thêm xóa dòng cột</h3>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    S["Bấm ô để chọn<br/>giữ Shift bấm ô khác<br/>để chọn vùng chữ nhật"] --> S1["Vùng chọn chạm ô đã gộp<br/>thì TỰ NỚI RA<br/>cho trọn ô gộp đó"]
+    S1 --> M{"Lệnh nào — thanh công cụ<br/>hoặc menu chuột phải"}
+    M -- "Gộp ô" --> G{"Vùng có từ 2 ô<br/>CÓ NỘI DUNG?"}
+    G -- "Có" --> GQ["Hỏi trước<br/>MSG_…_404 kèm số ô"]
+    GQ -- "Đồng ý" --> GM["Giữ nội dung ô ĐẦU TIÊN<br/>có nội dung; các ô còn lại<br/>MẤT nội dung"]
+    G -- "Không" --> GM
+    M -- "Tách ô" --> T["Trả về các ô đơn<br/>nội dung dồn về<br/>ô góc TRÊN TRÁI"]
+    M -- "Thêm dòng · thêm cột" --> A1["Chèn ngay cạnh ô đang chọn<br/>ô mới là ô trống"]
+    A1 --> A2["Chèn vào GIỮA một ô gộp<br/>thì ô gộp rộng thêm<br/>một dòng hoặc một cột"]
+    M -- "Xóa dòng · Xóa cột" --> X1["Xóa các dòng, cột<br/>mà vùng chọn phủ"]
+    X1 --> X2["Đi qua một ô gộp thì<br/>TÁCH ô gộp trước rồi mới xóa"]
+    X2 --> L1["Còn 1 dòng hoặc 1 cột<br/>thì nút trừ Dòng<br/>và trừ Cột mờ"]
+
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class GQ,GM warn;
+    class L1 ok;
+</pre>
+    </div>
+    <figcaption><b>Thanh công cụ chỉ sống khi có ô được chọn.</b> Chưa chọn ô nào thì mọi nút đều mờ <span class="chip c-br">R-TLMI-162</span>; thanh công cụ khối tự do chỉ hiện khi đang chọn một khối tự do <span class="chip c-br">R-TLMI-170</span>. Menu chuột phải trên ô có <strong>cùng tác dụng</strong> với thanh công cụ <span class="chip c-br">R-TLMI-171</span> — hai lối gọi một hành vi, không phải hai bộ lệnh.</figcaption>
+  </figure>
+
+  <p>Kho trường = <strong>mọi ô trên form trừ cột trong các lưới</strong> <span class="chip c-br">R-TLMI-165</span>, là một danh sách phẳng theo thứ tự các ô trên form, không chia nhóm. Cùng một trường được dùng ở <em>nhiều khối tự do khác nhau</em> thì được phép <span class="chip c-br">R-TLMI-153</span> — ràng buộc "một ô" chỉ áp trong phạm vi <strong>một khối</strong>.</p>
+  <p>Kéo một ô có nội dung thả lên ô khác thì hai ô <strong>đổi nội dung cho nhau</strong> <span class="chip c-br">R-TLMI-154</span> — không phải ghi đè. Phím Delete đưa các ô đang chọn về ô trống. Tên khối tự do <strong>không in ra bản in</strong> <span class="chip c-br">R-TLMI-126</span>; nó chỉ là nhãn trong Bố cục mẫu.</p>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="s6">
+  <span class="snum">06 — Nhóm F · Nhóm K · BR50.7</span>
+  <h2>Đầu trang và Chữ ký đọc hồ sơ của chi nhánh ghi trên chứng từ</h2>
+  <p class="lede">Không phải chi nhánh đang làm việc. In lại một chứng từ cũ của chi nhánh khác thì bản in phải mang thông tin của <strong>chi nhánh ghi trên chứng từ đó</strong> <span class="chip c-br">R-TLMI-267</span>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Dựng khối Thông tin đầu trang hoặc khối Chữ ký"]) --> B["Đọc qua MỘT cổng duy nhất<br/>HoSoDonViPort.theoChiNhanh"]
+    B --> C{"Lấy chi nhánh nào?"}
+    C -- "ĐÚNG" --> C1["Chi nhánh GHI TRÊN CHỨNG TỪ"]
+    C -- "SAI" --> C2["Chi nhánh đang làm việc"]
+    C1 --> D["Bảy dòng đầu trang theo thứ tự cố định"]
+    D --> E{"Dòng đã tick nhưng hồ sơ để trống?"}
+    E -- "Có" --> E1["BỎ QUA dòng — không in dòng trống"]
+    E -- "Không" --> E2["In dòng kèm giá trị thật"]
+    D --> F["Bỏ tick cả bảy dòng<br/>khối không in gì — KHÔNG phải lỗi"]
+    C1 --> G["Khối Chữ ký: 5 chức danh và các ô ký tự do"]
+    G --> G1["Chức danh chuẩn: chỉ TẮT được, không xóa được<br/>Tên người ký chỉ đọc, lấy từ Thiết lập người ký"]
+    G --> G2["Ô ký tự do: xóa được · Tên người ký gõ tay<br/>đang bật thì Tiêu đề in ra bắt buộc, tối đa 60 ký tự"]
+    G --> G3["Cờ In tên người ký — chỉ đọc ở màn này<br/>theo thiết lập chung"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    class C2 err;
+    class C1 ok;
+</pre>
+    </div>
+    <figcaption><b>Một cổng, không rải rác.</b> Cả ba nơi cần hồ sơ đơn vị — khối đầu trang, kho trường, khối Chữ ký — đều đi qua <span class="f">HoSoDonViPort.theoChiNhanh()</span>. Tài liệu <em>im lặng</em> ở khối Chữ ký; đã chốt C05 áp cùng quy tắc, vì mở nguồn khác nhau cho hai khối trên cùng một bản in là tự đặt luật.</figcaption>
+  </figure>
+
+  <h3>Logo là ô tick thứ bảy, mẫu sửa riêng được</h3>
+  <p>Logo <strong>CÓ</strong> nằm trong bảy ô tick của khối đầu trang và mẫu bỏ tick riêng được <span class="chip c-br">R-TLMI-082</span> (chốt C03). Nhưng <em>cỡ</em> logo, kiểu chữ, in hoa, căn lề và cờ lặp trang sau thì <strong>luôn</strong> theo thiết lập chung <span class="chip c-br">R-TLMI-049</span>. Vị trí logo: luôn bên trái khối thông tin đơn vị, cùng hàng với dòng đầu tiên; căn lề áp cho <strong>cả cụm</strong> logo và các dòng chữ (chốt C29).</p>
+
+  <p>Mặc định khối Chữ ký bật <b>Người lập phiếu · Kế toán trưởng · Giám đốc</b>, tắt <b>Thủ kho · Thủ quỹ</b> <span class="chip c-br">R-TLMI-184</span>. Dòng ghi chú mặc định <em>"(Ký, họ tên)"</em>, riêng Giám đốc <em>"(Ký, họ tên, đóng dấu)"</em> <span class="chip c-br">R-TLMI-190</span>. Số ô ký <strong>không giới hạn</strong>. Khi in, các ô đang bật chia đều chiều ngang, mỗi ô rộng tối thiểu 4 cm; hết chỗ thì ô tiếp theo xuống hàng mới và hàng đó lại chia đều; cuối trang không đủ chỗ thì <strong>cả khối</strong> sang trang mới, không bị cắt đôi <span class="chip c-br">R-TLMI-200</span>.</p>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="s7">
+  <span class="snum">07 — Nhóm N · R-TLMI-239</span>
+  <h2>Kiểm tra tại chỗ, ba nhãn trạng thái, một thông báo khi Lưu</h2>
+  <p class="lede">Không có mục "kiểm tra" riêng. Rời một ô là kiểm ngay ô đó <span class="chip c-br">R-TLMI-230</span>. Khi bấm Lưu mà đang có lỗi thì hệ thống chỉ báo <strong>lỗi đầu tiên</strong> — không đổ một danh sách.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Người dùng rời một ô"]) --> B{"Ô hợp lệ?"}
+    B -- "Không" --> C["Đánh dấu TẠI CHỖ kèm nội dung thông báo<br/>ô lưới khối tự do thì viền đỏ ngay trên trang xem trước"]
+    C --> C1["Đánh dấu ở HAI NƠI: dòng khối ở Bố cục mẫu<br/>và khối trên trang xem trước — rê chuột hiện nội dung lỗi"]
+    C1 --> N3["Nhãn trạng thái: <b>Có lỗi</b>"]
+    B -- "Có" --> D{"Còn ô nào khác đang lỗi?"}
+    D -- "Còn" --> N3
+    D -- "Hết — dấu hiệu lỗi tắt ngay" --> E{"Mẫu trên màn khác bản đã lưu?"}
+    E -- "Khác" --> N2["Nhãn trạng thái: <b>Chưa lưu</b> · nút Lưu bật"]
+    E -- "Bằng" --> N1["Nhãn trạng thái: <b>Đã lưu</b> · nút Lưu MỜ"]
+    N3 -- "Vẫn bấm Lưu" --> F["KHÔNG ghi — báo lỗi ĐẦU TIÊN<br/>1. thứ tự khối trong Bố cục mẫu<br/>2. rồi ô ở bảng chỉnh, trên xuống<br/>3. rồi ô lưới trên trang, trái sang phải rồi trên xuống"]
+    F --> G["Mở bảng chỉnh của khối đó<br/>đưa con trỏ vào đúng ô lỗi"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class C,C1,N3,F err;
+    class N1 ok;
+    class N2 warn;
+</pre>
+    </div>
+    <figcaption><b>Không có cảnh báo mềm.</b> <span class="chip c-br">R-TLMI-238</span> — lựa chọn hợp lệ nhưng bất thường thì <em>không</em> cảnh báo. Ba thứ dễ tưởng là lỗi mà <strong>không phải lỗi</strong>: tổng độ rộng cột khác 100 (tự chia lại khi Lưu) · ô trống trong khối tự do · khối tự do bật mà mọi ô đều trống.</figcaption>
+  </figure>
+
+  <h3>Bảng kiểm tra dữ liệu — 17 dòng</h3>
+  <p>Cột <em>Tầng</em> quyết định chỗ đặt code: <strong>V16 chỉ chặn phía máy chủ</strong> (ô chọn từ danh sách nên FE không có đường nhập sai), <strong>V17 là quyền</strong>, còn lại kiểm cả hai tầng <span class="chip c-br">R-TLMI-246</span>.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>#</th><th>Trường</th><th>Điều kiện</th><th class="mono">Mã</th><th>Tầng</th><th>Thời điểm</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">V01</td><td>Tiêu đề: Nội dung</td><td>Không trống, ≤ 255 ký tự</td><td class="mono">201</td><td>Cả hai</td><td>Rời ô · Lưu</td></tr>
+      <tr><td class="mono">V02</td><td>Tiêu đề: Cỡ chữ</td><td>Số nguyên 10–36</td><td class="mono">202</td><td>Cả hai</td><td>Rời ô · Lưu</td></tr>
+      <tr><td class="mono">V03</td><td>Bảng: cột in</td><td>Bảng đang bật còn ≥ 1 cột tick</td><td class="mono">203</td><td>Cả hai</td><td>Bỏ tick cột · Lưu</td></tr>
+      <tr><td class="mono">V04</td><td>Bảng: Tên hiển thị của cột</td><td>Không trống, ≤ 100 ký tự</td><td class="mono">204</td><td>Cả hai</td><td>Rời ô · Lưu</td></tr>
+      <tr><td class="mono">V05</td><td>Bảng: Rộng %</td><td>Số nguyên 3–90</td><td class="mono">205</td><td>Cả hai</td><td>Rời ô · Lưu</td></tr>
+      <tr><td class="mono">V06</td><td>Khối tự do: tên</td><td>Không trống, ≤ 60 ký tự</td><td class="mono">206</td><td>Cả hai</td><td>Hộp Đặt tên · rời ô · Lưu</td></tr>
+      <tr><td class="mono">V07</td><td>Số khối tự do</td><td>Tối đa 10</td><td class="mono">207</td><td>Cả hai</td><td>Bấm Thêm khối · Lưu</td></tr>
+      <tr><td class="mono">V08</td><td>Số dòng một khối tự do</td><td>Tối đa 20</td><td class="mono">208</td><td>Cả hai</td><td>Bấm thêm Dòng · Lưu</td></tr>
+      <tr><td class="mono">V09</td><td>Số cột một khối tự do</td><td>Tối đa 6</td><td class="mono">216</td><td>Cả hai</td><td>Bấm thêm Cột · Lưu</td></tr>
+      <tr><td class="mono">V10</td><td>Ảnh nền</td><td>jpg/png, ≤ 1MB</td><td class="mono">209</td><td>Cả hai</td><td>Khi chọn tệp</td></tr>
+      <tr><td class="mono">V11</td><td>Màu chữ</td><td>Dạng <span class="f">#rrggbb</span></td><td class="mono">210</td><td>Cả hai</td><td>Rời ô · Lưu</td></tr>
+      <tr><td class="mono">V12</td><td>Ô ký tự do đang bật</td><td>Tiêu đề không trống, ≤ 60 ký tự</td><td class="mono">211</td><td>Cả hai</td><td>Rời ô · Lưu</td></tr>
+      <tr><td class="mono">V13</td><td>Tên hiển thị của trường · Chữ tự do</td><td>≤ 255 ký tự</td><td class="mono">212</td><td>Cả hai</td><td>Rời ô · Lưu</td></tr>
+      <tr><td class="mono">V14</td><td>Căn lề bốn phía</td><td>0–5 cm, tối đa một chữ số lẻ</td><td class="mono">213</td><td>Cả hai</td><td>Rời ô · Lưu</td></tr>
+      <tr><td class="mono">V15</td><td>Số cột để tự động in ngang</td><td>Số nguyên 1–50, chỉ khi Hướng = Tự động</td><td class="mono">214</td><td>Cả hai</td><td>Rời ô · Lưu</td></tr>
+      <tr><td class="mono">V16</td><td>Giấy và chữ: Cỡ chữ</td><td>Số nguyên 8–20</td><td class="mono">215</td><td><b>Chỉ server</b></td><td>Lưu</td></tr>
+      <tr><td class="mono">V17</td><td>Quyền</td><td>Có quyền Thiết lập mẫu in của nghiệp vụ</td><td class="mono">002</td><td><b>Chỉ server</b></td><td>Mở màn · Lưu</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note ask">
+    <span class="lbl">Bảng thiếu một dòng</span>
+    <p><strong>Độ đậm hình nền</strong> có miền 5–100 % <span class="chip c-br">R-TLMI-072</span> nhưng <strong>không có dòng nào</strong> trong bảng Validation và không có mã message (mục <span class="f">Z-03</span>, còn hở). Vi phạm miền thì báo gì, chặn ở đâu — phải hỏi BA trước nghiệm thu.</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="s8">
+  <span class="snum">08 — UC01 bước 6–9 · INV-TLMI-002 · INV-TLMI-012</span>
+  <h2>Lưu: chuẩn hóa JSON rồi mới quyết định ghi hay xóa</h2>
+  <p class="lede">Thao tác Lưu có <strong>ba kết cục</strong>, không phải một. So sánh nội dung — không phải so cờ "phiên này đã bấm Đặt lại" — mới là điều kiện xóa bản ghi.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Bấm Lưu — hoặc Ctrl+S"]) --> P{"Server: có quyền Thiết lập mẫu in?"}
+    P -- "Không" --> PX["Chặn — MSG_…_002"]
+    P -- "Có" --> V{"Kiểm lại TOÀN BỘ theo bảng Validation, kể cả ở server"}
+    V -- "Có ô sai" --> VX["KHÔNG ghi — báo lỗi đầu tiên<br/>0 bản ghi bị đổi"]
+    V -- "Mọi ô hợp lệ" --> W{"phienBan trong payload khớp bản ghi hiện tại?"}
+    W -- "Lệch — người khác đã Lưu trước" --> WX["Hủy transaction — MSG_COMMON_001<br/>màn GIỮ NGUYÊN thay đổi của người dùng<br/>và hỏi nạp lại mẫu mới nhất"]
+    W -- "Khớp" --> N["Tự chia lại độ rộng cột về đúng 100"]
+    N --> S["<b>chuanHoa JSON</b><br/>sắp khóa theo thứ tự cố định<br/>bỏ MỌI khóa null hoặc vắng mặt<br/>bỏ id kỹ thuật"]
+    S --> C{"JSON chuẩn hóa của mẫu trên màn bằng JSON chuẩn hóa của mẫu chuẩn?"}
+    C -- "Bằng — và đang CÓ bản ghi" --> D1["XÓA bản ghi cùng toàn bộ nhánh con<br/>cùng một transaction"]
+    C -- "Bằng — và CHƯA có bản ghi" --> D2["KHÔNG tạo bản ghi"]
+    C -- "Khác" --> D3["Ghi toàn bộ mẫu trong MỘT transaction<br/>tăng phienBan lên 1"]
+    D1 --> OK["MSG_…_101 Lưu mẫu in thành công<br/>màn giữ nguyên · nhãn về Đã lưu<br/>mọi lần in sau đó dùng mẫu mới NGAY"]
+    D2 --> OK
+    D3 --> OK
+    D3 -. "lỗi hệ thống giữa chừng" .-> R["ROLLBACK — MSG_…_003<br/>DB không đổi một bit nào"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class PX,VX,WX,R err;
+    class OK ok;
+    class D1,D2 warn;
+</pre>
+    </div>
+    <figcaption><b>Chuẩn hóa trước, so sánh sau.</b> Nếu so hai chuỗi JSON thô thì thứ tự khóa khác nhau hay một khóa <span class="f">null</span> thừa cũng làm phép so trượt, và bản ghi rác sẽ tồn tại mãi. Bước <span class="f">chuanHoa()</span> chính là thứ làm <span class="f">INV-TLMI-002</span> đúng cả hai chiều.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Khóa lạc quan là quyết định triển khai, không có trong tài liệu</span>
+    <p>Mẫu dùng chung cho cả đơn vị và Lưu là "xóa hết bản cũ, ghi bản mới". Code trần theo tài liệu thì người Lưu sau <strong>ghi đè âm thầm</strong> toàn bộ công của người Lưu trước — tài liệu im lặng hoàn toàn về tình huống này. Đã chốt C06: khóa lạc quan bằng <span class="f">phienBan</span>, trường vốn đã có sẵn trong request nên không đổi hợp đồng API. Mã message tạm dùng <span class="chip c-msg">MSG_COMMON_001</span> cho tới khi BA cấp mã riêng (nợ <span class="f">L-4</span>).</p>
+  </div>
+</section>
+
+<!-- ============ 09 ============ -->
+<section id="s9">
+  <span class="snum">09 — R-TLMI-015…020 · R-TLMI-251…255</span>
+  <h2>Đặt lại mẫu chuẩn và Đóng khi chưa lưu</h2>
+  <p class="lede">Hai luồng đều có hộp xác nhận, và cả hai đều có chung một điểm dễ hiểu sai: <strong>Đặt lại chỉ đổi trên màn</strong>. Bấm Lưu mới có hiệu lực; Đóng rồi chọn Không lưu thì mẫu cũ còn nguyên trong DB.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    R(["Bấm Đặt lại mẫu chuẩn"]) --> RQ["Hỏi trước — MSG_…_402<br/>Mọi tùy chỉnh kể cả khối tự do, thứ tự khối, cột bảng, chữ ký<br/>sẽ trở về mẫu chuẩn hệ thống"]
+    RQ -- "Không đồng ý" --> RN["GIỮ NGUYÊN mẫu đang chỉnh"]
+    RQ -- "Đồng ý" --> RY["Nạp lại toàn bộ mẫu chuẩn hệ thống trên màn<br/>MSG_…_102 · nhãn chuyển sang Chưa lưu"]
+    RY --> RZ["CHƯA ghi xuống DB — bấm Lưu mới có hiệu lực"]
+
+    D(["Bấm Đóng hoặc Esc"]) --> DQ{"Mẫu trên màn khác bản đã lưu?"}
+    DQ -- "Không đổi gì" --> DN["Đóng NGAY, không hỏi"]
+    DQ -- "Đang mở hộp thoại con" --> DE["Esc KHÔNG tác dụng với màn chính"]
+    DQ -- "Có thay đổi" --> DH["Hỏi — MSG_…_401 · ba lựa chọn"]
+    DH -- "Lưu và đóng" --> D1{"Chạy luồng Lưu"}
+    D1 -- "Thành công" --> D1A["Hiện toast MSG_…_101 rồi mới đóng màn"]
+    D1 -- "Thất bại" --> D1B["KHÔNG đóng — giữ màn để người dùng sửa"]
+    DH -- "Không lưu" --> D2["Bỏ mọi thay đổi và đóng<br/>DB giữ nguyên mẫu cũ"]
+    DH -- "Ở lại" --> D3["Giữ màn, không đổi gì"]
+    D1A --> Z["Xóa sạch lịch sử Hoàn tác và Làm lại"]
+    D2 --> Z
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class D1B err;
+    class D1A,DN ok;
+    class RZ,D2 warn;
+</pre>
+    </div>
+    <figcaption><b>"Lưu và đóng" vẫn hiện toast thành công.</b> Tài liệu không nói rõ (mục <span class="f">Z-06</span>); đã chốt C23 là <strong>có</strong> — toast sống độc lập với màn, người dùng cần biết việc ghi đã xong trước khi màn biến mất. Và Lưu thất bại thì <strong>không đóng</strong>, nếu không thay đổi sẽ mất im lặng.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <span class="snum">10 — Nhóm M</span>
+  <h2>Xem trước bằng dữ liệu thật, hoàn tác 60 bước trong một phiên</h2>
+  <p class="lede">Không có chế độ "dữ liệu mẫu" và <strong>không chọn được chứng từ khác</strong> <span class="chip c-br">R-TLMI-219</span>. Trang xem trước luôn vẽ trang đầu bằng dữ liệu thật của chính chứng từ đang mở.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart LR
+    A["Bất kỳ thay đổi nào trên màn"] --> B["Trang xem trước VẼ LẠI NGAY<br/>theo nhóm Giấy và chữ của mẫu, kể cả hướng Tự động"]
+    A --> C["Đẩy MỘT bước vào lịch sử Hoàn tác"]
+    C --> C1["Gõ chữ trong một ô tính MỘT bước<br/>tính khi RỜI ô, không phải từng phím"]
+    C --> C2["Nhớ tối đa 60 bước · Ctrl+Z và Ctrl+Y<br/>hết bước thì nút tương ứng mờ"]
+    C2 --> C3["Đóng màn thì lịch sử BỊ XÓA<br/>lịch sử theo PHIÊN mở màn, không lưu"]
+    D["Thanh Xem trước — luôn hiện ở mọi khối đang chọn"] --> D1["Thu · Phóng · Vừa khung<br/>chỉ đổi tỷ lệ NHÌN, không ảnh hưởng bản in"]
+    D --> D2["Hiện lưới căn chỉnh — mặc định Có<br/>chỉ trên màn, KHÔNG LƯU, không in, không xuất PDF"]
+    D --> D3["Khổ giấy · Hướng giấy<br/>đổi ở đây là ĐỔI MẪU — ô thành riêng"]
+
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class D1,D2 ok;
+    class D3,C3 warn;
+</pre>
+    </div>
+    <figcaption><b>Hai nhóm control trên cùng một thanh, hai hệ quả khác hẳn.</b> Thu/Phóng và Hiện lưới là <em>trạng thái nhìn</em>, không bao giờ chạm vào mẫu. Khổ giấy và Hướng giấy ở ngay cạnh lại <em>ghi vào mẫu</em> và làm ô ngừng kế thừa thiết lập chung — đây chính là rủi ro UX ở mục <span class="f">Z-26</span>.</figcaption>
+  </figure>
+
+  <p>Trang xem trước còn là <strong>nơi thao tác với lưới khối tự do</strong> <span class="chip c-br">R-TLMI-229</span>: chọn ô, gõ chữ tự do, kéo trường thả vào ô đều làm ngay trên trang — bảng chỉnh bên phải chỉ cấp kho trường và các thuộc tính.</p>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <span class="snum">11 — UC02 · PMKT-U-14549_21-02 · Nhóm P</span>
+  <h2>Dựng bản in bằng mẫu tùy chỉnh</h2>
+  <p class="lede">Chưa có bản ghi mẫu thì vẫn in được — in theo mẫu chuẩn hệ thống và báo <strong>một lần</strong>, và đó <em>không</em> phải lỗi <span class="chip c-br">R-TLMI-260</span>.</p>
+
+  <figure>
+    <div class="plate">
+<pre class="mermaid">
+%%{init:{"flowchart":{"useMaxWidth":false},"theme":"base","themeVariables":{"primaryColor":"#ffffff","primaryTextColor":"#16202b","primaryBorderColor":"#2f6f8f","lineColor":"#6b7683","fontFamily":"Helvetica Neue, Helvetica, Arial, sans-serif","fontSize":"14px"}}}%%
+flowchart TD
+    A(["Chọn Mẫu tùy chỉnh trong menu In"]) --> Q{"Server: có quyền In?"}
+    Q -- "Không" --> QX["Chặn — MSG_COMMON_003"]
+    Q -- "Có" --> B["Xác định NGHIỆP VỤ của chứng từ đang mở"]
+    B --> C{"Có bản ghi mẫu của nghiệp vụ đó?"}
+    C -- "Không" --> C1["Dùng mẫu chuẩn hệ thống<br/>hiện MSG_…_103 MỘT LẦN mỗi lần mở xem trước"]
+    C -- "Có" --> C2["Đọc mẫu tùy chỉnh"]
+    C1 --> D["Áp ba quy tắc in chứng từ của thiết lập chung"]
+    C2 --> D
+    D --> D1["a. cho phép in chứng từ chưa ghi sổ"]
+    D --> D2["b. cho phép in chứng từ đã khóa sổ"]
+    D --> D3{"c. Cộng gộp đang bật VÀ chứng từ là Hóa đơn, phiếu xuất kho hoặc phiếu nhập kho?"}
+    D3 -- "Có" --> D3A["GỘP DÒNG TRƯỚC khi dựng bảng<br/>khóa gộp = mã hàng + đơn vị tính + đơn giá + <b>thuế suất</b><br/>cộng số lô và hạn sử dụng nếu vật tư theo dõi theo lô"]
+    D3 -- "Không — Phiếu chi, Chứng từ mua dịch vụ…" --> D3B["KHÔNG gộp"]
+    D3A --> E
+    D3B --> E["Đọc hồ sơ đơn vị theo CHI NHÁNH GHI TRÊN CHỨNG TỪ"]
+    E --> F["Dựng TỪ TRÊN XUỐNG theo thứ tự Bố cục mẫu<br/>chỉ các khối đang bật<br/>ô theo chung lấy giá trị thiết lập chung TẠI LÚC IN"]
+    F --> G["Hình nền vẽ DƯỚI CÙNG · bảng dài tràn trang<br/>khối sau in tiếp ngay dưới dòng cuối"]
+    G --> H(["Mở màn xem trước bản in như các mẫu cố định<br/>có nút In, Xuất file, và Sửa mẫu khi có quyền"])
+    F -. "lỗi hệ thống" .-> X["MSG_…_003 — KHÔNG mở màn xem trước"]
+    H --> Z["In KHÔNG thay đổi dữ liệu chứng từ hay mẫu"]
+
+    classDef err fill:#fbeceb,stroke:#b23a2e,color:#7a2318;
+    classDef ok fill:#e8f4ee,stroke:#2e7d5b,color:#1c4c38;
+    classDef warn fill:#fbf2e2,stroke:#a9761f,color:#6d4a12;
+    class QX,X err;
+    class H,Z ok;
+    class C1,D3A warn;
+</pre>
+    </div>
+    <figcaption><b>Khóa gộp có thuế suất, và chỉ ba loại chứng từ.</b> Hai điểm đều là chỗ tài liệu tự mâu thuẫn, đã chốt C01 và C30. Hai dòng cùng mã hàng, cùng đơn giá nhưng <strong>khác thuế suất</strong> phải in thành <strong>hai dòng</strong> — gộp lại buộc phải cộng dồn tiền thuế, làm sai chính con số người dùng đối chiếu với hóa đơn.</figcaption>
+  </figure>
+
+  <div class="note stop">
+    <span class="lbl">Thiếu quyền In dùng mã khác với thiếu quyền Thiết lập</span>
+    <p><span class="chip c-msg">MSG_PMKT-E-14549_21_002</span> được <span class="f">6.messages.md</span> khai riêng cho quyền <em>Thiết lập mẫu in</em>. Sơ đồ hoạt động <span class="f">AD02</span> tự mở rộng mã đó sang nhánh thiếu quyền <em>In</em> — AD là nguồn bậc 1, <strong>không được lấy làm nguồn luật</strong>. Đã chốt C15: nhánh thiếu quyền In dùng <span class="chip c-msg">MSG_COMMON_003</span> theo BR25.2.</p>
+  </div>
+
+  <p>Khi nút In bị disable theo hai quy tắc cấm in thì <strong>cả menu In không mở được</strong>, kể cả mục Mẫu tùy chỉnh <span class="chip c-br">R-TLMI-261</span>. Quy tắc "đã khóa sổ" <em>chỉ</em> tác động nút In của chứng từ — không tác động báo cáo và không tác động Xuất Excel.</p>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="s12">
+  <span class="snum">12 — Bảng tra</span>
+  <h2>Điều kiện chặn ↔ mã message, và ma trận quyền</h2>
+  <p class="lede">26 mã của <span class="f">6.messages.md</span> đều có ít nhất một luật dùng đến — không mã nào thừa. Hai mã dùng chung phải thêm là <strong>quyết định triển khai</strong>, không có trong tài liệu.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Mã</th><th>Loại</th><th>Nguyên văn tiếng Việt</th><th>Hành vi</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">_002</td><td>Error</td><td>Bạn không có quyền thực hiện tác vụ này</td><td>Chặn tác vụ — quyền Thiết lập mẫu in</td></tr>
+      <tr><td class="mono">_003</td><td>Error</td><td>Lỗi hệ thống, vui lòng thử lại sau</td><td>Rollback · không mở màn xem trước</td></tr>
+      <tr><td class="mono">_101</td><td>Success</td><td>Lưu mẫu in thành công!</td><td>Toast; màn giữ nguyên, nhãn về Đã lưu</td></tr>
+      <tr><td class="mono">_102</td><td>Info</td><td>Đã đưa về mẫu chuẩn hệ thống. Bấm Lưu để có hiệu lực</td><td>Sau khi xác nhận Đặt lại</td></tr>
+      <tr><td class="mono">_103</td><td>Info</td><td>Đơn vị chưa thiết lập mẫu tùy chỉnh cho nghiệp vụ này, đang in theo mẫu chuẩn hệ thống</td><td><b>Một lần</b> mỗi lần mở màn xem trước</td></tr>
+      <tr><td class="mono">_104</td><td>Info</td><td>Đã thêm khối tự do trước Chữ ký. Nháy đúp một ô để chọn trường, hoặc kéo trường từ bảng bên phải thả vào ô</td><td>Hướng dẫn sau khi thêm khối</td></tr>
+      <tr><td class="mono">_201</td><td>Error</td><td>Tiêu đề bản in không được để trống, tối đa 255 ký tự</td><td>Chặn Lưu, mở khối chứa lỗi</td></tr>
+      <tr><td class="mono">_202</td><td>Error</td><td>Cỡ chữ tiêu đề phải là số nguyên từ 10 đến 36</td><td>Chặn Lưu, báo tại ô</td></tr>
+      <tr><td class="mono">_203</td><td>Error</td><td>Bảng "{TenBang}" phải giữ lại ít nhất 1 cột hiển thị</td><td>Chặn; tham số <span class="f">{TenBang}</span></td></tr>
+      <tr><td class="mono">_204</td><td>Error</td><td>Tên hiển thị của cột không được để trống, tối đa 100 ký tự</td><td>Chặn Lưu, báo tại ô</td></tr>
+      <tr><td class="mono">_205</td><td>Error</td><td>Độ rộng cột phải là số nguyên từ 3 đến 90</td><td>Chặn Lưu, báo tại ô</td></tr>
+      <tr><td class="mono">_206</td><td>Error</td><td>Tên khối tự do không được để trống, tối đa 60 ký tự</td><td>Áp ở <b>cả hai chỗ</b> nhập tên khối</td></tr>
+      <tr><td class="mono">_207</td><td>Error</td><td>Mỗi mẫu tối đa 10 khối tự do</td><td>Chặn hành động thêm</td></tr>
+      <tr><td class="mono">_208</td><td>Error</td><td>Mỗi khối tự do tối đa 20 dòng</td><td>Chặn hành động thêm dòng</td></tr>
+      <tr><td class="mono">_216</td><td>Error</td><td>Mỗi khối tự do tối đa 6 cột</td><td>Chặn hành động thêm cột</td></tr>
+      <tr><td class="mono">_209</td><td>Error</td><td>Ảnh nền phải là tệp jpg hoặc png, dung lượng tối đa 1MB</td><td>Chặn chọn tệp</td></tr>
+      <tr><td class="mono">_210</td><td>Error</td><td>Mã màu phải có dạng #rrggbb</td><td>Chặn, báo tại ô</td></tr>
+      <tr><td class="mono">_211</td><td>Error</td><td>Tiêu đề ô ký tự do không được để trống, tối đa 60 ký tự</td><td>Chặn Lưu, báo tại ô</td></tr>
+      <tr><td class="mono">_212</td><td>Error</td><td>Tên hiển thị và chữ tự do tối đa 255 ký tự</td><td>Chặn, báo tại ô</td></tr>
+      <tr><td class="mono">_213</td><td>Error</td><td>Căn lề phải là số từ 0 đến 5 cm</td><td>Chặn, báo tại ô</td></tr>
+      <tr><td class="mono">_214</td><td>Error</td><td>Số cột để tự động in ngang phải là số nguyên từ 1 đến 50</td><td>Chặn, báo tại ô</td></tr>
+      <tr><td class="mono">_215</td><td>Error</td><td>Cỡ chữ phải là số nguyên từ 8 đến 20</td><td><b>Chỉ chặn phía máy chủ</b></td></tr>
+      <tr><td class="mono">_401</td><td>Confirm</td><td>Mẫu đã có thay đổi chưa lưu. Bạn muốn làm gì?</td><td><b>Ba nút</b>: Lưu và đóng / Không lưu / Ở lại</td></tr>
+      <tr><td class="mono">_402</td><td>Confirm</td><td>Mọi tùy chỉnh (kể cả khối tự do, thứ tự khối, cột bảng, chữ ký) sẽ trở về mẫu chuẩn hệ thống. Thay đổi chỉ có hiệu lực khi bạn bấm Lưu. Tiếp tục?</td><td>Hai nút — <b>tên nút không có trong tài liệu</b></td></tr>
+      <tr><td class="mono">_403</td><td>Confirm</td><td>Xóa khối "{TenKhoi}" cùng các ô trong đó?</td><td>Hai nút; tham số <span class="f">{TenKhoi}</span></td></tr>
+      <tr><td class="mono">_404</td><td>Confirm</td><td>Vùng chọn có {SoO} ô đang có nội dung. Gộp thì chỉ giữ nội dung của ô đầu tiên, các ô còn lại mất nội dung. Tiếp tục?</td><td>Hai nút; tham số <span class="f">{SoO}</span></td></tr>
+      <tr><td class="mono">COMMON_001</td><td>Error</td><td colspan="2"><b>Thêm theo quyết định C06</b> — xung đột phiên bản khi Lưu, kèm một key i18n riêng cho câu hướng dẫn nạp lại</td></tr>
+      <tr><td class="mono">COMMON_003</td><td>Error</td><td colspan="2"><b>Thêm theo quyết định C15</b> — thiếu quyền In khi gọi API in mẫu tùy chỉnh (BR25.2)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Không tái dùng mã của epic _20</span>
+    <p>Ba cặp message của epic <span class="f">_20</span> trùng nội dung nhưng khác mã (<span class="f">_20_201</span> ↔ <span class="f">_21_215</span> · <span class="f">_20_202</span> ↔ <span class="f">_21_213</span> · <span class="f">_20_203</span> ↔ <span class="f">_21_214</span>) là <strong>nhân đôi có chủ ý</strong>. Đừng import <span class="f">MSG_PMKT-E-14549_20_*</span> vào i18n của module này.</p>
+  </div>
+
+  <h3>Quyền — hai tầng</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Mã quyền</th><th>Gác cái gì</th><th>Thiếu thì sao</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">HTMauIn.View</td><td>Mở màn Thiết lập mẫu in ở chế độ xem</td><td>Server chặn khi mở màn — <span class="chip c-msg">_002</span></td></tr>
+      <tr><td class="mono">HTMauIn.Edit</td><td>Lưu mẫu · Đặt lại mẫu chuẩn</td><td>Mục menu và nút Sửa mẫu <b>ẩn hẳn</b>; API trả <span class="chip c-msg">_002</span></td></tr>
+      <tr><td class="mono">&lt;ChucNang&gt;.View.Detail</td><td>Quyền xem chi tiết của chính nghiệp vụ</td><td>Không mở được form chứng từ nên không có lối vào</td></tr>
+      <tr><td class="mono">quyền In của nghiệp vụ</td><td>Mục <b>Mẫu tùy chỉnh</b> trong menu In</td><td>API in trả <span class="chip c-msg">COMMON_003</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="color:var(--ink-faint); font-size:14px">Hằng số đặt ở <span class="f">MaQuyenMauIn</span> để khi epic nghiệp vụ khai mã riêng thì chỉ sửa một chỗ (nợ <span class="f">L-3</span>).</p>
+</section>
+
+<!-- ============ 13 ============ -->
+<section id="s13">
+  <span class="snum">13 — Chưa vẽ được</span>
+  <h2>Chỗ tài liệu BA còn im lặng</h2>
+  <p class="lede">Sổ mâu thuẫn có <strong>38 mục, 0 mục OPEN</strong> — không luật nào bị chặn code. Nhưng 14 mục dưới đây là <em>khoảng trống tài liệu</em> chưa được chốt, không đủ căn cứ để vẽ thành nhánh trong sơ đồ.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th class="mono">Mục</th><th>Tài liệu im lặng ở đâu</th><th>Ảnh hưởng</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">Z-03</td><td>Độ đậm hình nền 5–100 % không có dòng Validation, không có mã message</td><td>Vi phạm miền thì báo gì, chặn ở đâu</td></tr>
+      <tr><td class="mono">Z-04</td><td>Nói "10 ô màu" nhưng không liệt kê mã màu; Figma đếm được <b>9</b> ô preset và ô hex</td><td>Không code được hằng số bảng màu</td></tr>
+      <tr><td class="mono">Z-10</td><td>Lưu là "xóa hết bản cũ, ghi bản mới" — có giữ id cũ không</td><td>Không kiểm được ảnh hưởng tới dữ liệu tham chiếu</td></tr>
+      <tr><td class="mono">Z-11</td><td>Hai khối tự do có được trùng tên không</td><td>Có hay không unique check khi tạo / sửa tên</td></tr>
+      <tr><td class="mono">Z-13</td><td>Tự chia lại độ rộng khi form có cột mới xảy ra <em>lúc nào</em> — mở màn, Lưu, hay in</td><td>Ba chỗ đặt code khác nhau, hành vi khác nhau</td></tr>
+      <tr><td class="mono">Z-15</td><td>Tên người ký gõ tay và Dòng ghi chú có giới hạn ký tự không, có bắt buộc không</td><td>Không viết được validator</td></tr>
+      <tr><td class="mono">Z-16</td><td>Dòng ghi chú của 5 chức danh chuẩn có sửa được trong mẫu không — hai nguồn nói ngược</td><td>Có hay không cột lưu và ô nhập</td></tr>
+      <tr><td class="mono">Z-17</td><td>Đặt lại mẫu chuẩn có phải một bước Hoàn tác được không</td><td>Có push snapshot vào undo stack hay không</td></tr>
+      <tr><td class="mono">Z-18</td><td>In đậm áp cho vùng chọn <em>hỗn hợp</em> trường và Chữ tự do — In đậm là thuộc tính của trường nhưng nút lại áp theo vùng ô</td><td>Hai mô hình dữ liệu đụng nhau</td></tr>
+      <tr><td class="mono">Z-19</td><td>Kéo ô gộp thả lên ô thường, nội dung dài hơn chỗ chứa thì sao</td><td>Hành vi hiển thị và in không xác định</td></tr>
+      <tr><td class="mono">Z-22</td><td>"Số tiền bằng chữ đọc theo quy tắc đọc số chung" — không trích mã BR nào</td><td>Không biết dùng quy tắc nào</td></tr>
+      <tr><td class="mono">Z-23</td><td><em>n</em> trong tên gợi ý "Khối tự do &lt;n&gt;" là số khối hiện có + 1 hay số lớn nhất từng dùng + 1</td><td>Kết quả khác nhau sau khi xóa khối ở giữa</td></tr>
+      <tr><td class="mono">Z-35</td><td>Đặc tả form của epic nghiệp vụ — nguồn của mẫu chuẩn và kho trường</td><td>Do epic nghiệp vụ quyết, ngoài phạm vi epic này</td></tr>
+      <tr><td class="mono">Z-38…40</td><td>Tooltip BR7 của epic _20 · hành vi chung bản in chứng từ · danh mục mẫu cố định 01-TT, 02-VT…</td><td>Nằm ngoài epic, do nơi khác quyết</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note ask">
+    <span class="lbl">Hai mục chạm hành vi người dùng thấy được</span>
+    <p><span class="f">Z-18</span> và <span class="f">Z-19</span> sẽ gặp ngay khi code khối tự do. Gặp thì chọn cách <strong>an toàn nhất — không mất dữ liệu</strong> và ghi lại vào biên bản quyết định, không lặng lẽ tự quyết.</p>
+  </div>
+
+  <h3>BR chung đã áp dụng</h3>
+  <p>Epic này chạy theo <strong>bộ BR Phase 2</strong> cho riêng chức năng in (quyết định C11): <span class="chip c-br">BR50.6</span> mẫu không mang phạm vi chi nhánh · <span class="chip c-br">BR50.7</span> đọc hồ sơ theo chi nhánh ghi trên chứng từ · <span class="chip c-br">BR51.5</span> ba quy tắc in chứng từ và phạm vi cộng gộp · <span class="chip c-br">BR51.6</span> tùy chỉnh và in báo cáo. Cùng với BR nền của bộ chung: <span class="chip c-br">BR2</span> hiển thị &amp; sắp xếp · <span class="chip c-br">BR3</span> popup · <span class="chip c-br">BR7</span> số liệu &amp; làm tròn · <span class="chip c-br">BR12</span> trạng thái chứng từ · <span class="chip c-br">BR13</span> hiển thị nút · <span class="chip c-br">BR25</span> phân quyền · <span class="chip c-br">BR26</span> thông báo.</p>
+  <p style="color:var(--ink-faint); font-size:14px">⚠ <b>BR50 và BR51 chỉ có trong bộ BR Phase 2.</b> Bản Phase 1 mà <span class="f">br.sh</span> đọc chỉ có BR1…BR49 — tra <span class="f">br.sh 50</span> sẽ không ra gì. 23 luật và 3 bất biến của epic đứng trên nền Phase 2 này (nợ <span class="f">L-8</span>).</p>
+</section>
+
+</main>
+
+<footer>
+  <span>PMKT-E-14549_21 · Thiết lập mẫu in chứng từ</span>
+  <span>Dựng từ 2 UC · 2 Activity Diagram · 1 màn hình · 1 ma trận · 26 message · 271 luật R-TLMI</span>
+  <span>Cập nhật 21/09/2026</span>
+</footer>
+
+</div>
