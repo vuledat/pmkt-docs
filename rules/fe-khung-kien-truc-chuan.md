@@ -273,7 +273,7 @@ giữ bộ lệnh nặng đã bị bãi bỏ 2026-08-13; bảng BR còn thiếu 
 
 | Cần gì | Bản gốc (SSOT) |
 |---|---|
-| 8 luật cứng (hardcode · i18n · `any` · alias · commit) | [`CLAUDE.md` §8 luật](../../CLAUDE.md) |
+| Luật cứng (hardcode · i18n · `any` · alias · commit · phân trang) | [`CLAUDE.md` §8 luật](../../CLAUDE.md) |
 | Chi tiết FE của các luật đó (TS đang bật · đặt tên · i18n) | [`client/CLAUDE.md`](../../client/CLAUDE.md) §8 §10 §11 |
 | BR phải đối chiếu + cách trích | [`CLAUDE.md` §BR](../../CLAUDE.md) → `./docs/rules/br.sh <số BR>` |
 | Cổng nghiệm thu FE | [`fe-cong-nghiem-thu.md`](fe-cong-nghiem-thu.md) — cổng nhẹ `npx vite build`, **KHÔNG** `npm run build` |
