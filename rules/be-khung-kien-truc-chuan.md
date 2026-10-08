@@ -255,7 +255,7 @@ BR47–49). Đọc thẳng bản gốc:
 | Cần gì | Bản gốc (SSOT) |
 |---|---|
 | Bảng tra BR + cách trích | [`CLAUDE.md` §BR](../../CLAUDE.md) → `./docs/rules/br.sh <số BR>` |
-| 8 luật cứng toàn repo | [`CLAUDE.md`](../../CLAUDE.md) |
+| Luật cứng toàn repo (gồm phân trang — [phan-trang.md](phan-trang.md)) | [`CLAUDE.md`](../../CLAUDE.md) |
 | Quy ước Java (đặt tên, API, DI, JPA) | [`conventions-be.md`](conventions-be.md) |
 | Quy tắc chung + Git + checklist commit | [`conventions-chung.md`](conventions-chung.md) |
 | Cổng chạy, tiền tố bảng, Modulith | [`cell-app/CLAUDE.md`](../../cell-app/CLAUDE.md) |
